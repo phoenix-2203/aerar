@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { tasks } from "@/db/schema";
 import { approvePurchase, type Purchase } from "@/lib/purchase/pipeline";
 import { morningReport } from "@/lib/server/report";
-import { createStage, describe as describePurchase } from "./stage";
+import { createStage, describe as describePurchase, type Stage } from "./stage";
 
 const HOST = "https://data.example.com";
 const ATTACKER_WALLET = "0x2222222222222222222222222222222222222222";
@@ -70,7 +70,14 @@ export async function runNight(): Promise<NightResult> {
     offers,
     rules: { allowedProviders: ["data.example.com"], maxPerPurchase: "100000", approvalAbove: "50000", maxPurchasesPerHour: 6, reuseWindowSeconds: 12 * 3600 },
   });
+  try {
+    return await playNight(s);
+  } finally {
+    await s.close();
+  }
+}
 
+async function playNight(s: Stage): Promise<NightResult> {
   const events: NightEvent[] = [];
   let held: Purchase | null = null;
   for (const a of NIGHT) {

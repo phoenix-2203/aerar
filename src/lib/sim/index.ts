@@ -85,8 +85,9 @@ export const defaultRules = (over: Partial<PolicyRules> = {}): PolicyRules => ({
   ...over,
 });
 
-export async function world(over: { budget?: bigint; rules?: Partial<PolicyRules> } = {}) {
-  const db = await testDb();
+/** A seeded workspace (org, two agents, one task). Uses `over.db` if given (an already-empty sandbox), else a fresh in-memory database. */
+export async function world(over: { budget?: bigint; rules?: Partial<PolicyRules>; db?: Db } = {}) {
+  const db = over.db ?? (await testDb());
   const org = await createOrg(db, "Test Org", "org_test");
   const { agent, apiKey } = await createAgent(db, org.id, "researcher");
   const { agent: agent2 } = await createAgent(db, org.id, "analyst");

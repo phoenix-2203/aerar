@@ -5,6 +5,7 @@ import type { Db } from "@/db";
 import type { PolicyRules } from "@/db/schema";
 import { submitPurchase, type Purchase, type PurchaseRequest } from "@/lib/purchase/pipeline";
 import { fakeRail, world, type FakeOffer } from "@/lib/sim";
+import { leaseSandbox } from "@/lib/sim/sandbox";
 import type { PayResult, Quote } from "@/lib/x402/rail";
 
 /** The problems from the README, in the same order. Every scenario answers one of them. */
@@ -31,7 +32,15 @@ export type Stage = Awaited<ReturnType<typeof createStage>>;
 let seq = 0;
 
 export async function createStage(opts: StageOptions = {}) {
-  const w = await world({ budget: opts.budget ?? 1_000_000n, rules: opts.rules });
+  // The shared sandbox is wiped for this lease and held until close(), so stages never see each other.
+  const lease = await leaseSandbox();
+  let w: Awaited<ReturnType<typeof world>>;
+  try {
+    w = await world({ budget: opts.budget ?? 1_000_000n, rules: opts.rules, db: lease.db });
+  } catch (e) {
+    lease.release();
+    throw e;
+  }
   const rail = fakeRail(opts.offers ?? {}, { payResult: opts.payResult });
   const ctx = { db: w.db as Db, rail };
   const agentIds = { researcher: w.agent.id, analyst: w.agent2.id } as const;
@@ -52,7 +61,15 @@ export async function createStage(opts: StageOptions = {}) {
     });
   }
 
-  return { ...w, rail, ctx, agentIds, buy };
+  /** Hand the sandbox to the next stage. Always call it (play() and runNight() do). */
+  let closed = false;
+  async function close() {
+    if (closed) return;
+    closed = true;
+    lease.release();
+  }
+
+  return { ...w, rail, ctx, agentIds, buy, close };
 }
 
 /** Collects pass/fail checks so a scenario can grade itself in tests and in the live narration. */
@@ -96,11 +113,15 @@ export async function play(
   body: (s: Stage, log: (line: string | Purchase) => void, check: Checks) => Promise<string>,
 ): Promise<ScenarioResult> {
   const s = await createStage(opts);
-  const timeline: string[] = [];
-  const checks = new Checks();
-  const log = (line: string | Purchase) => timeline.push(typeof line === "string" ? line : describe(line));
-  const verdict = await body(s, log, checks);
-  return { timeline, verdict, checks, payments: s.rail.calls.pay.length };
+  try {
+    const timeline: string[] = [];
+    const checks = new Checks();
+    const log = (line: string | Purchase) => timeline.push(typeof line === "string" ? line : describe(line));
+    const verdict = await body(s, log, checks);
+    return { timeline, verdict, checks, payments: s.rail.calls.pay.length };
+  } finally {
+    await s.close();
+  }
 }
 
 const usd = (atomic: bigint | null | undefined) => `$${(Number(atomic ?? 0n) / 1e6).toFixed(2)}`;
