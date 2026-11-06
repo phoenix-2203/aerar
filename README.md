@@ -202,7 +202,19 @@ Based on public documentation found on 6 Nov 2026. "Not documented" means we cou
 
 ## Live on testnet
 
-*Coming before submission:* the deployed app, the payer wallet and the first BaseScan-linked purchases (paid, reused, approved).
+Running at **[aerar.duckdns.org](https://aerar.duckdns.org)** on Base Sepolia with test USDC.
+
+- **Payer wallet** (only Aerar holds its key): [`0xf53e…8761`](https://sepolia.basescan.org/address/0xf53e9c939426a539020BeaFb59C136Fe1AB18761)
+- **Demo provider** (receives payments): [`0x4d2c…E931`](https://sepolia.basescan.org/address/0x4d2cc52A7D80d1276bE8DE66223Fa55a64B6E931)
+
+The first night's purchases, made by the demo agent through the live API on 6 Nov 2026:
+
+| # | Request | Outcome | Paid | Proof |
+|---|---|---|---|---|
+| 1 | Standard report, "AI agents" | **Delivered.** Quote within policy, paid, transfer checked onchain (block 55339992) | $0.10 | [tx `0xa2f2…18c9`](https://sepolia.basescan.org/tx/0xa2f215fb77daaf046a2b0d61f873b423c5b2b4c1e1822625d0ad67ba275818c9) |
+| 2 | Same report again, different agent request | **Reused** purchase #1 | $0.00 (avoided $0.10) | No payment made |
+| 3 | Premium report, "AI agents" | **Waiting for approval**: $0.50 is above the task's $0.25 auto-approve threshold | $0.00 until approved | Approval queue |
+| 4 | `api.example.com`, a provider not on the task's list | **Declined** before any quote was paid | $0.00 | `PROVIDER_NOT_ALLOWED` |
 
 ## Screens
 
