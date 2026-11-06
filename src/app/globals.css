@@ -1,49 +1,200 @@
 @import "tailwindcss";
 
-/* Night-shift palette: deep ink, a lamp-amber accent, and clear status colours. */
-@theme inline {
-  --color-ink: #0a0f1e;
-  --color-night: #0f1629;
-  --color-panel: #141d33;
-  --color-panel-2: #1a2540;
-  --color-line: #253253;
-  --color-text: #e8edf7;
-  --color-muted: #8d9ab8;
-  --color-faint: #5d6a88;
-  --color-lamp: #f6b94a;
-  --color-lamp-soft: #f6b94a1f;
-  --color-paid: #5fd4a6;
-  --color-paid-soft: #5fd4a61c;
-  --color-saved: #7fb2ff;
-  --color-saved-soft: #7fb2ff1c;
-  --color-refused: #f0807f;
-  --color-refused-soft: #f0807f1c;
-  --color-wait: #f6b94a;
-  --color-wait-soft: #f6b94a1c;
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Theme follows data-theme on <html> (set before paint by the script in layout.tsx). Without JS: dark, or light
+   when the system asks for it. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/*
+ * Ink and brass (docs/design-brief.md). All text pairs meet WCAG AA in both themes.
+ * Brand (night blue) is for the one primary action per screen; brass only for the logo and small highlights;
+ * success / warning / danger / info only for statuses.
+ */
+:root,
+:root[data-theme="light"] {
+  --bg: #f6f6f3;
+  --surface: #ffffff;
+  --surface-2: #efefea;
+  --border: #e3e3de;
+  --border-strong: #cfcfc8;
+  --text: #15171c;
+  --text-2: #5a6070;
+  --brand: #2f45b8;
+  --brand-hover: #263a9e;
+  --on-brand: #ffffff;
+  --brass: #8a5e17;
+  --success: #15734a;
+  --success-tint: #e6f4ec;
+  --warning: #9a5800;
+  --warning-tint: #fbf0dc;
+  --danger: #b8322a;
+  --danger-tint: #fbe8e6;
+  --info: #1f5fae;
+  --info-tint: #e7effa;
+  --shadow: 0 1px 2px rgb(21 23 28 / 0.06), 0 4px 16px rgb(21 23 28 / 0.06);
+  color-scheme: light;
 }
 
-html {
+:root[data-theme="dark"] {
+  --bg: #0a0d14;
+  --surface: #121722;
+  --surface-2: #1a2030;
+  --border: #252c3b;
+  --border-strong: #343d50;
+  --text: #e9ebf1;
+  --text-2: #9aa2b4;
+  --brand: #8fa2ff;
+  --brand-hover: #a8b7ff;
+  --on-brand: #0a0d14;
+  --brass: #d8aa55;
+  --success: #4cc08a;
+  --success-tint: #10291f;
+  --warning: #edb14b;
+  --warning-tint: #2e2410;
+  --danger: #f2796e;
+  --danger-tint: #331717;
+  --info: #6aa6f2;
+  --info-tint: #132640;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
   color-scheme: dark;
 }
 
-body {
-  background:
-    radial-gradient(1200px 600px at 85% -10%, #1b2a55 0%, transparent 60%),
-    radial-gradient(900px 500px at -10% 0%, #151f3d 0%, transparent 55%),
-    var(--color-ink);
-  background-attachment: fixed;
-  color: var(--color-text);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+/* No data-theme yet (JS off): dark by default, light if the system prefers it. */
+:root:not([data-theme]) {
+  --bg: #0a0d14;
+  --surface: #121722;
+  --surface-2: #1a2030;
+  --border: #252c3b;
+  --border-strong: #343d50;
+  --text: #e9ebf1;
+  --text-2: #9aa2b4;
+  --brand: #8fa2ff;
+  --brand-hover: #a8b7ff;
+  --on-brand: #0a0d14;
+  --brass: #d8aa55;
+  --success: #4cc08a;
+  --success-tint: #10291f;
+  --warning: #edb14b;
+  --warning-tint: #2e2410;
+  --danger: #f2796e;
+  --danger-tint: #331717;
+  --info: #6aa6f2;
+  --info-tint: #132640;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bg: #f6f6f3;
+    --surface: #ffffff;
+    --surface-2: #efefea;
+    --border: #e3e3de;
+    --border-strong: #cfcfc8;
+    --text: #15171c;
+    --text-2: #5a6070;
+    --brand: #2f45b8;
+    --brand-hover: #263a9e;
+    --on-brand: #ffffff;
+    --brass: #8a5e17;
+    --success: #15734a;
+    --success-tint: #e6f4ec;
+    --warning: #9a5800;
+    --warning-tint: #fbf0dc;
+    --danger: #b8322a;
+    --danger-tint: #fbe8e6;
+    --info: #1f5fae;
+    --info-tint: #e7effa;
+    color-scheme: light;
+  }
 }
 
-.num {
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-on-brand: var(--on-brand);
+  --color-brass: var(--brass);
+  --color-success: var(--success);
+  --color-success-tint: var(--success-tint);
+  --color-warning: var(--warning);
+  --color-warning-tint: var(--warning-tint);
+  --color-danger: var(--danger);
+  --color-danger-tint: var(--danger-tint);
+  --color-info: var(--info);
+  --color-info-tint: var(--info-tint);
+
+  /* Temporary aliases for pages not yet rebuilt (removed in phase 4). */
+  --color-ink: var(--bg);
+  --color-night: var(--surface-2);
+  --color-panel: var(--surface);
+  --color-panel-2: var(--surface-2);
+  --color-line: var(--border);
+  --color-muted: var(--text-2);
+  --color-faint: var(--text-2);
+  --color-lamp: var(--brand);
+  --color-lamp-soft: var(--info-tint);
+  --color-paid: var(--success);
+  --color-paid-soft: var(--success-tint);
+  --color-saved: var(--info);
+  --color-saved-soft: var(--info-tint);
+  --color-refused: var(--danger);
+  --color-refused-soft: var(--danger-tint);
+  --color-wait: var(--warning);
+  --color-wait-soft: var(--warning-tint);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", Menlo, monospace;
+
+  --shadow-card: var(--shadow);
+  --animate-arrive: arrive 180ms ease-out;
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  font-feature-settings: "cv11";
+}
+
+.num,
+.tabular {
   font-variant-numeric: tabular-nums;
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-lamp);
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
   border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
