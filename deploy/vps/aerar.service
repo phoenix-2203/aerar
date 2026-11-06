@@ -1,0 +1,33 @@
+# systemd unit for Aerar on a VPS that already runs other apps behind a system Caddy.
+# Install: cp deploy/vps/aerar.service /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now aerar
+[Unit]
+Description=Aerar - agent procurement ledger (Next.js)
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=aerar
+Group=aerar
+WorkingDirectory=/opt/aerar
+EnvironmentFile=/opt/aerar/.env
+Environment=NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
+# Apply pending migrations, then serve on localhost only; Caddy is the public front door.
+ExecStartPre=/usr/bin/npm run db:migrate
+ExecStart=/usr/bin/npm run start -- -H 127.0.0.1 -p 8800
+Restart=on-failure
+RestartSec=5
+MemoryMax=1G
+
+# Keep Aerar away from the rest of the machine.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/aerar/.next
+ProtectKernelTunables=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target
