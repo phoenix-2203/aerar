@@ -7,7 +7,7 @@ AI agents now pay for APIs and data by themselves, a few cents at a time, over x
 Agents never hold a wallet. They ask Aerar to buy a resource for a task. Aerar reads the provider's real price, checks it against the task's rules, serves an identical earlier purchase for $0 instead of paying twice, pays exactly the approved quote, checks the USDC transfer onchain, and writes every step into a tamper-evident ledger. Your agents work the night shift; Aerar is the morning report.
 
 - **Demo video:** *coming before submission*
-- **Try it:** *live URL coming before submission* (Base Sepolia, test USDC)
+- **Try it:** [aerar.duckdns.org](https://aerar.duckdns.org) (Base Sepolia, test USDC)
 - **Connect an agent:** REST API or MCP server (`buy_resource`, `get_purchase`), [setup below](#connect-an-ai-agent-over-mcp)
 
 Built for [Vibestarter's Vibeathon 02](https://blog.vibestarter.xyz/vibeathon-02), theme *Night shift*.
