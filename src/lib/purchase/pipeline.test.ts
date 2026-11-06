@@ -86,6 +86,32 @@ describe("purchase pipeline", () => {
     ).rejects.toMatchObject({ code: "IDEMPOTENCY_CONFLICT" });
   });
 
+  it("concurrent requests with the same idempotency key pay once and return the same purchase", async () => {
+    const w = await world();
+    const rail = fakeRail({ "/fx": { amount: 10_000n } });
+    const r = req({ taskId: w.task.id, idempotencyKey: "race" });
+    const results = await Promise.all(Array.from({ length: 5 }, () => submitPurchase({ db: w.db, rail }, w.agent.id, r)));
+    // Every racer must have got past the pre-check (otherwise this test isn't exercising the race).
+    expect(rail.calls.quote.length).toBeGreaterThan(1);
+    expect(new Set(results.map((p) => p.id)).size).toBe(1);
+    expect(rail.calls.pay).toHaveLength(1);
+    const rows = await w.db.select().from(purchases);
+    expect(rows).toHaveLength(1);
+    expect((await taskRow(w)).spent).toBe(10_000n);
+  });
+
+  it("a concurrent same-key request for a different URL gets a conflict, not a payment", async () => {
+    const w = await world();
+    const rail = fakeRail({ "/fx": { amount: 10_000n }, "/other": { amount: 10_000n } });
+    const [a, b] = await Promise.allSettled([
+      submitPurchase({ db: w.db, rail }, w.agent.id, req({ taskId: w.task.id, idempotencyKey: "race2" })),
+      submitPurchase({ db: w.db, rail }, w.agent.id, req({ taskId: w.task.id, idempotencyKey: "race2", url: "https://data.example.com/other" })),
+    ]);
+    const outcomes = [a, b].map((x) => (x.status === "fulfilled" ? "ok" : (x.reason as { code: string }).code)).sort();
+    expect(outcomes).toEqual(["IDEMPOTENCY_CONFLICT", "ok"]);
+    expect(rail.calls.pay).toHaveLength(1);
+  });
+
   it("declines when the budget would be exceeded, without paying", async () => {
     const w = await world({ budget: 15_000n });
     const rail = fakeRail({ "/a": { amount: 10_000n }, "/b": { amount: 10_000n } });

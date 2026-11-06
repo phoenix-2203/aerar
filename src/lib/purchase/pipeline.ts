@@ -127,17 +127,55 @@ export async function submitPurchase(ctx: Ctx, agentId: string, req: PurchaseReq
   if (!agent) throw new PurchaseError("UNKNOWN_AGENT", "Unknown agent", 401);
 
   // ---- idempotency: same agent + key returns the original purchase, never a second payment
-  const [existing] = await db
+  const key = reuseKey(req.method, url.toString(), body);
+  const existing = await findByIdempotencyKey(db, agentId, req.idempotencyKey);
+  if (existing) return sameRequestOrConflict(existing, key, req.taskId);
+
+  try {
+    return await submitNew(ctx, agent, req, url, body, key, now);
+  } catch (e) {
+    // Two concurrent requests with the same key can both pass the check above. The unique index lets
+    // exactly one insert win; the loser returns the winner's row (or a conflict if it differs).
+    if (!isUniqueViolation(e, "purchases_idem")) throw e;
+    const winner = await findByIdempotencyKey(db, agentId, req.idempotencyKey);
+    if (!winner) throw e;
+    return sameRequestOrConflict(winner, key, req.taskId);
+  }
+}
+
+async function findByIdempotencyKey(db: Db, agentId: string, idempotencyKey: string) {
+  const [row] = await db
     .select()
     .from(purchases)
-    .where(and(eq(purchases.agentId, agentId), eq(purchases.idempotencyKey, req.idempotencyKey)));
-  const key = reuseKey(req.method, url.toString(), body);
-  if (existing) {
-    if (existing.reuseKey !== key || existing.taskId !== req.taskId)
-      throw new PurchaseError("IDEMPOTENCY_CONFLICT", "This idempotency key was already used for a different request", 409);
-    return existing;
-  }
+    .where(and(eq(purchases.agentId, agentId), eq(purchases.idempotencyKey, idempotencyKey)));
+  return row ?? null;
+}
 
+function sameRequestOrConflict(existing: Purchase, key: string, taskId: string): Purchase {
+  if (existing.reuseKey !== key || existing.taskId !== taskId)
+    throw new PurchaseError("IDEMPOTENCY_CONFLICT", "This idempotency key was already used for a different request", 409);
+  return existing;
+}
+
+/** Postgres unique_violation (23505), unwrapping Drizzle's error wrapper. */
+export function isUniqueViolation(e: unknown, constraint?: string): boolean {
+  for (let err: unknown = e, i = 0; err && i < 4; err = (err as { cause?: unknown }).cause, i++) {
+    const x = err as { code?: string; constraint?: string; message?: string };
+    if (x.code === "23505") return !constraint || x.constraint === constraint || !!x.message?.includes(constraint);
+  }
+  return false;
+}
+
+async function submitNew(
+  ctx: Ctx,
+  agent: typeof agents.$inferSelect,
+  req: PurchaseRequest,
+  url: URL,
+  body: string | null,
+  key: string,
+  now: Date,
+): Promise<Purchase> {
+  const { db, rail } = ctx;
   const [task] = await db.select().from(tasks).where(eq(tasks.id, req.taskId));
   if (!task || task.orgId !== agent.orgId) throw new PurchaseError("UNKNOWN_TASK", "Unknown task", 404);
   const [assignment] = await db
