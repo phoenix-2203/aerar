@@ -138,7 +138,14 @@ async function shoot(shot: Shot, size: (typeof SIZES)[number], theme: (typeof TH
     }
     const { cssContentSize } = await c.send<{ cssContentSize: { width: number; height: number } }>("Page.getLayoutMetrics");
     const overflowX = await evaluate<number>(c, "document.documentElement.scrollWidth - document.documentElement.clientWidth");
-    if (overflowX > 0) console.warn(`  ! ${shot.name} ${size.w}px: horizontal overflow of ${overflowX}px`);
+    if (overflowX > 0) {
+      // Name the widest offenders so the fix is obvious.
+      const culprits = await evaluate<string[]>(
+        c,
+        `[...document.querySelectorAll('body *')].filter(e => e.getBoundingClientRect().right > document.documentElement.clientWidth + 1).filter(e => ![...e.children].some(ch => ch.getBoundingClientRect().right > document.documentElement.clientWidth + 1)).slice(0, 4).map(e => e.tagName.toLowerCase() + (e.className && typeof e.className === 'string' ? '.' + e.className.split(' ').slice(0, 3).join('.') : '') + ' "' + (e.textContent || '').trim().slice(0, 40) + '"')`,
+      );
+      console.warn(`  ! ${shot.name} ${size.w}px: horizontal overflow of ${overflowX}px: ${culprits.join(" | ")}`);
+    }
     const y = Math.min(CLIP_Y, Math.max(0, Math.ceil(cssContentSize.height) - 1));
     const height = Math.min(Math.ceil(cssContentSize.height) - y, CLIP_H ?? 12000, 12000);
     const { data } = await c.send<{ data: string }>("Page.captureScreenshot", {
