@@ -218,7 +218,15 @@ The first night's purchases, made by the demo agent through the live API on 6 No
 
 ## Screens
 
-*Coming before submission:* the morning report, a task, the approval queue, the audit log.
+All 36 (every page, 375 and 1440 px, light and dark) are in [`docs/screenshots`](docs/screenshots). Public pages are from the live site; operator pages use a local simulated night (`npm run seed:sim`), marked "[simulated]".
+
+| | |
+|---|---|
+| **Landing:** an injected purchase stopped at step 1, and the same night paid by a plain wallet vs Aerar (computed by the real pipeline) ![Landing](docs/screenshots/landing-1440-dark.png) | **Attack lab:** 25 scenarios, each graded by its own checks, with what a plain wallet would have paid ![Attack lab](docs/screenshots/scenarios-1440-light.png) |
+| **Morning report:** one-sentence lead, four tiles, approvals first ![Morning report](docs/screenshots/report-1440-dark.png) | **Purchase drawer:** every step, the rules that decided, and onchain proof ![Drawer](docs/screenshots/demo-drawer-1440-light.png) |
+| **Task:** budget, rules as sentences, history as a diff, kill switches ![Task](docs/screenshots/task-1440-light.png) | **Audit log:** recompute the hash chain on demand ![Audit](docs/screenshots/audit-1440-dark.png) |
+
+On a phone: ![Report on a phone](docs/screenshots/report-375-light.png)
 
 ## What has been verified
 
