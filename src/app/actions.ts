@@ -6,7 +6,9 @@ import { redirect } from "next/navigation";
 import { approvePurchase, PurchaseError, rejectPurchase } from "@/lib/purchase/pipeline";
 import { checkPassword, issueSession, loginThrottle, SESSION_COOKIE, SESSION_TTL_SECONDS } from "@/lib/server/auth";
 import { getContext, getDbOnly, operatorOrgId } from "@/lib/server/context";
+import { summarise } from "@/lib/server/http";
 import { requirePurchaseInOrg } from "@/lib/server/queries";
+import { fmt$ } from "@/lib/money/usdc";
 import { isOperator } from "@/lib/server/session";
 
 export type ActionState = { error?: string; done?: string } | undefined;
@@ -52,13 +54,15 @@ async function decide(kind: "approve" | "reject", id: string): Promise<ActionSta
       await requirePurchaseInOrg(ctx.db, operatorOrgId(), id);
       const p = await approvePurchase(ctx, id, "operator");
       refresh();
-      return p.status === "delivered" ? { done: "Approved and paid." } : { done: `Approved, but it ended as "${p.status.replace(/_/g, " ")}".` };
+      return p.status === "delivered"
+        ? { done: `Approved. Paid ${fmt$(p.paidAmount)}${p.onchainVerifiedAt ? ", transfer checked onchain" : ""}.` }
+        : { error: `Approved, but not paid: ${summarise(p)}` };
     }
     const db = await getDbOnly();
     await requirePurchaseInOrg(db, operatorOrgId(), id);
     await rejectPurchase({ db }, id, "operator");
     refresh();
-    return { done: "Rejected. Nothing was paid." };
+    return { done: "Declined. Nothing was paid." };
   } catch (e) {
     if (e instanceof PurchaseError) return { error: e.message };
     console.error("[aerar] decision failed:", e instanceof Error ? e.message : e);
