@@ -144,7 +144,7 @@ function RunAllBar({ state, total, onRun }: { state: AllState; total: number; on
               </p>
               <p className="tabular mt-0.5 text-sm text-text-2">
                 A plain agent wallet would have paid <span className="font-medium text-danger">{usd(state.plain)}</span>. Aerar paid{" "}
-                <span className="font-medium text-success">{usd(state.aerar)}</span>, all of it for things the task allowed.
+                <span className="font-medium text-success">{usd(state.aerar)}</span>, all of it within the tasks, all of it for things the task allowed.apos; rules.
               </p>
             </>
           ) : state.kind === "running" ? (
