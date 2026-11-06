@@ -165,7 +165,7 @@ async function shoot(shot: Shot, size: (typeof SIZES)[number], theme: (typeof TH
 /** Fill in ids the operator shots need (a purchase, a task) from the report page itself, over HTTP. */
 async function resolveIds(): Promise<Record<string, string>> {
   const html = await fetch(`${BASE}/report?period=7d`, { headers: { cookie: `${SESSION_COOKIE}=${issueSession()}` } }).then((r) => r.text());
-  const purchase = html.match(/[?&]purchase=(pur_[A-Za-z0-9_-]+)/)?.[1];
+  const purchase = html.match(/purchase=(pur_[A-Za-z0-9_-]+)/)?.[1]; // the & before it is &amp; in HTML
   const task = html.match(/\/tasks\/(tsk_[A-Za-z0-9_-]+)/)?.[1];
   return { __FIRST__: purchase ?? "none", __TASK__: task ?? "none" };
 }
