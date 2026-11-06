@@ -285,6 +285,20 @@ The seed puts `DEMO_PROVIDER_HOST` (default `localhost:3000`) on the task's prov
 
 PGlite is a single-process database: stop `npm run dev` before running `db:migrate` or `seed` against the same folder.
 
+### Deploy on a VPS
+
+Docker Compose runs Postgres, the app and [Caddy](https://caddyserver.com/), which gets and renews the HTTPS certificate on its own. Any domain pointing at the server works; a free `*.duckdns.org` name is enough.
+
+```bash
+# On the VPS (Docker installed, ports 80 and 443 open, the domain's A record pointing at it)
+git clone https://github.com/phoenix-2203/aerar.git && cd aerar
+cp deploy/.env.example deploy/.env    # fill it in on the server; never commit it
+docker compose -f deploy/compose.yaml --env-file deploy/.env up -d --build
+docker compose -f deploy/compose.yaml --env-file deploy/.env exec app npm run seed   # prints the agent API key once
+```
+
+Migrations run when the container starts. To update: `git pull`, then the `up -d --build` line again.
+
 ### Environment
 
 See [`.env.example`](.env.example) for the full list. The essentials:

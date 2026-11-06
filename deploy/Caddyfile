@@ -1,0 +1,5 @@
+# Caddy fetches and renews a Let's Encrypt certificate for AERAR_DOMAIN on its own (needs ports 80 and 443 open).
+{$AERAR_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}
