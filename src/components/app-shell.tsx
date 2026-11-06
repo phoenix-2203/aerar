@@ -6,6 +6,7 @@ import { Suspense, type ReactNode } from "react";
 import { logout } from "@/app/actions";
 import { purchases } from "@/db/schema";
 import { getDbOnly, operatorOrgId } from "@/lib/server/context";
+import { isOperator } from "@/lib/server/session";
 import { Logo } from "./logo";
 import { ThemeToggle } from "./theme-toggle";
 import { ToastProvider } from "./toast";
@@ -32,6 +33,8 @@ function NavLink({ href, active, children }: { href: string; active: boolean; ch
 }
 
 async function ApprovalsBadge() {
+  // Operators only; also makes this request-time (the session check reads the clock), so the count is never prerendered.
+  if (!(await isOperator())) return null;
   const db = await getDbOnly();
   const [r] = await db
     .select({ n: count() })
