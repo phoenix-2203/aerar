@@ -7,7 +7,7 @@ import { logout } from "@/app/actions";
 import { purchases } from "@/db/schema";
 import { getDbOnly, operatorOrgId } from "@/lib/server/context";
 import { isOperator } from "@/lib/server/session";
-import { Logo } from "./logo";
+import { Logo, LogoMark } from "./logo";
 import { ThemeToggle } from "./theme-toggle";
 import { ToastProvider } from "./toast";
 
@@ -29,6 +29,16 @@ function NavLink({ href, active, children }: { href: string; active: boolean; ch
     >
       {children}
     </Link>
+  );
+}
+
+/** A shorter label on phones so the whole nav fits without scrolling. */
+function Short({ short, long }: { short: string; long: string }) {
+  return (
+    <>
+      <span className="sm:hidden">{short}</span>
+      <span className="hidden sm:inline">{long}</span>
+    </>
   );
 }
 
@@ -57,7 +67,12 @@ function Frame({ nav, right, children, footer }: { nav: ReactNode; right: ReactN
       <header className="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:gap-5 sm:px-6">
           <Link href="/" aria-label="Aerar home" className="shrink-0">
-            <Logo />
+            <span className="hidden sm:inline">
+              <Logo />
+            </span>
+            <span className="text-text sm:hidden">
+              <LogoMark size={24} />
+            </span>
           </Link>
           <nav className="-mx-1 flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto px-1 [scrollbar-width:none]" aria-label="Main">
             {nav}
@@ -79,7 +94,7 @@ export function AppShell({ active, children }: { active?: "/report" | "/audit" |
       nav={
         <>
           <NavLink href="/report" active={active === "/report"}>
-            Morning report
+            <Short short="Report" long="Morning report" />
           </NavLink>
           <NavLink href="/report#approvals" active={false}>
             Approvals
@@ -87,11 +102,13 @@ export function AppShell({ active, children }: { active?: "/report" | "/audit" |
               <ApprovalsBadge />
             </Suspense>
           </NavLink>
-          <NavLink href="/report#tasks" active={active === "/tasks"}>
-            Tasks
-          </NavLink>
+          <span className="hidden sm:contents">
+            <NavLink href="/report#tasks" active={active === "/tasks"}>
+              Tasks
+            </NavLink>
+          </span>
           <NavLink href="/audit" active={active === "/audit"}>
-            Audit log
+            <Short short="Audit" long="Audit log" />
           </NavLink>
         </>
       }
@@ -121,7 +138,7 @@ export function PublicShell({ active, children }: { active?: "/scenarios" | "/de
             Attack lab
           </NavLink>
           <NavLink href="/demo" active={active === "/demo"}>
-            Last night&apos;s report
+            <Short short="Report" long="Last night&apos;s report" />
           </NavLink>
         </>
       }
