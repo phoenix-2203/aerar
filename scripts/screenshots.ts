@@ -105,9 +105,12 @@ async function shoot(shot: Shot, size: (typeof SIZES)[number], theme: (typeof TH
     await c.send("Runtime.enable");
     await c.send("Emulation.setDeviceMetricsOverride", { width: size.w, height: size.h, deviceScaleFactor: 1, mobile: size.mobile });
     await c.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: theme }, { name: "prefers-reduced-motion", value: "reduce" }] });
+    // A distinct client address per shot, so local per-IP limits don't refuse later shots.
+    // (Only affects local runs: the production proxy replaces X-Forwarded-For.)
+    await c.send("Network.enable");
+    await c.send("Network.setExtraHTTPHeaders", { headers: { "x-forwarded-for": `10.9.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}` } });
     if (shot.operator) {
       const url = new URL(BASE);
-      await c.send("Network.enable");
       await c.send("Network.setCookie", { name: SESSION_COOKIE, value: issueSession(), domain: url.hostname, path: "/", httpOnly: true });
     }
     await c.send("Page.navigate", { url: BASE + resolved });
