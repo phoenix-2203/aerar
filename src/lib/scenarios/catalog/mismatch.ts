@@ -74,7 +74,7 @@ export const mismatch: Scenario[] = [
         },
         async (s, log, check) => {
           log("researcher: buy /report ($0.02)");
-          const p = await s.buy("researcher", `${HOST}/report`);
+          const p = await s.buy("researcher", `${HOST}/report`, { plainWalletPays: false });
           log(p);
           const t = await budget(s);
           check.that(p.status === "payment_failed", "recorded as not paid");
@@ -95,7 +95,7 @@ export const mismatch: Scenario[] = [
         { offers: { "/report": { amount: 20_000n } }, payResult: () => ({ kind: "unknown", reason: "socket hang up during settlement" }) },
         async (s, log, check) => {
           log("researcher: buy /report ($0.02); connection drops during payment");
-          const p = await s.buy("researcher", `${HOST}/report`);
+          const p = await s.buy("researcher", `${HOST}/report`, { plainWalletPays: false });
           log(p);
           const t = await budget(s);
           check.that(p.status === "unknown", "marked unknown, not paid or failed");

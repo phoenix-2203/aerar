@@ -1,5 +1,4 @@
 // Problem 2: the same thing is paid for twice (two agents, retries, parallel races).
-import { submitPurchase } from "@/lib/purchase/pipeline";
 import { play, type Scenario } from "../stage";
 
 const FX = "https://data.example.com/fx?base=USD";
@@ -82,13 +81,7 @@ export const duplicate: Scenario[] = [
         log(a);
         log("two minutes later, analyst: same request (reuse window is 60 seconds)");
         const later = new Date(Date.now() + 120_000);
-        const b = await submitPurchase({ ...s.ctx, now: () => later }, s.agentIds.analyst, {
-          taskId: s.task.id,
-          url: FX,
-          method: "GET",
-          purpose: "Fresh rates",
-          idempotencyKey: "after-window",
-        });
+        const b = await s.buy("analyst", FX, { now: later, purpose: "Fresh rates", idempotencyKey: "after-window" });
         log(b);
         check.that(b.status === "delivered", "bought again after the window");
         check.that(s.rail.calls.pay.length === 2, "two payments, by design");
