@@ -5,7 +5,8 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { purchases, type agents } from "@/db/schema";
 import { PurchaseError, submitPurchase, type Ctx, type Purchase } from "@/lib/purchase/pipeline";
-import { explain, summarise } from "@/lib/server/http";
+import { explain } from "@/lib/copy/reasons";
+import { summarise } from "@/lib/server/http";
 import { fmt$ } from "@/lib/money/usdc";
 
 type Agent = typeof agents.$inferSelect;

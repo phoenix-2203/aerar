@@ -3,7 +3,8 @@ import { and, desc, eq, gte, lt } from "drizzle-orm";
 import type { Db } from "@/db";
 import { agents, purchases, tasks, type PurchaseStatus } from "@/db/schema";
 import { fmt$ } from "@/lib/money/usdc";
-import { explain, purchaseView } from "./http";
+import { explain } from "@/lib/copy/reasons";
+import { purchaseView } from "./http";
 import { listTasks } from "./queries";
 
 export interface ReportWindow {

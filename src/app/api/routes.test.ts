@@ -83,7 +83,7 @@ describe("agent API", () => {
     );
     expect(res.status).toBe(202);
     const { purchase } = await res.json();
-    expect(purchase.summary).toMatch(/Waiting for a person/);
+    expect(purchase.summary).toMatch(/^Needs approval: .* a person decides/);
   });
 
   it("rejects missing, wrong and revoked keys with 401", async () => {

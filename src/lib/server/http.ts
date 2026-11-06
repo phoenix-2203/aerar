@@ -3,7 +3,10 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import type { Purchase } from "@/lib/purchase/pipeline";
 import { PurchaseError } from "@/lib/purchase/pipeline";
+import { blockingReasons, explain } from "@/lib/copy/reasons";
 import { fmt$ } from "@/lib/money/usdc";
+
+export { explain };
 
 /** JSON with every bigint turned into a decimal string (atomic USDC units). */
 export function json(data: unknown, init?: number | ResponseInit) {
@@ -34,39 +37,10 @@ export function withErrors<A extends unknown[]>(fn: (...args: A) => Promise<Resp
   };
 }
 
-const PLAIN: Record<string, string> = {
-  TASK_NOT_ACTIVE: "the task isn't active",
-  TASK_DEADLINE_PASSED: "the task deadline has passed",
-  MANDATE_EXPIRED: "the task's spending policy has expired",
-  AGENT_REVOKED: "this agent's key was revoked",
-  AGENT_NOT_ASSIGNED: "this agent isn't assigned to the task",
-  PROVIDER_NOT_ALLOWED: "the provider isn't on the task's allowed list",
-  NETWORK_NOT_ALLOWED: "the provider wants payment on a network other than Base Sepolia",
-  ASSET_NOT_ALLOWED: "the provider wants a token other than USDC",
-  SCHEME_NOT_SUPPORTED: "the provider's payment scheme isn't supported",
-  INVALID_PAYEE: "the provider's payee address is invalid",
-  PAYEE_CHANGED: "the provider's payee address changed since we last paid it",
-  INVALID_AMOUNT: "the quoted amount is invalid",
-  OVER_PER_PURCHASE_LIMIT: "the price is above the per-purchase limit",
-  OVER_TASK_BUDGET: "there isn't enough budget left on the task",
-  RATE_LIMITED: "the agent hit its hourly purchase limit",
-  ABOVE_APPROVAL_THRESHOLD: "the price is above the auto-approve threshold",
-  NO_USABLE_QUOTE: "the provider offered no usable payment option",
-  PROVIDER_UNREACHABLE: "the provider couldn't be reached",
-  QUOTE_CHANGED: "the provider's price or payee changed before payment, so nothing was paid",
-  PAYMENT_NOT_SETTLED: "the provider didn't settle the payment",
-};
-
-export function explain(code: string) {
-  return PLAIN[code] ?? code.toLowerCase().replace(/_/g, " ");
-}
-
-const NEGATIVE = new Set(Object.keys(PLAIN).filter((k) => k !== "ABOVE_APPROVAL_THRESHOLD"));
-
 /** One sentence a person (or an LLM) can read. */
 export function summarise(p: Purchase): string {
   const amount = p.quoteAmount != null ? fmt$(p.quoteAmount) : "an unknown amount";
-  const why = p.reasonCodes.filter((c) => NEGATIVE.has(c)).map(explain).join("; ");
+  const why = blockingReasons(p.reasonCodes).map(explain).join("; ");
   switch (p.status) {
     case "delivered":
       return `Delivered. Paid ${fmt$(p.paidAmount)} to ${p.host}${p.txHash ? ` (tx ${p.txHash})` : ""}${p.onchainVerifiedAt ? ", transfer verified on Base Sepolia" : ", onchain check pending or failed"}.`;
@@ -75,11 +49,11 @@ export function summarise(p: Purchase): string {
     case "free":
       return `The provider didn't ask for payment. Nothing was paid.`;
     case "declined":
-      return `Declined. Nothing was paid: ${why || p.error || "policy check failed"}.`;
+      return `Declined: ${why || p.error || "a rule check failed"}. Nothing was paid.`;
     case "awaiting_approval":
-      return `Waiting for a person to approve ${amount} because ${explain("ABOVE_APPROVAL_THRESHOLD")}. Nothing has been paid yet.`;
+      return `Needs approval: ${amount} is above the auto-approve limit, so a person decides. Nothing has been paid yet.`;
     case "rejected":
-      return `A person rejected this purchase. Nothing was paid.`;
+      return `Declined by a person. Nothing was paid.`;
     case "reserved":
     case "paying":
       return `${amount} is reserved and payment is in progress.`;
