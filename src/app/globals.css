@@ -127,25 +127,6 @@
   --color-info: var(--info);
   --color-info-tint: var(--info-tint);
 
-  /* Temporary aliases for pages not yet rebuilt (removed in phase 4). */
-  --color-ink: var(--bg);
-  --color-night: var(--surface-2);
-  --color-panel: var(--surface);
-  --color-panel-2: var(--surface-2);
-  --color-line: var(--border);
-  --color-muted: var(--text-2);
-  --color-faint: var(--text-2);
-  --color-lamp: var(--brand);
-  --color-lamp-soft: var(--info-tint);
-  --color-paid: var(--success);
-  --color-paid-soft: var(--success-tint);
-  --color-saved: var(--info);
-  --color-saved-soft: var(--info-tint);
-  --color-refused: var(--danger);
-  --color-refused-soft: var(--danger-tint);
-  --color-wait: var(--warning);
-  --color-wait-soft: var(--warning-tint);
-
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", Menlo, monospace;
 
