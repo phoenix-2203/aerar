@@ -2,6 +2,7 @@
 // Rate-limited per IP. Shows real Base Sepolia purchases made by the demo agent.
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { connection } from "next/server";
 import Link from "next/link";
 import { Suspense } from "react";
 import { PublicShell } from "@/components/ui";
@@ -29,6 +30,7 @@ export default function DemoPage({ searchParams }: PageProps<"/demo">) {
 }
 
 async function Demo({ searchParams }: { searchParams: PageProps<"/demo">["searchParams"] }) {
+  await connection(); // request-time only: the rate limiter and report window read the clock
   const rate = publicLimits().publicPages.check(clientIp(await headers()));
   if (!rate.ok)
     return (

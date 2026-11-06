@@ -2,6 +2,7 @@
 // Each "Run" plays the scenario through the real purchase pipeline in its own isolated, in-memory stage.
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { connection } from "next/server";
 import Link from "next/link";
 import { Suspense } from "react";
 import { PublicShell } from "@/components/ui";
@@ -72,6 +73,7 @@ export default function ScenariosPage() {
 
 /** Counts page views per IP; shows a notice instead of blocking the static list. Runs are limited separately. */
 async function PageLimit() {
+  await connection(); // request-time only: the rate limiter reads the clock
   const rate = publicLimits().publicPages.check(clientIp(await headers()));
   if (rate.ok) return null;
   return (
