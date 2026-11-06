@@ -1,6 +1,6 @@
 // Public (no login): run one catalogue scenario in its own isolated in-memory stage and return what happened.
 // Simulated providers only; nothing touches the real database or wallet. Rate-limited per IP, and at most
-// two runs execute at once so visitors can't overload the server.
+// four are in flight (they take turns in one sandbox) so visitors can't overload the server.
 import type { NextRequest } from "next/server";
 import { SCENARIOS } from "@/lib/scenarios";
 import { json, withErrors } from "@/lib/server/http";

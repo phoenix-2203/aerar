@@ -82,9 +82,10 @@ export function createGate(maxConcurrent: number) {
 const g = globalThis as unknown as { __aerarLimits?: ReturnType<typeof makeShared> };
 function makeShared() {
   return {
-    /** Scenario runs: each spins up an in-memory database. */
+    /** Scenario runs per IP. */
     scenarioRuns: createRateLimiter({ max: 20, windowMs: 10 * 60_000 }),
-    scenarioGate: createGate(2),
+    // Runs share one sandbox and take turns; allow a short queue, refuse beyond it.
+    scenarioGate: createGate(4),
     /** Page views of the public pages. */
     publicPages: createRateLimiter({ max: 60, windowMs: 60_000 }),
   };
