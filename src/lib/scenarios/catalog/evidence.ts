@@ -4,7 +4,7 @@ import { auditEvents } from "@/db/schema";
 import { verifyChain } from "@/lib/audit/log";
 import { updatePolicy } from "@/lib/workspace";
 import type { OnchainCheck } from "@/lib/x402/rail";
-import { defaultRules } from "@/test/helpers";
+import { defaultRules } from "@/lib/sim";
 import { play, type Scenario } from "../stage";
 
 const HOST = "https://data.example.com";

@@ -4,7 +4,7 @@
 import type { Db } from "@/db";
 import type { PolicyRules } from "@/db/schema";
 import { submitPurchase, type Purchase, type PurchaseRequest } from "@/lib/purchase/pipeline";
-import { fakeRail, world, type FakeOffer } from "@/test/helpers";
+import { fakeRail, world, type FakeOffer } from "@/lib/sim";
 import type { PayResult, Quote } from "@/lib/x402/rail";
 
 /** The problems from the README, in the same order. Every scenario answers one of them. */

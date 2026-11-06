@@ -2,7 +2,7 @@
 import { eq } from "drizzle-orm";
 import { tasks } from "@/db/schema";
 import { approvePurchase } from "@/lib/purchase/pipeline";
-import { resp } from "@/test/helpers";
+import { resp } from "@/lib/sim";
 import { play, usd, type Scenario, type Stage } from "../stage";
 
 const HOST = "https://data.example.com";
