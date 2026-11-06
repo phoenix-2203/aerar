@@ -15,6 +15,7 @@ describe("public scenario runs", () => {
     expect(body.timeline.join(" ")).toMatch(/Declined/);
     expect(body.checks.passed).toContain("the attacker's server is never contacted");
     expect(body.checks.failed).toEqual([]);
+    expect(body).toMatchObject({ plainWalletFormatted: "$0.09", aerarPaidFormatted: "$0.00" });
   });
 
   it("404s for an unknown scenario", async () => {

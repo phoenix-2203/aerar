@@ -3,6 +3,7 @@
 // four are in flight (they take turns in one sandbox) so visitors can't overload the server.
 import type { NextRequest } from "next/server";
 import { SCENARIOS } from "@/lib/scenarios";
+import { scenarioRunView } from "@/lib/scenarios/view";
 import { json, withErrors } from "@/lib/server/http";
 import { clientIp, publicLimits } from "@/lib/server/rate-limit";
 
@@ -24,15 +25,5 @@ export const POST = withErrors(async (req: NextRequest, ctx: RouteContext<"/api/
   if (!out.ok)
     return json({ error: "BUSY", message: "Other visitors are running scenarios right now. Try again in a few seconds." }, { status: 503, headers: { "retry-after": "3" } });
 
-  const r = out.value;
-  return json({
-    id: scenario.id,
-    timeline: r.timeline,
-    verdict: r.verdict,
-    checks: { passed: r.checks.passed, failed: r.checks.failures },
-    ok: r.checks.failures.length === 0,
-    payments: r.payments,
-    ms: Date.now() - started,
-    remainingRuns: rate.remaining,
-  });
+  return json({ ...scenarioRunView(scenario, out.value, Date.now() - started), remainingRuns: rate.remaining });
 });
