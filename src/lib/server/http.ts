@@ -1,3 +1,4 @@
+import { unstable_rethrow } from "next/navigation";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import type { Purchase } from "@/lib/purchase/pipeline";
@@ -26,6 +27,8 @@ export function withErrors<A extends unknown[]>(fn: (...args: A) => Promise<Resp
     try {
       return await fn(...args);
     } catch (e) {
+      // Let Next.js handle its own control-flow signals (dynamic bail-out during prerender, redirects, notFound).
+      unstable_rethrow(e);
       return errorResponse(e);
     }
   };
