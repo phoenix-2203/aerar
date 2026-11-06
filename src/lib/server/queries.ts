@@ -70,3 +70,22 @@ export async function requirePurchaseInOrg(db: Db, orgId: string, id: string) {
   if (!p) throw new PurchaseError("NOT_FOUND", "No such purchase", 404);
   return p;
 }
+
+/** Everything the purchase drawer shows: the purchase, who asked, for which task, and the exact rules it was decided under. */
+export async function getPurchaseDetail(db: Db, orgId: string, id: string) {
+  const [row] = await db
+    .select({ p: purchases, agentName: agents.name, taskTitle: tasks.title })
+    .from(purchases)
+    .innerJoin(agents, eq(agents.id, purchases.agentId))
+    .innerJoin(tasks, eq(tasks.id, purchases.taskId))
+    .where(and(eq(purchases.id, id), eq(purchases.orgId, orgId)));
+  if (!row) return null;
+  const [policy] = await db
+    .select()
+    .from(policies)
+    .where(and(eq(policies.taskId, row.p.taskId), eq(policies.version, row.p.policyVersion)));
+  return {
+    purchase: { ...purchaseView(row.p, { includeBody: true }), agentName: row.agentName, taskTitle: row.taskTitle },
+    rules: policy?.rules ?? null,
+  };
+}

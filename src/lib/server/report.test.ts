@@ -67,3 +67,17 @@ describe("morning report", () => {
     expect(windowFor("24h", morning).since.toISOString()).toBe("2026-11-06T07:30:00.000Z");
   });
 });
+
+describe("purchase detail", () => {
+  it("returns the purchase with its agent, task and the rules version it was decided under, only within the org", async () => {
+    const { getPurchaseDetail } = await import("./queries");
+    const w = await world();
+    const rail = fakeRail({ "/fx": { amount: 10_000n } });
+    const p = await submitPurchase({ db: w.db, rail }, w.agent.id, req(w.task.id, "https://data.example.com/fx?base=USD"));
+    const d = await getPurchaseDetail(w.db, w.org.id, p.id);
+    expect(d?.purchase).toMatchObject({ id: p.id, agentName: "researcher", taskTitle: "Competitor report", status: "delivered" });
+    expect(d?.purchase.responseBody).toBeTruthy();
+    expect(d?.rules?.maxPerPurchase).toBe("100000");
+    expect(await getPurchaseDetail(w.db, "org_other", p.id)).toBeNull();
+  });
+});
