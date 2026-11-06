@@ -154,7 +154,11 @@ An approved purchase is not a paid purchase, and a paid purchase is not proof th
 **Connecting**
 - **REST API** and an **MCP server** that Claude and other agents can use directly. Provider responses come back fenced and labelled as untrusted data.
 
-**Morning report** *(coming)*: the operator dashboard for the night: spend, reused, refused, waiting.
+**Morning report**
+- **The night in plain words**, built from the numbers only: what was paid and verified, what wasn't spent twice, what was refused and why, what's waiting.
+- **Approve or reject** from the report; approving re-checks the rules and re-quotes first.
+- **Per task, provider and agent**: budgets, spend, reuse and refusals, with BaseScan links for every payment.
+- **Audit log page** that recomputes the whole hash chain on every load.
 
 ## Use cases
 
@@ -208,7 +212,7 @@ Based on public documentation found on 6 Nov 2026. "Not documented" means we cou
 
 | Check | Where | Result |
 |---|---|---|
-| 59 tests: policy engine, purchase pipeline (concurrent same-key purchases and races included), agent and operator routes, MCP endpoint | `npm test` (Vitest) | all pass |
+| 63 tests: policy engine, morning report, purchase pipeline (concurrent same-key purchases and races included), agent and operator routes, MCP endpoint | `npm test` (Vitest) | all pass |
 | Provider rejection reasons (e.g. insufficient balance) recorded instead of a bare 402 | pipeline tests | pass |
 
 *More rows (live payments on Base Sepolia, browser runs) as they're done.*
@@ -236,7 +240,7 @@ flowchart TB
     end
     subgraph App["Next.js app"]
         API["Agent API /api/v1 · MCP /api/mcp"]
-        OP["Operator API (+ dashboard, coming)"]
+        OP["Operator dashboard + API"]
         PIPE["Purchase pipeline<br/>access · memory · quote · policy · reserve · pay · evidence"]
         DEMO["Demo x402 providers"]
     end
@@ -257,7 +261,9 @@ flowchart TB
 | `src/lib/x402/` | Payment rail on Base Sepolia and onchain transfer check |
 | `src/lib/audit/` | Hash-chained audit log |
 | `src/lib/mcp/` | MCP server tools |
+| `src/app/report/`, `src/app/tasks/`, `src/app/audit/` | Operator dashboard: morning report, task pages, audit log |
 | `src/app/api/` | Agent, operator, MCP and demo-provider routes |
+| `src/lib/server/report.ts` | Morning report numbers and headline |
 | `src/db/`, `drizzle/` | Schema and migrations |
 | `scripts/` | Migrate and seed |
 
@@ -342,7 +348,6 @@ Log in with `POST /api/auth/login {"password": "…"}` (sets an httpOnly, SameSi
 
 ## Roadmap
 
-- **Morning report dashboard**: the night's spend, reuse savings, refusals and approvals in one screen.
 - **Was it worth it?** Mark each purchase as used or unused when a task closes, and report useful spend per provider.
 - **Public receipt pages**: quote, policy version, BaseScan link and chain proof for any purchase, checkable by anyone.
 - **Price-drift alerts**: send a purchase to approval when a provider's quote jumps from what was last paid.
