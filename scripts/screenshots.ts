@@ -33,15 +33,17 @@ interface Shot {
   path: string;
   operator?: boolean;
   actions?: Action[];
+  /** Capture only the first screen (overlays such as the drawer are pinned to the viewport). */
+  viewportOnly?: boolean;
 }
 
 const SHOTS: Shot[] = [
   { name: "landing", path: "/" },
   { name: "scenarios", path: "/scenarios", actions: [{ click: "Run all" }, { waitText: "scenarios handled correctly", waitMs: 30000 }] },
   { name: "demo", path: "/demo" },
-  { name: "demo-drawer", path: "/demo?purchase=__DEMO__" },
+  { name: "demo-drawer", path: "/demo?purchase=__DEMO__", viewportOnly: true },
   { name: "report", path: "/report", operator: true },
-  { name: "purchase-drawer", path: "/report?purchase=__FIRST__", operator: true },
+  { name: "purchase-drawer", path: "/report?purchase=__FIRST__", operator: true, viewportOnly: true },
   { name: "task", path: "/tasks/__TASK__", operator: true },
   { name: "audit", path: "/audit", operator: true, actions: [{ click: "Verify chain" }, { waitText: "Chain intact", waitMs: 10000 }] },
   { name: "login", path: "/login" },
@@ -148,7 +150,7 @@ async function shoot(shot: Shot, size: (typeof SIZES)[number], theme: (typeof TH
       console.warn(`  ! ${shot.name} ${size.w}px: horizontal overflow of ${overflowX}px: ${culprits.join(" | ")}`);
     }
     const y = Math.min(CLIP_Y, Math.max(0, Math.ceil(cssContentSize.height) - 1));
-    const height = Math.min(Math.ceil(cssContentSize.height) - y, CLIP_H ?? 12000, 12000);
+    const height = shot.viewportOnly ? size.h : Math.min(Math.ceil(cssContentSize.height) - y, CLIP_H ?? 12000, 12000);
     const { data } = await c.send<{ data: string }>("Page.captureScreenshot", {
       format: "png",
       captureBeyondViewport: true,
