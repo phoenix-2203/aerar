@@ -417,6 +417,9 @@ export async function execute(ctx: Ctx, purchaseId: string): Promise<Purchase> {
   const paid = result.amount ?? p.reservedAmount;
   const delivered = await db.transaction(async (tx) => {
     const t = tx as unknown as Db;
+    // Lock order everywhere: task row first, then the purchase row. reserve() does the same; the opposite order
+    // deadlocks on Postgres when a duplicate request is reserving while this one settles.
+    await t.select({ id: tasks.id }).from(tasks).where(eq(tasks.id, p.taskId)).for("update");
     const [row] = await t
       .update(purchases)
       .set({
@@ -460,6 +463,7 @@ export async function execute(ctx: Ctx, purchaseId: string): Promise<Purchase> {
 async function release(ctx: Ctx, p: Purchase, status: PurchaseStatus, code: string, reason: string, extra: Partial<NewPurchase> = {}) {
   return ctx.db.transaction(async (tx) => {
     const t = tx as unknown as Db;
+    await t.select({ id: tasks.id }).from(tasks).where(eq(tasks.id, p.taskId)).for("update"); // task first (see execute)
     const [row] = await t
       .update(purchases)
       .set({ status, reasonCodes: [...p.reasonCodes, code], error: reason, updatedAt: new Date(), ...extra })
