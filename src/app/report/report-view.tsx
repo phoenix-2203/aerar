@@ -121,7 +121,8 @@ export function ReportView({ r, w, mode, q }: { r: Report; w: Window; mode: View
         </div>
       </section>
 
-      {/* Purchases */}
+      {/* Purchases + side column */}
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
       <Card title={`Purchases${taskTitle ? ` for ${taskTitle}` : ""}`} aside={`${rows.length} of ${r.timeline.length}`} bodyClassName="p-0">
         <div className="flex flex-wrap items-center gap-1.5 border-b border-border px-4 py-2.5 sm:px-5">
           <ListFilter className="mr-1 size-4 text-text-2" aria-hidden />
@@ -180,51 +181,50 @@ export function ReportView({ r, w, mode, q }: { r: Report; w: Window; mode: View
           </ul>
         )}
       </Card>
-
-      {/* Why, providers, agents */}
-      <div className="grid gap-4 lg:grid-cols-3">
+        <aside className="space-y-4">
+        {/* Tasks */}
+        <section id="tasks" className="scroll-mt-20" aria-labelledby="tasks-h">
+          <h2 id="tasks-h" className="text-sm font-semibold">
+            Task budgets
+          </h2>
+          <div className="mt-3 grid gap-3">
+            {r.tasks.map((task) => (
+              <TaskBox key={task.id} id={task.id} mode={mode}>
+                <div className="mb-3 min-w-0">
+                  <div className="truncate font-medium">{task.title}</div>
+                  <div className="text-xs text-text-2">
+                    <span className="capitalize">{task.status}</span> · {plural(task.counts.total, "purchase")} · {task.avoidedByReuseFormatted} saved by reuse
+                  </div>
+                </div>
+                <BudgetMeter budget={task.money.budget} spent={task.money.spent} reserved={task.money.reserved} formatted={task.money.formatted} compact />
+              </TaskBox>
+            ))}
+            {r.tasks.length === 0 && <p className="text-sm text-text-2">No tasks yet.</p>}
+          </div>
+        </section>
         <Card title="Why purchases were declined">
-          {r.reasons.length === 0 ? (
-            <p className="text-sm text-text-2">Nothing was declined.</p>
-          ) : (
-            <ul className="space-y-2.5 text-sm">
-              {r.reasons.map((x) => (
-                <li key={x.code} className="flex items-start justify-between gap-3">
-                  <span className="first-letter:uppercase">{x.explanation}</span>
-                  <span className="tabular shrink-0 text-text-2">×{x.count}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-        <Card title="Providers">
-          <Rows rows={r.providers.map((p) => ({ k: p.host, mono: true, v: p.paidFormatted, sub: `${plural(p.purchases, "request")} · ${p.reused} reused · ${p.refused} declined` }))} empty="No providers contacted." />
-        </Card>
-        <Card title="Agents">
-          <Rows rows={r.agents.map((a) => ({ k: a.name, v: a.paidFormatted, sub: `${plural(a.purchases, "request")} · ${a.refused} declined` }))} empty="No agent activity." />
-        </Card>
+            {r.reasons.length === 0 ? (
+              <p className="text-sm text-text-2">Nothing was declined.</p>
+            ) : (
+              <ul className="space-y-2.5 text-sm">
+                {r.reasons.map((x) => (
+                  <li key={x.code} className="flex items-start justify-between gap-3">
+                    <span className="first-letter:uppercase">{x.explanation}</span>
+                    <span className="tabular shrink-0 text-text-2">×{x.count}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+          <Card title="Providers">
+            <Rows rows={r.providers.map((p) => ({ k: p.host, mono: true, v: p.paidFormatted, sub: `${plural(p.purchases, "request")} · ${p.reused} reused · ${p.refused} declined` }))} empty="No providers contacted." />
+          </Card>
+          <Card title="Agents">
+            <Rows rows={r.agents.map((a) => ({ k: a.name, v: a.paidFormatted, sub: `${plural(a.purchases, "request")} · ${a.refused} declined` }))} empty="No agent activity." />
+          </Card>
+        </aside>
       </div>
 
-      {/* Tasks */}
-      <section id="tasks" className="scroll-mt-20" aria-labelledby="tasks-h">
-        <h2 id="tasks-h" className="text-base font-semibold">
-          Task budgets
-        </h2>
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
-          {r.tasks.map((task) => (
-            <TaskBox key={task.id} id={task.id} mode={mode}>
-              <div className="mb-3 min-w-0">
-                <div className="truncate font-medium">{task.title}</div>
-                <div className="text-xs text-text-2">
-                  <span className="capitalize">{task.status}</span> · {plural(task.counts.total, "purchase")} · {task.avoidedByReuseFormatted} saved by reuse
-                </div>
-              </div>
-              <BudgetMeter budget={task.money.budget} spent={task.money.spent} reserved={task.money.reserved} formatted={task.money.formatted} compact />
-            </TaskBox>
-          ))}
-          {r.tasks.length === 0 && <p className="text-sm text-text-2">No tasks yet.</p>}
-        </div>
-      </section>
     </div>
   );
 }

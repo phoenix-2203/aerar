@@ -30,7 +30,7 @@ export function ApprovalCard({ item, readOnly = false }: { item: ApprovalItem; r
   const simulated = /\[simulated\]/i.test(item.purpose);
   const purpose = item.purpose.replace(/\s*\[simulated\]\s*/gi, " ").trim();
   return (
-    <article className="relative overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+    <article className="relative overflow-hidden rounded-xl border border-warning/45 bg-surface shadow-card">
       <span className="absolute inset-y-0 left-0 w-1 bg-warning" aria-hidden />
       <div className="flex flex-col gap-4 p-4 pl-5 sm:flex-row sm:items-center sm:justify-between sm:p-5 sm:pl-6">
         <div className="flex min-w-0 gap-4">

@@ -15,7 +15,7 @@ export function BudgetMeter({
   const used = spent + reserved;
   const pct = (x: bigint) => (budget > 0n ? Math.min(100, Number((x * 10000n) / budget) / 100) : 0);
   const usedPct = pct(used);
-  const tone = usedPct >= 100 ? "bg-danger" : usedPct >= 80 ? "bg-warning" : "bg-success";
+  const tone = usedPct >= 100 ? "bg-danger" : usedPct >= 80 ? "bg-warning" : "bg-accent";
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
