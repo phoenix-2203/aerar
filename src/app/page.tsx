@@ -23,6 +23,7 @@ export default function Home() {
         <Logo className="text-lg" />
         <nav className="flex items-center gap-5 text-sm">
           <a href="https://github.com/phoenix-2203/aerar" className="text-muted hover:text-text">GitHub</a>
+          <Link href="/scenarios" className="text-muted hover:text-text">Scenarios</Link>
           <Link href="/report" className="rounded-lg border border-line px-3 py-1.5 hover:border-lamp/50">Operator login</Link>
         </nav>
       </header>
@@ -37,10 +38,13 @@ export default function Home() {
               which task each purchase was for, whether it was allowed, whether you already had it, and proof that you paid exactly what was quoted.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/report" className="rounded-lg bg-lamp px-5 py-2.5 font-medium text-ink transition hover:brightness-110">Open the morning report</Link>
-              <a href="#connect" className="rounded-lg border border-line px-5 py-2.5 transition hover:border-lamp/50">Connect an agent</a>
+              <Link href="/scenarios#injection" className="rounded-lg bg-lamp px-5 py-2.5 font-medium text-ink transition hover:brightness-110">See it handle an attack</Link>
+              <Link href="/demo" className="rounded-lg border border-line px-5 py-2.5 transition hover:border-lamp/50">See last night&apos;s report</Link>
             </div>
-            <p className="mt-4 text-sm text-faint">Testnet only: settles in USDC on Base Sepolia.</p>
+            <p className="mt-4 text-sm text-faint">
+              No login or wallet needed. Testnet only: settles in USDC on Base Sepolia.{" "}
+              <a href="#connect" className="text-muted hover:text-text">Connect an agent ↓</a>
+            </p>
           </div>
 
           <div className="rounded-2xl border border-line bg-panel/80 p-5 shadow-2xl shadow-black/30">
