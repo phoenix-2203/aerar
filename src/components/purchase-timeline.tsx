@@ -26,7 +26,7 @@ export function PurchaseTimeline({ purchase, steps }: { purchase?: PurchaseLike;
                 <span className="font-medium">{s.title}</span>
                 <span className={`text-xs ${st.cls}`}>{st.label}</span>
               </div>
-              <p className="text-[13px] text-text-2">{s.detail}</p>
+              {s.state !== "skipped" && <p className="text-[13px] text-text-2">{s.detail}</p>}
             </div>
           </li>
         );
