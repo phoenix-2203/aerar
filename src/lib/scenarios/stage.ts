@@ -87,6 +87,22 @@ export interface Scenario {
   run(): Promise<ScenarioResult>;
 }
 
+/**
+ * Run one scenario body on a fresh stage. The body logs what happens (`log`), grades itself (`check`)
+ * and returns the verdict line.
+ */
+export async function play(
+  opts: StageOptions,
+  body: (s: Stage, log: (line: string | Purchase) => void, check: Checks) => Promise<string>,
+): Promise<ScenarioResult> {
+  const s = await createStage(opts);
+  const timeline: string[] = [];
+  const checks = new Checks();
+  const log = (line: string | Purchase) => timeline.push(typeof line === "string" ? line : describe(line));
+  const verdict = await body(s, log, checks);
+  return { timeline, verdict, checks, payments: s.rail.calls.pay.length };
+}
+
 const usd = (atomic: bigint | null | undefined) => `$${(Number(atomic ?? 0n) / 1e6).toFixed(2)}`;
 export { usd };
 
