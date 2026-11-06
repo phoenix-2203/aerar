@@ -3,7 +3,11 @@
 import { refresh } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { and, eq } from "drizzle-orm";
+import { agents, tasks } from "@/db/schema";
+import { verifyChain } from "@/lib/audit/log";
 import { approvePurchase, PurchaseError, rejectPurchase } from "@/lib/purchase/pipeline";
+import { revokeAgent, setTaskStatus } from "@/lib/workspace";
 import { checkPassword, issueSession, loginThrottle, SESSION_COOKIE, SESSION_TTL_SECONDS } from "@/lib/server/auth";
 import { getContext, getDbOnly, operatorOrgId } from "@/lib/server/context";
 import { summarise } from "@/lib/server/http";
@@ -76,4 +80,35 @@ export async function approve(id: string): Promise<ActionState> {
 
 export async function reject(id: string): Promise<ActionState> {
   return decide("reject", id);
+}
+
+/** Pause or resume a task: while paused, every purchase for it is declined. */
+export async function setTaskActive(taskId: string, active: boolean): Promise<ActionState> {
+  if (!(await isOperator())) return { error: "Your session ended. Sign in again." };
+  const db = await getDbOnly();
+  const [t] = await db.select().from(tasks).where(and(eq(tasks.id, taskId), eq(tasks.orgId, operatorOrgId())));
+  if (!t) return { error: "No such task." };
+  if (t.status === "closed") return { error: "This task is closed." };
+  await setTaskStatus(db, taskId, active ? "active" : "paused", "operator");
+  refresh();
+  return { done: active ? "Task resumed. Agents can buy again within its rules." : "Task paused. Every purchase for it is declined until you resume it." };
+}
+
+/** Revoke an agent's key. It stays off: there is no un-revoke; create a new agent instead. */
+export async function revokeAgentKey(agentId: string): Promise<ActionState> {
+  if (!(await isOperator())) return { error: "Your session ended. Sign in again." };
+  const db = await getDbOnly();
+  const [a] = await db.select().from(agents).where(and(eq(agents.id, agentId), eq(agents.orgId, operatorOrgId())));
+  if (!a) return { error: "No such agent." };
+  if (a.revokedAt) return { done: "This key was already revoked." };
+  await revokeAgent(db, agentId, "operator");
+  refresh();
+  return { done: `${a.name}'s key is revoked. It stays off; any further request is declined.` };
+}
+
+/** Recompute the audit chain now. */
+export async function verifyAuditChain(): Promise<{ ok: boolean; count: number; brokenAt: number | null; at: string } | { error: string }> {
+  if (!(await isOperator())) return { error: "Your session ended. Sign in again." };
+  const r = await verifyChain(await getDbOnly(), operatorOrgId());
+  return { ...r, at: new Date().toISOString() };
 }
