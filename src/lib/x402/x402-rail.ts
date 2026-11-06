@@ -33,6 +33,23 @@ function toRequest(req: HttpRequestSpec, extra: Record<string, string> = {}): Re
   });
 }
 
+/** x402 v2 answers a rejected payment with a fresh 402 whose `error` says why (e.g. insufficient_funds). */
+function rejectionReason(http: x402HTTPClient, res: Response, captured: CapturedResponse): string | null {
+  if (res.status !== 402) return null;
+  try {
+    let body: unknown;
+    try {
+      body = JSON.parse(new TextDecoder().decode(captured.body));
+    } catch {
+      body = undefined;
+    }
+    const pr = http.getPaymentRequiredResponse((n) => res.headers.get(n), body);
+    return pr.error ? `Provider rejected the payment: ${pr.error}` : null;
+  } catch {
+    return null;
+  }
+}
+
 export function toQuote(r: PaymentRequirements, raw: PaymentRequired): Quote {
   return { scheme: r.scheme, network: r.network, asset: r.asset, amount: BigInt(r.amount), payTo: r.payTo, raw };
 }
@@ -113,7 +130,7 @@ export function createX402Rail(opts: { privateKey: Hex; rpcUrl?: string; fetch?:
       return {
         kind: "not_settled",
         response,
-        reason: settle?.errorReason ?? `Provider responded ${res.status}`,
+        reason: settle?.errorReason ?? rejectionReason(http, res, response) ?? `Provider responded ${res.status}`,
       };
     },
 
