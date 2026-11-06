@@ -7,7 +7,7 @@ const STATE: Record<StepState, { icon: typeof CheckCircle2; cls: string; label: 
   failed: { icon: XCircle, cls: "text-danger", label: "Stopped here" },
   held: { icon: Clock, cls: "text-warning", label: "Held for a person" },
   pending: { icon: Loader2, cls: "text-text-2", label: "In progress" },
-  skipped: { icon: MinusCircle, cls: "text-text-2/60", label: "Not reached" },
+  skipped: { icon: MinusCircle, cls: "text-text-2", label: "Not reached" },
 };
 
 export function PurchaseTimeline({ purchase, steps }: { purchase?: PurchaseLike; steps?: Step[] }) {
@@ -21,9 +21,9 @@ export function PurchaseTimeline({ purchase, steps }: { purchase?: PurchaseLike;
           <li key={s.id} className="relative flex gap-3 pb-4 last:pb-0">
             {i < list.length - 1 && <span className="absolute left-[9px] top-6 h-[calc(100%-20px)] w-px bg-border" aria-hidden />}
             <Icon className={`relative mt-0.5 size-[18px] shrink-0 ${st.cls} ${s.state === "pending" ? "animate-spin" : ""}`} aria-hidden />
-            <div className={`min-w-0 ${s.state === "skipped" ? "opacity-60" : ""}`}>
+            <div className="min-w-0">
               <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
-                <span className="font-medium">{s.title}</span>
+                <span className={s.state === "skipped" ? "text-text-2" : "font-medium"}>{s.title}</span>
                 <span className={`text-xs ${st.cls}`}>{st.label}</span>
               </div>
               {s.state !== "skipped" && <p className="text-[13px] text-text-2">{s.detail}</p>}

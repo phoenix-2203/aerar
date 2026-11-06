@@ -43,7 +43,7 @@ export default function ScenariosPage() {
       <nav className="-mx-4 mt-6 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0" aria-label="Problems">
         {groups.map((g) => (
           <a key={g.id} href={`#${g.id}`} className="shrink-0 rounded-full border border-border px-3 py-1 text-[13px] text-text-2 transition-colors hover:border-border-strong hover:text-text">
-            {g.title} <span className="tabular text-text-2/70">· {g.scenarios.length}</span>
+            {g.title} <span className="tabular">· {g.scenarios.length}</span>
           </a>
         ))}
       </nav>
