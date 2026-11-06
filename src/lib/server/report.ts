@@ -123,6 +123,19 @@ export async function morningReport(db: Db, orgId: string, w: ReportWindow) {
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
+/**
+ * The one-sentence summary at the top of the report, e.g.
+ * "Overnight your agents paid $0.30, reused $0.20, and 1 purchase needs you."
+ */
+export function lead(t: Totals, when = "Overnight"): string {
+  if (t.purchases === 0 && t.waiting === 0) return `${when} your agents didn't try to buy anything.`;
+  const parts = [`paid ${t.formatted.spent}`];
+  if (t.saved > 0n) parts.push(`reused ${t.formatted.saved}`);
+  if (t.refused > 0) parts.push(`declined ${plural(t.refused, "purchase")}`);
+  const needs = t.waiting > 0 ? `${plural(t.waiting, "purchase")} ${t.waiting === 1 ? "needs" : "need"} you` : "nothing needs you";
+  return `${when} your agents ${parts.join(", ")}, and ${needs}.`;
+}
+
 /** A few plain sentences, built from the numbers only (no AI), so they're always accurate. */
 export function headline(t: Totals, reasons: { code: string; count: number; explanation: string }[]): string[] {
   if (t.purchases === 0 && t.waiting === 0) return ["A quiet shift: your agents didn't try to buy anything."];
@@ -136,9 +149,9 @@ export function headline(t: Totals, reasons: { code: string; count: number; expl
   if (t.reused > 0) out.push(`${plural(t.reused, "request")} matched something already bought, so ${t.formatted.saved} wasn't spent twice.`);
   if (t.refused > 0) {
     const top = reasons[0];
-    out.push(`${plural(t.refused, "purchase")} ${t.refused === 1 ? "was" : "were"} refused${t.blocked > 0n ? ` (${t.formatted.blocked} in quotes)` : ""}${top ? `; most often because ${top.explanation}` : ""}.`);
+    out.push(`${plural(t.refused, "purchase")} ${t.refused === 1 ? "was" : "were"} declined${t.blocked > 0n ? ` (${t.formatted.blocked} in quotes)` : ""}${top ? `; most often because ${top.explanation}` : ""}.`);
   }
   if (t.failed > 0) out.push(`${plural(t.failed, "payment")} didn't go through and ${t.failed === 1 ? "needs" : "need"} a look.`);
-  if (t.waiting > 0) out.push(`${plural(t.waiting, "purchase")} ${t.waiting === 1 ? "is" : "are"} waiting for you to approve or reject.`);
+  if (t.waiting > 0) out.push(`${plural(t.waiting, "purchase")} ${t.waiting === 1 ? "needs" : "need"} your approval.`);
   return out;
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { submitPurchase, type PurchaseRequest } from "@/lib/purchase/pipeline";
 import { fakeRail, world } from "@/test/helpers";
-import { headline, morningReport, windowFor } from "./report";
+import { headline, lead, morningReport, windowFor } from "./report";
 
 let n = 0;
 const req = (taskId: string, url: string, over: Partial<PurchaseRequest> = {}): PurchaseRequest => ({
@@ -37,7 +37,8 @@ describe("morning report", () => {
     expect(r.agents.find((a) => a.name === "researcher")).toMatchObject({ purchases: 2, paid: 10_000n, refused: 1 });
     expect(r.headline.join(" ")).toMatch(/paid \$0\.01 for 1 delivery, every transfer checked onchain/);
     expect(r.headline.join(" ")).toMatch(/wasn't spent twice/);
-    expect(r.headline.join(" ")).toMatch(/waiting for you/);
+    expect(r.headline.join(" ")).toMatch(/needs your approval/);
+    expect(lead(r.totals)).toBe("Overnight your agents paid $0.01, reused $0.01, declined 1 purchase, and 1 purchase needs you.");
   });
 
   it("only counts purchases inside the window, but always shows what's waiting", async () => {
@@ -48,12 +49,14 @@ describe("morning report", () => {
     const r = await morningReport(w.db, w.org.id, future);
     expect(r.totals.purchases).toBe(0);
     expect(r.waiting).toHaveLength(1);
-    expect(r.headline).toEqual(["1 purchase is waiting for you to approve or reject."]);
+    expect(r.headline).toEqual(["1 purchase needs your approval."]);
   });
 
   it("says so when nothing happened", () => {
     const zero = { purchases: 0, delivered: 0, reused: 0, refused: 0, failed: 0, waiting: 0, spent: 0n, saved: 0n, blocked: 0n, verified: 0, formatted: { spent: "$0.00", saved: "$0.00", blocked: "$0.00" } };
     expect(headline(zero, [])[0]).toMatch(/quiet shift/);
+    expect(lead(zero)).toBe("Overnight your agents didn't try to buy anything.");
+    expect(lead({ ...zero, purchases: 3, spent: 300_000n, formatted: { ...zero.formatted, spent: "$0.30" } }, "This week")).toBe("This week your agents paid $0.30, and nothing needs you.");
   });
 
   it("defaults to the night since 18:00 UTC", () => {
