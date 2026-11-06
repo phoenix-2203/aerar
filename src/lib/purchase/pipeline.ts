@@ -512,7 +512,7 @@ export async function approvePurchase(ctx: Ctx, purchaseId: string, approver: st
   return execute(ctx, r.id);
 }
 
-export async function rejectPurchase(ctx: Ctx, purchaseId: string, by: string, note?: string): Promise<Purchase> {
+export async function rejectPurchase(ctx: Pick<Ctx, "db">, purchaseId: string, by: string, note?: string): Promise<Purchase> {
   return ctx.db.transaction(async (tx) => {
     const t = tx as unknown as Db;
     const [row] = await t

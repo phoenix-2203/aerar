@@ -176,7 +176,7 @@ describe("purchase pipeline", () => {
     const w = await world();
     const rail = fakeRail({ "/fx": { amount: 60_000n } });
     const p = await submitPurchase({ db: w.db, rail }, w.agent.id, req({ taskId: w.task.id }));
-    const r = await rejectPurchase({ db: w.db, rail }, p.id, "ops", "not needed");
+    const r = await rejectPurchase({ db: w.db }, p.id, "ops", "not needed");
     expect(r.status).toBe("rejected");
     expect(rail.calls.pay).toHaveLength(0);
   });
