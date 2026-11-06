@@ -7,6 +7,7 @@ import { tasks, type PolicyRules } from "@/db/schema";
 import { submitPurchase, type Purchase, type PurchaseRequest } from "@/lib/purchase/pipeline";
 import { fakeRail, world, type FakeOffer } from "@/lib/sim";
 import { leaseSandbox } from "@/lib/sim/sandbox";
+import { blockingReasons, explain } from "@/lib/copy/reasons";
 import type { PayResult, Quote } from "@/lib/x402/rail";
 
 /** The problems from the README, in the same order. Every scenario answers one of them. */
@@ -158,6 +159,12 @@ const usd = (atomic: bigint | null | undefined) => `$${(Number(atomic ?? 0n) / 1
 export { usd };
 
 /** One timeline line for a purchase, in the words the dashboard uses. */
+/** The plain-English reasons a purchase was stopped (shared copy), never the engine's raw strings. */
+function why(p: Purchase) {
+  const codes = blockingReasons(p.reasonCodes);
+  return codes.length ? codes.map(explain).join("; ") : (p.error ?? "a rule check failed");
+}
+
 export function describe(p: Purchase): string {
   const price = usd(p.quoteAmount);
   switch (p.status) {
@@ -166,13 +173,13 @@ export function describe(p: Purchase): string {
     case "reused":
       return `Reused an earlier purchase: paid $0.00, avoided ${price}`;
     case "awaiting_approval":
-      return `Held for a person to approve (${price})`;
+      return `Needs approval: ${price} is above the auto-approve limit`;
     case "declined":
-      return `Declined, nothing paid: ${p.error ?? p.reasonCodes.join(", ")}`;
+      return `Declined: ${why(p)}. Nothing paid`;
     case "rejected":
-      return `Rejected by a person, nothing paid`;
+      return `Declined by a person. Nothing paid`;
     case "payment_failed":
-      return `Not paid: ${p.error ?? p.reasonCodes.at(-1)}`;
+      return `Not paid: ${why(p)}. Budget released`;
     case "free":
       return `Free resource, nothing to pay`;
     default:

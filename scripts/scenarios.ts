@@ -37,7 +37,7 @@ function wrap(text: string, width = 88, indent = "   ") {
 function tone(line: string) {
   if (/^(Paid|Reused|Returned)/.test(line)) return green(line);
   if (/^(Declined|Rejected|Not paid)/.test(line)) return red(line);
-  if (/^Held/.test(line) || /^unknown/.test(line)) return yellow(line);
+  if (/^(Held|Needs approval|unknown)/.test(line)) return yellow(line);
   if (/BROKEN|FAILED|BAD/.test(line)) return red(line);
   return line;
 }
