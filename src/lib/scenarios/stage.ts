@@ -2,7 +2,8 @@
 // in which one real-world situation is played through the real purchase pipeline.
 // Used by the scenario tests, the night-shift simulation script and the demo page.
 import type { Db } from "@/db";
-import type { PolicyRules } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { tasks, type PolicyRules } from "@/db/schema";
 import { submitPurchase, type Purchase, type PurchaseRequest } from "@/lib/purchase/pipeline";
 import { fakeRail, world, type FakeOffer } from "@/lib/sim";
 import { leaseSandbox } from "@/lib/sim/sandbox";
@@ -45,13 +46,32 @@ export async function createStage(opts: StageOptions = {}) {
   const ctx = { db: w.db as Db, rail };
   const agentIds = { researcher: w.agent.id, analyst: w.agent2.id } as const;
 
+  /**
+   * What a plain agent wallet (one that pays every 402 it is shown) would have paid for the requests in this stage.
+   * Requests whose payment would only settle on delivery anyway can opt out with `plainWalletPays: false`.
+   */
+  let plainWallet = 0n;
+  const offers = opts.offers ?? {};
+  function priceOf(url: string): bigint {
+    let o = offers[url];
+    try {
+      const u = new URL(url);
+      o ??= offers[u.toString()] ?? offers[u.pathname];
+    } catch {
+      /* not a URL: nothing to pay */
+    }
+    return o && o !== "free" ? o.amount : 0n;
+  }
+
   /** An agent asks Aerar to buy something. Everything the agent says is just data to Aerar. */
   async function buy(
     agent: keyof typeof agentIds,
     url: string,
-    over: Partial<Omit<PurchaseRequest, "url" | "taskId">> & { taskId?: string } = {},
+    over: Partial<Omit<PurchaseRequest, "url" | "taskId">> & { taskId?: string; now?: Date; plainWalletPays?: boolean } = {},
   ): Promise<Purchase> {
-    return submitPurchase(ctx, agentIds[agent], {
+    if (over.plainWalletPays !== false) plainWallet += priceOf(url);
+    const c = over.now ? { ...ctx, now: () => over.now! } : ctx;
+    return submitPurchase(c, agentIds[agent], {
       taskId: over.taskId ?? w.task.id,
       url,
       method: over.method ?? "GET",
@@ -69,7 +89,13 @@ export async function createStage(opts: StageOptions = {}) {
     lease.release();
   }
 
-  return { ...w, rail, ctx, agentIds, buy, close };
+  /** Confirmed spend on the task (delivered payments only). */
+  async function spent(): Promise<bigint> {
+    const [t] = await w.db.select().from(tasks).where(eq(tasks.id, w.task.id));
+    return t?.spent ?? 0n;
+  }
+
+  return { ...w, rail, ctx, agentIds, buy, close, spent, plainWalletPaid: () => plainWallet };
 }
 
 /** Collects pass/fail checks so a scenario can grade itself in tests and in the live narration. */
@@ -90,6 +116,10 @@ export interface ScenarioResult {
   checks: Checks;
   /** Real payments the simulated network received. */
   payments: number;
+  /** What a wallet that pays every 402 it is shown would have paid (atomic USDC). */
+  plainWallet: bigint;
+  /** What Aerar actually paid (confirmed, atomic USDC). */
+  aerarPaid: bigint;
 }
 
 export interface Scenario {
@@ -118,7 +148,7 @@ export async function play(
     const checks = new Checks();
     const log = (line: string | Purchase) => timeline.push(typeof line === "string" ? line : describe(line));
     const verdict = await body(s, log, checks);
-    return { timeline, verdict, checks, payments: s.rail.calls.pay.length };
+    return { timeline, verdict, checks, payments: s.rail.calls.pay.length, plainWallet: s.plainWalletPaid(), aerarPaid: await s.spent() };
   } finally {
     await s.close();
   }
