@@ -11,7 +11,9 @@
     "typecheck": "next typegen && tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env --import tsx scripts/migrate.ts",
-    "seed": "node --env-file-if-exists=.env --import tsx scripts/seed.ts"
+    "seed": "node --env-file-if-exists=.env --import tsx scripts/seed.ts",
+    "scenarios": "node --import tsx scripts/scenarios.ts",
+    "test:scenarios": "vitest run src/lib/scenarios"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.31.0",
