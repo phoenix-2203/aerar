@@ -66,10 +66,10 @@ async function decide(kind: "approve" | "reject", id: string): Promise<ActionSta
   }
 }
 
-export async function approve(id: string, _prev: ActionState): Promise<ActionState> {
+export async function approve(id: string): Promise<ActionState> {
   return decide("approve", id);
 }
 
-export async function reject(id: string, _prev: ActionState): Promise<ActionState> {
+export async function reject(id: string): Promise<ActionState> {
   return decide("reject", id);
 }
