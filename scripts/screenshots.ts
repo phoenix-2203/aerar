@@ -3,6 +3,7 @@
 //
 //   npm run screenshots -- --base http://localhost:3311              all shots, 375 and 1440 px, light and dark
 //   npm run screenshots -- --base http://localhost:3311 --only demo  one shot by name
+//   ... --y 0 --height 1200                                            only a section of the page
 //
 // Operator pages need a session: the script signs one with SESSION_SECRET from your local .env (never printed).
 // Use it against a local instance; it does not log in to remote servers.
@@ -20,6 +21,9 @@ const flag = (n: string) => {
 const BASE = flag("base") ?? "http://localhost:3311";
 const ONLY = flag("only");
 const OUT = flag("out") ?? "docs/screenshots";
+/** Optional section: start at --y and capture at most --height CSS pixels (for close-up reviews). */
+const CLIP_Y = Number(flag("y") ?? 0);
+const CLIP_H = flag("height") ? Number(flag("height")) : undefined;
 const CHROME = process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const PORT = 9333;
 
@@ -135,11 +139,12 @@ async function shoot(shot: Shot, size: (typeof SIZES)[number], theme: (typeof TH
     const { cssContentSize } = await c.send<{ cssContentSize: { width: number; height: number } }>("Page.getLayoutMetrics");
     const overflowX = await evaluate<number>(c, "document.documentElement.scrollWidth - document.documentElement.clientWidth");
     if (overflowX > 0) console.warn(`  ! ${shot.name} ${size.w}px: horizontal overflow of ${overflowX}px`);
-    const height = Math.min(Math.ceil(cssContentSize.height), 12000);
+    const y = Math.min(CLIP_Y, Math.max(0, Math.ceil(cssContentSize.height) - 1));
+    const height = Math.min(Math.ceil(cssContentSize.height) - y, CLIP_H ?? 12000, 12000);
     const { data } = await c.send<{ data: string }>("Page.captureScreenshot", {
       format: "png",
       captureBeyondViewport: true,
-      clip: { x: 0, y: 0, width: size.w, height, scale: 1 },
+      clip: { x: 0, y, width: size.w, height, scale: 1 },
     });
     const file = path.join(OUT, `${shot.name}-${size.w}-${theme}.png`);
     writeFileSync(file, Buffer.from(data, "base64"));
