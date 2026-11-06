@@ -147,16 +147,12 @@ async function shoot(shot: Shot, size: (typeof SIZES)[number], theme: (typeof TH
   }
 }
 
-/** Fill in ids the operator shots need (first purchase, first task) from the local database. */
+/** Fill in ids the operator shots need (a purchase, a task) from the report page itself, over HTTP. */
 async function resolveIds(): Promise<Record<string, string>> {
-  const { getDb, closeDb } = await import("@/db");
-  const { purchases, tasks } = await import("@/db/schema");
-  const { desc } = await import("drizzle-orm");
-  const db = await getDb();
-  const [p] = await db.select({ id: purchases.id }).from(purchases).orderBy(desc(purchases.createdAt)).limit(1);
-  const [t] = await db.select({ id: tasks.id }).from(tasks).limit(1);
-  await closeDb();
-  return { __FIRST__: p?.id ?? "none", __TASK__: t?.id ?? "none" };
+  const html = await fetch(`${BASE}/report?period=7d`, { headers: { cookie: `${SESSION_COOKIE}=${issueSession()}` } }).then((r) => r.text());
+  const purchase = html.match(/[?&]purchase=(pur_[A-Za-z0-9_-]+)/)?.[1];
+  const task = html.match(/\/tasks\/(tsk_[A-Za-z0-9_-]+)/)?.[1];
+  return { __FIRST__: purchase ?? "none", __TASK__: task ?? "none" };
 }
 
 async function main() {
