@@ -1,27 +1,31 @@
 @import "tailwindcss";
 
-/* Theme follows data-theme on <html> (set before paint by the script in layout.tsx). Without JS: dark, or light
-   when the system asks for it. */
+/* Theme follows data-theme on <html>; accent follows data-accent ("brass" default, or "blue" for Base Blue).
+   Both are set before first paint by the script in layout.tsx. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /*
- * Ink and brass (docs/design-brief.md). All text pairs meet WCAG AA in both themes.
- * Brand (night blue) is for the one primary action per screen; brass only for the logo and small highlights;
- * success / warning / danger / info only for statuses.
+ * Neutral ink surfaces (Linear/Vercel-like), one accent. The primary action is ink-on-paper (inverted text colour);
+ * the accent is for the logo's newest record, highlights and focus. Status colours only for statuses.
+ * Every text pair meets WCAG AA in both themes.
  */
 :root,
 :root[data-theme="light"] {
-  --bg: #f6f6f3;
+  --bg: #fafaf9;
   --surface: #ffffff;
-  --surface-2: #efefea;
-  --border: #e3e3de;
-  --border-strong: #cfcfc8;
-  --text: #15171c;
-  --text-2: #5a6070;
-  --brand: #2f45b8;
-  --brand-hover: #263a9e;
-  --on-brand: #ffffff;
-  --brass: #8a5e17;
+  --surface-2: #f3f3f1;
+  --surface-3: #ebebe8;
+  --border: #e7e7e4;
+  --border-strong: #d4d4cf;
+  --text: #111215;
+  --text-2: #5b616e;
+  --text-3: #6b7180;
+  --primary: #111215;
+  --primary-hover: #2a2c31;
+  --on-primary: #ffffff;
+  --accent: #8a5e17;
+  --accent-tint: #f6eddc;
+  --on-accent: #ffffff;
   --success: #15734a;
   --success-tint: #e6f4ec;
   --warning: #9a5800;
@@ -30,94 +34,73 @@
   --danger-tint: #fbe8e6;
   --info: #1f5fae;
   --info-tint: #e7effa;
-  --shadow: 0 1px 2px rgb(21 23 28 / 0.06), 0 4px 16px rgb(21 23 28 / 0.06);
+  --shadow: 0 1px 2px rgb(17 18 21 / 0.05), 0 2px 8px rgb(17 18 21 / 0.04);
+  --shadow-lg: 0 1px 2px rgb(17 18 21 / 0.06), 0 12px 40px -8px rgb(17 18 21 / 0.14);
+  --grid-line: rgb(17 18 21 / 0.05);
   color-scheme: light;
 }
-
-:root[data-theme="dark"] {
-  --bg: #0a0d14;
-  --surface: #121722;
-  --surface-2: #1a2030;
-  --border: #252c3b;
-  --border-strong: #343d50;
-  --text: #e9ebf1;
-  --text-2: #9aa2b4;
-  --brand: #8fa2ff;
-  --brand-hover: #a8b7ff;
-  --on-brand: #0a0d14;
-  --brass: #d8aa55;
-  --success: #4cc08a;
-  --success-tint: #10291f;
-  --warning: #edb14b;
-  --warning-tint: #2e2410;
-  --danger: #f2796e;
-  --danger-tint: #331717;
-  --info: #6aa6f2;
-  --info-tint: #132640;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
-  color-scheme: dark;
+:root[data-theme="light"][data-accent="blue"] {
+  --accent: #0000ff;
+  --accent-tint: #e8ecff;
 }
 
-/* No data-theme yet (JS off): dark by default, light if the system prefers it. */
+:root[data-theme="dark"],
 :root:not([data-theme]) {
-  --bg: #0a0d14;
-  --surface: #121722;
-  --surface-2: #1a2030;
-  --border: #252c3b;
-  --border-strong: #343d50;
-  --text: #e9ebf1;
-  --text-2: #9aa2b4;
-  --brand: #8fa2ff;
-  --brand-hover: #a8b7ff;
-  --on-brand: #0a0d14;
-  --brass: #d8aa55;
+  --bg: #08090c;
+  --surface: #0f1115;
+  --surface-2: #16181d;
+  --surface-3: #1d2027;
+  --border: #22252c;
+  --border-strong: #30343d;
+  --text: #edeef0;
+  --text-2: #9ba1ad;
+  --text-3: #858b98;
+  --primary: #edeef0;
+  --primary-hover: #ffffff;
+  --on-primary: #08090c;
+  --accent: #d8aa55;
+  --accent-tint: #2a2213;
+  --on-accent: #08090c;
   --success: #4cc08a;
-  --success-tint: #10291f;
+  --success-tint: #0f2219;
   --warning: #edb14b;
-  --warning-tint: #2e2410;
+  --warning-tint: #2a2010;
   --danger: #f2796e;
-  --danger-tint: #331717;
+  --danger-tint: #2d1514;
   --info: #6aa6f2;
-  --info-tint: #132640;
+  --info-tint: #111f33;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 1px 2px rgb(0 0 0 / 0.5), 0 16px 48px -12px rgb(0 0 0 / 0.7);
+  --grid-line: rgb(255 255 255 / 0.04);
   color-scheme: dark;
 }
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme]) {
-    --bg: #f6f6f3;
-    --surface: #ffffff;
-    --surface-2: #efefea;
-    --border: #e3e3de;
-    --border-strong: #cfcfc8;
-    --text: #15171c;
-    --text-2: #5a6070;
-    --brand: #2f45b8;
-    --brand-hover: #263a9e;
-    --on-brand: #ffffff;
-    --brass: #8a5e17;
-    --success: #15734a;
-    --success-tint: #e6f4ec;
-    --warning: #9a5800;
-    --warning-tint: #fbf0dc;
-    --danger: #b8322a;
-    --danger-tint: #fbe8e6;
-    --info: #1f5fae;
-    --info-tint: #e7effa;
-    color-scheme: light;
-  }
+:root[data-theme="dark"][data-accent="blue"],
+:root:not([data-theme])[data-accent="blue"] {
+  --accent: #3c8aff;
+  --accent-tint: #0f1d36;
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-text: var(--text);
   --color-text-2: var(--text-2);
-  --color-brand: var(--brand);
-  --color-brand-hover: var(--brand-hover);
-  --color-on-brand: var(--on-brand);
-  --color-brass: var(--brass);
+  --color-text-3: var(--text-3);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-accent: var(--accent);
+  --color-accent-tint: var(--accent-tint);
+  --color-on-accent: var(--on-accent);
+  /* older names, kept so every page follows the accent switch */
+  --color-brand: var(--accent);
+  --color-brand-hover: var(--accent);
+  --color-on-brand: var(--on-accent);
+  --color-brass: var(--accent);
   --color-success: var(--success);
   --color-success-tint: var(--success-tint);
   --color-warning: var(--warning);
@@ -131,18 +114,42 @@
   --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", Menlo, monospace;
 
   --shadow-card: var(--shadow);
-  --animate-arrive: arrive 180ms ease-out;
+  --shadow-lift: var(--shadow-lg);
+  --animate-arrive: arrive 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-fade-up: fade-up 500ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-pop: pop 260ms cubic-bezier(0.2, 0.8, 0.2, 1.2) both;
+  --animate-draw: draw 420ms ease-out both;
+  --animate-pulse-dot: pulse-dot 1.6s ease-out infinite;
+  --animate-shimmer: shimmer 1.4s linear infinite;
 }
 
 @keyframes arrive {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pop {
+  0% { opacity: 0; transform: scale(0.6); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes draw {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes pulse-dot {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 45%, transparent); }
+  100% { box-shadow: 0 0 0 7px transparent; }
+}
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+@keyframes record-in {
+  0% { opacity: 0; transform: translateX(-6px); }
+  100% { opacity: 1; transform: none; }
 }
 
 html {
@@ -155,7 +162,12 @@ body {
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 20px;
-  font-feature-settings: "cv11";
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 .num,
@@ -163,8 +175,39 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Faint grid behind hero sections. */
+.bg-grid {
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at 50% 0%, #000 30%, transparent 75%);
+}
+
+/* A drawn check / line: give the path pathLength="24" and this class. */
+.draw {
+  stroke-dasharray: 24;
+  animation: var(--animate-draw);
+}
+
+/* The logo's records build up one by one on hover. */
+.logo-mark rect {
+  transform-box: fill-box;
+  transform-origin: left center;
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.logo-hover:hover .logo-mark rect:nth-child(1) { transform: translateX(1px); }
+.logo-hover:hover .logo-mark rect:nth-child(2) { transform: translateX(2px); transition-delay: 40ms; }
+.logo-hover:hover .logo-mark rect:nth-child(3) { transform: translateX(3px); transition-delay: 80ms; }
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
 :focus-visible {
-  outline: 2px solid var(--brand);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 6px;
 }

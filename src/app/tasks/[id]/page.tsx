@@ -9,7 +9,7 @@ import { Card } from "@/components/card";
 import { EmptyState } from "@/components/empty-state";
 import { RuleSentences } from "@/components/rule-sentence";
 import { ReportSkeleton } from "@/components/skeleton";
-import { StatusChip } from "@/components/status-chip";
+import { PurchaseRow } from "@/components/purchase-row";
 import type { PolicyRules } from "@/db/schema";
 import { dateTime } from "@/lib/format";
 import { fmt$ } from "@/lib/money/usdc";
@@ -119,21 +119,16 @@ async function Task({ params, searchParams }: { params: PageProps<"/tasks/[id]">
         ) : (
           <ul className="divide-y divide-border">
             {purchases.map((p) => (
-              <li key={p.id}>
-                <Link href={`${here}?purchase=${p.id}`} scroll={false} className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1.5 px-4 py-3 hover:bg-surface-2/60 sm:grid-cols-[8rem_1fr_auto] sm:items-center sm:px-5">
-                  <span className="order-3 col-span-2 sm:order-none sm:col-span-1">
-                    <StatusChip status={p.status} />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate font-mono text-[13px]">{p.host}</span>
-                    <span className="block truncate text-[13px] text-text-2">&ldquo;{p.purpose}&rdquo;</span>
-                  </span>
-                  <span className="text-right">
-                    <span className={`tabular block text-sm font-medium ${p.status === "reused" ? "text-text-2 line-through" : ""}`}>{p.amountFormatted ?? "—"}</span>
-                    <span className="block text-xs text-text-2">{dateTime(p.createdAt)} · v{p.policyVersion}</span>
-                  </span>
-                </Link>
-              </li>
+              <PurchaseRow
+                key={p.id}
+                href={`${here}?purchase=${p.id}`}
+                purpose={p.purpose}
+                agentName={"agentName" in p ? (p as { agentName?: string }).agentName : undefined}
+                host={p.host}
+                status={p.status}
+                amount={p.amountFormatted ?? null}
+                when={`${dateTime(p.createdAt)} · v${p.policyVersion}`}
+              />
             ))}
           </ul>
         )}

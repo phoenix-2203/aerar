@@ -1,22 +1,30 @@
-// Aerar's mark: a treasury arch (the aerarium) with a brass crescent moon inside (the night shift).
-// 24px grid, 2px round strokes. The arch takes the text colour; the crescent is always brass.
+// Aerar's mark: three records in a ledger, each a step on from the last; the newest (top) is the accent colour.
+// 24px grid. The two older records take the text colour. Hover a .logo-hover parent and the records shift in turn.
 
-/** Crescent: a r=3.5 circle at (12,13) minus a r=3 circle at (13.6,11.8), as one path (no masks, so no duplicate ids). */
-export const CRESCENT = "M11.65 9.52A3.5 3.5 0 1 0 15.25 14.31A3 3 0 0 1 11.65 9.52Z";
+const H = 4.4;
+const G = 1.8;
+const W = 13.2;
+const S = 3.1;
+const Y0 = (24 - (3 * H + 2 * G)) / 2;
+const X0 = (24 - (W + 2 * S)) / 2;
+/** Bottom to top: [x, y] of each record. */
+export const RECORDS = [0, 1, 2].map((i) => [+(X0 + i * S).toFixed(2), +(Y0 + (2 - i) * (H + G)).toFixed(2)] as const);
+export const RECORD = { w: W, h: H, r: H / 2 };
 
-export function LogoMark({ size = 24, className = "" }: { size?: number; className?: string }) {
+export function LogoMark({ size = 24, className = "", mono = false }: { size?: number; className?: string; mono?: boolean }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
-      <path d="M5 21V11a7 7 0 0 1 14 0v10M3 21h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d={CRESCENT} fill="var(--brass)" />
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" className={`logo-mark ${className}`}>
+      {RECORDS.map(([x, y], i) => (
+        <rect key={i} x={x} y={y} width={W} height={H} rx={H / 2} fill={i === 2 && !mono ? "var(--accent)" : "currentColor"} />
+      ))}
     </svg>
   );
 }
 
-export function Logo({ className = "" }: { className?: string }) {
+export function Logo({ className = "", size = 22 }: { className?: string; size?: number }) {
   return (
-    <span className={`inline-flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em] text-text ${className}`}>
-      <LogoMark size={22} />
+    <span className={`logo-hover inline-flex items-center gap-2 text-[15px] font-semibold tracking-[-0.02em] text-text ${className}`}>
+      <LogoMark size={size} />
       Aerar
     </span>
   );

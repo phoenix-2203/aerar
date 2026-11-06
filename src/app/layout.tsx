@@ -31,13 +31,14 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#0a0d14" },
-    { media: "(prefers-color-scheme: light)", color: "#f6f6f3" },
+    { media: "(prefers-color-scheme: dark)", color: "#08090c" },
+    { media: "(prefers-color-scheme: light)", color: "#fafaf9" },
   ],
 };
 
-// Runs before first paint: the saved choice, else the system preference, else dark.
-const THEME_SCRIPT = `(function(){var d=document.documentElement;try{var t=localStorage.getItem("aerar-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}d.dataset.theme=t}catch(e){d.dataset.theme="dark"}})();`;
+// Runs before first paint: theme = saved choice, else system, else dark. Accent = ?accent= in the URL (remembered),
+// else the saved choice, else brass. The accent switch is a brand preview until the final colour is chosen.
+const THEME_SCRIPT = `(function(){var d=document.documentElement;try{var t=localStorage.getItem("aerar-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}d.dataset.theme=t;var q=new URLSearchParams(location.search).get("accent");if(q==="blue"||q==="brass")localStorage.setItem("aerar-accent",q);var a=localStorage.getItem("aerar-accent");d.dataset.accent=a==="blue"?"blue":"brass"}catch(e){d.dataset.theme="dark";d.dataset.accent="brass"}})();`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

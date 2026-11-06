@@ -9,7 +9,7 @@ import { BudgetMeter } from "@/components/budget-meter";
 import { Card } from "@/components/card";
 import { EmptyState } from "@/components/empty-state";
 import { StatTile } from "@/components/stat-tile";
-import { StatusChip } from "@/components/status-chip";
+import { PurchaseRow } from "@/components/purchase-row";
 import { dateTime, shortDate, time } from "@/lib/format";
 import { lead, type morningReport, type windowFor } from "@/lib/server/report";
 
@@ -68,11 +68,11 @@ export function ReportView({ r, w, mode, q }: { r: Report; w: Window; mode: View
       {/* Lead */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl">
-          <p className="text-[13px] text-text-2">
-            Morning report · {dateTime(w.since)} → {dateTime(w.until)}
+          <p className="flex items-center gap-2 text-[13px] text-text-3">
+            <Moon className="size-3.5" aria-hidden />
+            {dateTime(w.since)} → {dateTime(w.until)}
           </p>
-          <h1 className="mt-1.5 text-2xl font-semibold leading-8 tracking-tight sm:text-[28px] sm:leading-9">{lead(t, period.lead)}</h1>
-          {r.headline.length > 1 && <p className="mt-2 text-sm text-text-2">{r.headline.slice(1).join(" ")}</p>}
+          <h1 className="mt-2 text-[26px] font-semibold leading-tight tracking-[-0.025em] sm:text-[32px]">{lead(t, period.lead)}</h1>
         </div>
         <nav className="flex shrink-0 self-start rounded-lg border border-border bg-surface p-0.5 text-sm lg:self-auto" aria-label="Period">
           {PERIODS.map((p) => (
@@ -80,7 +80,7 @@ export function ReportView({ r, w, mode, q }: { r: Report; w: Window; mode: View
               key={p.key}
               href={reportHref(mode, q, { period: p.key })}
               aria-current={w.key === p.key ? "page" : undefined}
-              className={`rounded-md px-3 py-1.5 ${w.key === p.key ? "bg-surface-2 font-medium text-text" : "text-text-2 hover:text-text"}`}
+              className={`rounded-md px-3 py-1.5 text-[13px] transition-colors ${w.key === p.key ? "bg-surface-2 font-medium text-text shadow-card" : "text-text-2 hover:text-text"}`}
             >
               {p.label}
             </Link>
@@ -166,29 +166,16 @@ export function ReportView({ r, w, mode, q }: { r: Report; w: Window; mode: View
         ) : (
           <ul className="divide-y divide-border">
             {rows.map((p) => (
-              <li key={p.id}>
-                <Link
-                  href={reportHref(mode, q, { purchase: p.id })}
-                  scroll={false}
-                  className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1.5 px-4 py-3 transition-colors hover:bg-surface-2/60 sm:grid-cols-[8rem_1fr_auto] sm:items-center sm:px-5"
-                >
-                  <span className="order-3 col-span-2 sm:order-none sm:col-span-1">
-                    <StatusChip status={p.status} />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm">
-                      <span className="font-medium">{p.agentName}</span>
-                      <span className="text-text-2"> · </span>
-                      <span className="font-mono text-[13px]">{p.host}</span>
-                    </span>
-                    <span className="block truncate text-[13px] text-text-2">&ldquo;{p.purpose}&rdquo;</span>
-                  </span>
-                  <span className="text-right">
-                    <span className={`tabular block text-sm font-medium ${p.status === "reused" ? "text-text-2 line-through" : ""}`}>{p.amountFormatted ?? "—"}</span>
-                    <span className="tabular block text-xs text-text-2">{multiDay ? `${shortDate(p.createdAt)} ${time(p.createdAt)}` : time(p.createdAt)}</span>
-                  </span>
-                </Link>
-              </li>
+              <PurchaseRow
+                key={p.id}
+                href={reportHref(mode, q, { purchase: p.id })}
+                purpose={p.purpose}
+                agentName={p.agentName}
+                host={p.host}
+                status={p.status}
+                amount={p.amountFormatted ?? null}
+                when={multiDay ? `${shortDate(p.createdAt)} ${time(p.createdAt)}` : time(p.createdAt)}
+              />
             ))}
           </ul>
         )}
@@ -260,7 +247,7 @@ function FilterLink({ href, active, children }: { href: string; active: boolean;
       href={href}
       scroll={false}
       aria-current={active ? "true" : undefined}
-      className={`rounded-full px-2.5 py-1 text-xs transition-colors ${active ? "bg-text text-bg" : "bg-surface-2 text-text-2 hover:text-text"}`}
+      className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${active ? "bg-primary text-on-primary" : "bg-surface-2 text-text-2 hover:text-text"}`}
     >
       {children}
     </Link>

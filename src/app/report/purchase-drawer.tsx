@@ -1,4 +1,5 @@
 // Purchase details, opened from any row via ?purchase=<id>. Server-rendered content inside the client Drawer.
+import { splitPurpose } from "@/components/purchase-row";
 import { CheckCircle2, Clock, Info, XCircle } from "lucide-react";
 import { Drawer } from "@/components/drawer";
 import { Hash } from "@/components/hash";
@@ -49,7 +50,7 @@ export function PurchaseDrawer({ detail, closeHref }: { detail: Detail | null; c
           <p className="mt-2 text-sm">
             <span className="font-medium">{p.agentName}</span> <span className="text-text-2">for</span> {p.taskTitle}
           </p>
-          <blockquote className="mt-1.5 border-l-2 border-border-strong pl-3 text-sm text-text-2">&ldquo;{p.purpose}&rdquo;</blockquote>
+          <blockquote className="mt-1.5 border-l-2 border-border-strong pl-3 text-sm text-text-2">&ldquo;{splitPurpose(p.purpose).text}&rdquo;</blockquote>
           <p className="mt-1.5 text-xs text-text-2">The agent&apos;s words are recorded, never used to decide.</p>
         </section>
 

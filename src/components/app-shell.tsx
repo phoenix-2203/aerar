@@ -8,14 +8,14 @@ import { purchases } from "@/db/schema";
 import { getDbOnly, operatorOrgId } from "@/lib/server/context";
 import { isOperator } from "@/lib/server/session";
 import { Logo, LogoMark } from "./logo";
-import { ThemeToggle } from "./theme-toggle";
+import { AccentToggle, ThemeToggle } from "./theme-toggle";
 import { ToastProvider } from "./toast";
 
 function NetworkPill() {
   return (
-    <span className="hidden items-center gap-1.5 rounded-full border border-border px-2.5 py-0.5 text-xs text-text-2 sm:inline-flex">
-      <span className="size-1.5 rounded-full bg-info" aria-hidden />
-      Base Sepolia (test)
+    <span className="hidden h-7 items-center gap-2 rounded-full border border-border bg-surface px-2.5 text-xs text-text-2 md:inline-flex">
+      <span className="size-1.5 animate-pulse-dot rounded-full bg-success text-success" aria-hidden />
+      Base Sepolia · test
     </span>
   );
 }
@@ -25,7 +25,7 @@ function NavLink({ href, active, children }: { href: string; active: boolean; ch
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-sm transition-colors ${active ? "bg-surface-2 font-medium text-text" : "text-text-2 hover:text-text"}`}
+      className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[13.5px] transition-colors duration-150 ${active ? "bg-surface-2 font-medium text-text" : "text-text-2 hover:bg-surface-2/60 hover:text-text"}`}
     >
       {children}
     </Link>
@@ -64,14 +64,14 @@ function Frame({ nav, right, children, footer }: { nav: ReactNode; right: ReactN
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2">
         Skip to content
       </a>
-      <header className="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:gap-5 sm:px-6">
-          <Link href="/" aria-label="Aerar home" className="shrink-0">
+      <header className="sticky top-0 z-30 border-b border-border/80 bg-bg/75 backdrop-blur-xl backdrop-saturate-150">
+        <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:gap-6 sm:px-6">
+          <Link href="/" aria-label="Aerar home" className="logo-hover shrink-0">
             <span className="hidden sm:inline">
               <Logo />
             </span>
             <span className="text-text sm:hidden">
-              <LogoMark size={24} />
+              <LogoMark size={22} />
             </span>
           </Link>
           <nav className="-mx-1 flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto px-1 [scrollbar-width:none]" aria-label="Main">
@@ -80,7 +80,7 @@ function Frame({ nav, right, children, footer }: { nav: ReactNode; right: ReactN
           <div className="flex shrink-0 items-center gap-1.5">{right}</div>
         </div>
       </header>
-      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
         {children}
       </main>
       {footer}
@@ -115,6 +115,7 @@ export function AppShell({ active, children }: { active?: "/report" | "/audit" |
       right={
         <>
           <NetworkPill />
+          <AccentToggle />
           <ThemeToggle />
           <form action={logout}>
             <button className="grid size-8 place-items-center rounded-lg text-text-2 hover:bg-surface-2 hover:text-text" aria-label="Sign out">
@@ -138,16 +139,17 @@ export function PublicShell({ active, children }: { active?: "/scenarios" | "/de
             Attack lab
           </NavLink>
           <NavLink href="/demo" active={active === "/demo"}>
-            <Short short="Report" long="Last night&apos;s report" />
+            <Short short="Report" long="Live report" />
           </NavLink>
         </>
       }
       right={
         <>
           <NetworkPill />
+          <AccentToggle />
           <ThemeToggle />
-          <Link href="/login" className="hidden h-8 items-center rounded-lg px-2.5 text-sm text-text-2 hover:text-text sm:inline-flex">
-            Operator sign in
+          <Link href="/login" className="ml-1 hidden h-8 items-center rounded-lg border border-border bg-surface px-3 text-[13px] font-medium text-text transition-colors hover:border-border-strong sm:inline-flex">
+            Sign in
           </Link>
         </>
       }
@@ -160,17 +162,18 @@ export function PublicShell({ active, children }: { active?: "/scenarios" | "/de
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-border">
-      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6 text-[13px] text-text-2 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <span>Aerar · built for Vibestarter Vibeathon 02, &ldquo;Night shift&rdquo; · testnet only (Base Sepolia, test USDC)</span>
-        <span className="flex gap-4">
-          <a href="https://github.com/phoenix-2203/aerar" className="hover:text-text">
-            GitHub
-          </a>
-          <Link href="/login" className="hover:text-text">
-            Operator sign in
-          </Link>
-        </span>
+    <footer className="mt-16 border-t border-border">
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-[13px] text-text-2 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex items-center gap-3">
+          <Logo size={18} />
+          <span className="text-text-3">Built for Vibestarter Vibeathon 02 · testnet only</span>
+        </div>
+        <nav className="flex gap-5" aria-label="Footer">
+          <Link href="/scenarios" className="hover:text-text">Attack lab</Link>
+          <Link href="/demo" className="hover:text-text">Live report</Link>
+          <a href="https://github.com/phoenix-2203/aerar" className="hover:text-text">GitHub</a>
+          <Link href="/login" className="hover:text-text">Sign in</Link>
+        </nav>
       </div>
     </footer>
   );

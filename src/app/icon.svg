@@ -1,5 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>.arch{stroke:#15171c}@media (prefers-color-scheme: dark){.arch{stroke:#e9ebf1}}</style>
-  <path class="arch" d="M5 21V11a7 7 0 0 1 14 0v10M3 21h18" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M11.65 9.52A3.5 3.5 0 1 0 15.25 14.31A3 3 0 0 1 11.65 9.52Z" fill="#c9962f"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <style>.ink{fill:#111215}@media (prefers-color-scheme: dark){.ink{fill:#edeef0}}</style>
+  <rect class="ink" x="2.30" y="16.00" width="13.2" height="4.4" rx="2.2"/>
+  <rect class="ink" x="5.40" y="9.80" width="13.2" height="4.4" rx="2.2"/>
+  <rect fill="#c9962f" x="8.50" y="3.60" width="13.2" height="4.4" rx="2.2"/>
 </svg>

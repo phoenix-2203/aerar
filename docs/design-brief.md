@@ -41,7 +41,10 @@ All text pairs meet WCAG AA (ratios computed in the research). Borders are decor
 Inter (UI, tabular numerals for amounts), JetBrains Mono (hashes, addresses). Weights 400/500/600. Body 14/20, H1 24/32, stat numbers 28/32.
 
 ## Logo
-Treasury arch with a brass crescent moon inside (the *aerarium* plus the night shift), drawn on a 24×24 grid with 2px round strokes. Wordmark "Aerar" in Inter 600.
+Three records in a ledger, each a step on from the last, on a 24px grid (record 13.2×4.4, gap 1.8, step 3.1). The two older records take the text colour; the newest (top) takes the accent. Wordmark "Aerar" in Inter 600. One-colour version for favicons and partner pages.
+
+## Accent (brand preview)
+Two candidate accents, switchable in the header until the final choice: **brass** (`#8A5E17` light / `#D8AA55` dark, default) and **Base Blue** (`#0000FF` light / `#3C8AFF` dark). `?accent=blue` or `?accent=brass` in any URL sets it. The primary button is ink on paper (inverted text colour), so it works with either accent.
 
 ## Navigation
 Morning report (home) · Approvals (badge) · Tasks · Audit log ("Tamper-proof record of every decision") · Try the demo (sandbox, test USDC). Top bar: network pill "Base Sepolia (test)".
