@@ -232,10 +232,15 @@ On a phone: ![Report on a phone](docs/screenshots/report-375-light.png)
 
 | Check | Where | Result |
 |---|---|---|
-| 63 tests: policy engine, morning report, purchase pipeline (concurrent same-key purchases and races included), agent and operator routes, MCP endpoint | `npm test` (Vitest) | all pass |
+| 112 tests: policy engine, purchase pipeline (concurrent same-key purchases and races included), morning report, agent and operator routes, MCP, rate limits, the scenario sandbox, the plain-English reason copy and step tracker | `npm test` (Vitest) | all pass |
+| 25 real-world scenarios across six problems, each grading itself (62 checks), plus Aerar never paying more than a plain wallet in any of them | `npm run test:scenarios`, `npm run scenarios` | 25/25 |
+| The same scenarios on the live server against real Postgres (sandbox database, never the ledger) | [attack lab](https://aerar.duckdns.org/scenarios) "Run all" | 25/25 |
+| One scripted night: a plain wallet pays $2.05 ($1.90 of it waste); Aerar pays $0.17 and lets $0.02 of waste through under the hourly cap | `npm run night-shift`, `night.test.ts` | pinned |
+| Real payments on Base Sepolia: paid, reused, held then approved, declined; each transfer checked onchain | [Live on testnet](#live-on-testnet) | done |
+| Every UI text colour pair meets WCAG AA in light and dark (lowest 4.93:1); no horizontal scroll at 375 px on any page | contrast computed from the tokens; `npm run screenshots` flags overflow | pass |
 | Provider rejection reasons (e.g. insufficient balance) recorded instead of a bare 402 | pipeline tests | pass |
 
-*More rows (live payments on Base Sepolia, browser runs) as they're done.*
+**Found and fixed by the attack lab:** on real Postgres, ten identical purchases at once deadlocked (settling locked the purchase row before the task row; reserving did the opposite). Every transaction now locks the task first. The in-memory test database runs one query at a time, so only the live sandbox could catch it.
 
 ## Trust model and limits
 
