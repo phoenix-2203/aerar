@@ -4,8 +4,9 @@ import { evidence } from "./catalog/evidence";
 import { injection } from "./catalog/injection";
 import { mismatch } from "./catalog/mismatch";
 import { oversight } from "./catalog/oversight";
+import { runaway } from "./catalog/runaway";
 import type { Scenario } from "./stage";
 
 export { PROBLEMS, type ProblemId, type Scenario, type ScenarioResult } from "./stage";
 
-export const SCENARIOS: Scenario[] = [...injection, ...duplicate, ...mismatch, ...evidence, ...oversight];
+export const SCENARIOS: Scenario[] = [...injection, ...duplicate, ...mismatch, ...evidence, ...oversight, ...runaway];
