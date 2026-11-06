@@ -1,26 +1,49 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* Night-shift palette: deep ink, a lamp-amber accent, and clear status colours. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-ink: #0a0f1e;
+  --color-night: #0f1629;
+  --color-panel: #141d33;
+  --color-panel-2: #1a2540;
+  --color-line: #253253;
+  --color-text: #e8edf7;
+  --color-muted: #8d9ab8;
+  --color-faint: #5d6a88;
+  --color-lamp: #f6b94a;
+  --color-lamp-soft: #f6b94a1f;
+  --color-paid: #5fd4a6;
+  --color-paid-soft: #5fd4a61c;
+  --color-saved: #7fb2ff;
+  --color-saved-soft: #7fb2ff1c;
+  --color-refused: #f0807f;
+  --color-refused-soft: #f0807f1c;
+  --color-wait: #f6b94a;
+  --color-wait-soft: #f6b94a1c;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 85% -10%, #1b2a55 0%, transparent 60%),
+    radial-gradient(900px 500px at -10% 0%, #151f3d 0%, transparent 55%),
+    var(--color-ink);
+  background-attachment: fixed;
+  color: var(--color-text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-lamp);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
