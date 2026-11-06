@@ -21,6 +21,20 @@ export function windowFor(period: string | undefined, now = new Date()): ReportW
   return { since, until: now, label: "Since 18:00 UTC", key: "night" };
 }
 
+export interface Totals {
+  purchases: number;
+  delivered: number;
+  reused: number;
+  refused: number;
+  failed: number;
+  waiting: number;
+  spent: bigint;
+  saved: bigint;
+  blocked: bigint;
+  verified: number;
+  formatted: { spent: string; saved: string; blocked: string };
+}
+
 const sum = (xs: bigint[]) => xs.reduce((a, b) => a + b, 0n);
 
 export async function morningReport(db: Db, orgId: string, w: ReportWindow) {
@@ -79,7 +93,7 @@ export async function morningReport(db: Db, orgId: string, w: ReportWindow) {
 
   const view = (r: (typeof rows)[number]) => ({ ...purchaseView(r.p), agentName: r.agentName, taskTitle: r.taskTitle });
 
-  const totals = {
+  const totals: Totals = {
     purchases: ps.length,
     delivered: delivered.length,
     reused: reused.length,
@@ -106,7 +120,6 @@ export async function morningReport(db: Db, orgId: string, w: ReportWindow) {
   };
 }
 
-type Totals = Awaited<ReturnType<typeof morningReport>>["totals"];
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /** A few plain sentences, built from the numbers only (no AI), so they're always accurate. */
