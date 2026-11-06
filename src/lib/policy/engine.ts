@@ -50,14 +50,17 @@ export function hostAllowed(host: string, allowed: string[]): boolean {
   });
 }
 
-export function evaluatePolicy(input: PolicyInput): PolicyResult {
-  const { task, policy, agent, quote, rails } = input;
+export type AccessInput = Pick<PolicyInput, "now" | "task" | "policy" | "agent" | "host">;
+
+/**
+ * Checks that don't depend on a price: who is asking, for which task, from which host.
+ * Run before Aerar contacts the provider at all, so a disallowed host is never even called.
+ */
+export function accessChecks(input: AccessInput): { declines: [string, string][]; passes: string[] } {
+  const { task, policy, agent } = input;
   const rules = policy.rules;
   const declines: [string, string][] = [];
   const passes: string[] = [];
-  const needsApproval: [string, string][] = [];
-
-  // Who and when
   if (agent.revoked) declines.push(["AGENT_REVOKED", "This agent's key has been revoked."]);
   if (!agent.assignedToTask) declines.push(["AGENT_NOT_ASSIGNED", "This agent is not assigned to the task."]);
   if (task.status !== "active") declines.push(["TASK_NOT_ACTIVE", `The task is ${task.status}.`]);
@@ -65,11 +68,19 @@ export function evaluatePolicy(input: PolicyInput): PolicyResult {
   if (task.deadline && input.now > task.deadline) declines.push(["TASK_DEADLINE_PASSED", "The task deadline has passed."]);
   if (rules.expiresAt && input.now > new Date(rules.expiresAt))
     declines.push(["MANDATE_EXPIRED", `Policy v${policy.version} expired at ${rules.expiresAt}.`]);
-
-  // Where the money goes
   if (!hostAllowed(input.host, rules.allowedProviders))
     declines.push(["PROVIDER_NOT_ALLOWED", `${input.host} is not on this task's provider list.`]);
   else passes.push("PROVIDER_ALLOWED");
+  return { declines, passes };
+}
+
+export function evaluatePolicy(input: PolicyInput): PolicyResult {
+  const { task, policy, quote, rails } = input;
+  const rules = policy.rules;
+  const { declines, passes } = accessChecks(input);
+  const needsApproval: [string, string][] = [];
+
+  // Where the money goes
   if (quote.network !== rails.network)
     declines.push(["NETWORK_NOT_ALLOWED", `Quote is on ${quote.network}; only ${rails.network} is allowed.`]);
   if (quote.asset.toLowerCase() !== rails.asset.toLowerCase())
