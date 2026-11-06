@@ -213,7 +213,7 @@ The first night's purchases, made by the demo agent through the live API on 6 No
 |---|---|---|---|---|
 | 1 | Standard report, "AI agents" | **Delivered.** Quote within policy, paid, transfer checked onchain (block 55339992) | $0.10 | [tx `0xa2f2…18c9`](https://sepolia.basescan.org/tx/0xa2f215fb77daaf046a2b0d61f873b423c5b2b4c1e1822625d0ad67ba275818c9) |
 | 2 | Same report again, different agent request | **Reused** purchase #1 | $0.00 (avoided $0.10) | No payment made |
-| 3 | Premium report, "AI agents" | **Waiting for approval**: $0.50 is above the task's $0.25 auto-approve threshold | $0.00 until approved | Approval queue |
+| 3 | Premium report, "AI agents" | **Held for approval** ($0.50 is above the task's $0.25 auto-approve threshold), **approved by the operator**, then paid and checked onchain (block 55340536) | $0.50 | [tx `0x7837…aac8`](https://sepolia.basescan.org/tx/0x78370338327d8ab365203b6c4e885bb92d8c5178f9160ce63ac3fa4ddc5baac8) |
 | 4 | `api.example.com`, a provider not on the task's list | **Declined** before any quote was paid | $0.00 | `PROVIDER_NOT_ALLOWED` |
 
 ## Screens
