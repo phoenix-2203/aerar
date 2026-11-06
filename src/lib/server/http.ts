@@ -21,7 +21,9 @@ export function errorResponse(e: unknown) {
     return json({ error: "INVALID_REQUEST", message: "Request body failed validation", issues: e.issues.map((i) => ({ path: i.path.join("."), message: i.message })) }, 400);
   if (e instanceof SyntaxError) return json({ error: "INVALID_JSON", message: "Body is not valid JSON" }, 400);
   // Unexpected: log server-side, say nothing specific to the caller.
-  console.error("[aerar] unhandled error:", e instanceof Error ? e.message : e);
+  // Message plus the underlying cause's code/message (e.g. a Postgres error), never query parameters.
+  const cause = (e as { cause?: { code?: string; message?: string } })?.cause;
+  console.error("[aerar] unhandled error:", e instanceof Error ? e.message.split("\nparams:")[0] : e, cause ? `| cause: ${cause.code ?? ""} ${cause.message ?? ""}` : "");
   return json({ error: "INTERNAL", message: "Something went wrong" }, 500);
 }
 
