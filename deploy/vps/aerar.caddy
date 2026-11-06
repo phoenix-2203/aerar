@@ -1,0 +1,13 @@
+# Site block for a system Caddy that already serves other sites.
+# Install: copy to /etc/caddy/aerar.caddy and add "import /etc/caddy/aerar.caddy" to /etc/caddy/Caddyfile,
+# then: caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy
+aerar.duckdns.org {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+	reverse_proxy 127.0.0.1:8800
+}
