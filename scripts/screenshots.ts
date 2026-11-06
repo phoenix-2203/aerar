@@ -2,7 +2,7 @@
 // (Node 22's built-in WebSocket and fetch). Saves full-page PNGs to docs/screenshots.
 //
 //   npm run screenshots -- --base http://localhost:3311              all shots, 375 and 1440 px, light and dark
-//   npm run screenshots -- --base http://localhost:3311 --only demo  one shot by name
+//   npm run screenshots -- --base http://localhost:3311 --only demo,login  some shots by name
 //   ... --y 0 --height 1200                                            only a section of the page
 //
 // Operator pages need a session: the script signs one with SESSION_SECRET from your local .env (never printed).
@@ -39,6 +39,7 @@ const SHOTS: Shot[] = [
   { name: "landing", path: "/" },
   { name: "scenarios", path: "/scenarios", actions: [{ click: "Run all" }, { waitText: "scenarios handled correctly", waitMs: 30000 }] },
   { name: "demo", path: "/demo" },
+  { name: "demo-drawer", path: "/demo?purchase=__DEMO__" },
   { name: "report", path: "/report", operator: true },
   { name: "purchase-drawer", path: "/report?purchase=__FIRST__", operator: true },
   { name: "task", path: "/tasks/__TASK__", operator: true },
@@ -167,12 +168,15 @@ async function resolveIds(): Promise<Record<string, string>> {
   const html = await fetch(`${BASE}/report?period=7d`, { headers: { cookie: `${SESSION_COOKIE}=${issueSession()}` } }).then((r) => r.text());
   const purchase = html.match(/purchase=(pur_[A-Za-z0-9_-]+)/)?.[1]; // the & before it is &amp; in HTML
   const task = html.match(/\/tasks\/(tsk_[A-Za-z0-9_-]+)/)?.[1];
-  return { __FIRST__: purchase ?? "none", __TASK__: task ?? "none" };
+  // Prefer a paid purchase on the public demo, so its drawer shows onchain proof.
+  const demo = await fetch(`${BASE}/demo?status=paid`).then((r) => r.text()).catch(() => "");
+  const demoPurchase = demo.match(/purchase=(pur_[A-Za-z0-9_-]+)/)?.[1];
+  return { __FIRST__: purchase ?? "none", __TASK__: task ?? "none", __DEMO__: demoPurchase ?? "none" };
 }
 
 async function main() {
   mkdirSync(OUT, { recursive: true });
-  const ids = await resolveIds().catch(() => ({ __FIRST__: "none", __TASK__: "none" }) as Record<string, string>);
+  const ids = await resolveIds().catch(() => ({ __FIRST__: "none", __TASK__: "none", __DEMO__: "none" }) as Record<string, string>);
   const profile = path.join(tmpdir(), `aerar-shots-${process.pid}`);
   const chrome = spawn(CHROME, ["--headless=new", `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`, "--hide-scrollbars", "--no-first-run", "about:blank"], { stdio: "ignore" });
   try {
@@ -180,8 +184,9 @@ async function main() {
       if (await fetch(`http://127.0.0.1:${PORT}/json/version`).then((r) => r.ok).catch(() => false)) break;
       await sleep(200);
     }
-    for (const shot of SHOTS.filter((s) => !ONLY || s.name === ONLY)) {
-      const resolved = shot.path.replace(/__FIRST__|__TASK__/g, (m) => ids[m]);
+    const only = ONLY?.split(",");
+    for (const shot of SHOTS.filter((s) => !only || only.includes(s.name))) {
+      const resolved = shot.path.replace(/__FIRST__|__TASK__|__DEMO__/g, (m) => ids[m]);
       console.log(`${shot.name} (${resolved})`);
       for (const size of SIZES) for (const theme of THEMES) await shoot(shot, size, theme, resolved);
     }
