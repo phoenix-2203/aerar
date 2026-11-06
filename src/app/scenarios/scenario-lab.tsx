@@ -177,13 +177,13 @@ function lineTone(line: string): { icon: typeof CheckCircle2; cls: string } {
   if (/^Reused|^Returned/.test(line)) return { icon: Repeat2, cls: "text-info" };
   if (/^Paid/.test(line) && !/FAILED/.test(line)) return { icon: CheckCircle2, cls: "text-success" };
   if (/^(Declined|Rejected|Not paid)/.test(line) || /BROKEN|FAILED|BAD/.test(line)) return { icon: Ban, cls: "text-danger" };
-  if (/^(Held|unknown)/.test(line)) return { icon: Clock, cls: "text-warning" };
+  if (/^(Held|Needs approval|unknown)/.test(line)) return { icon: Clock, cls: "text-warning" };
   return { icon: Play, cls: "text-text-2" };
 }
 
 function ScenarioCard({ s, state, onRun, disabled }: { s: LabScenario; state: CardState; onRun: () => void; disabled: boolean }) {
   return (
-    <article id={s.id} className="flex flex-col rounded-xl border border-border bg-surface p-4 shadow-card sm:p-5">
+    <article id={s.id} className="flex min-w-0 flex-col rounded-xl border border-border bg-surface p-4 shadow-card sm:p-5">
       <div className="flex items-start justify-between gap-4">
         <h3 className="text-[15px] font-semibold leading-5">{s.title}</h3>
         <Button size="sm" variant={state.kind === "done" ? "ghost" : "secondary"} onClick={onRun} loading={state.kind === "running"} disabled={disabled} icon={<Play className="size-3.5" aria-hidden />}>
@@ -192,8 +192,8 @@ function ScenarioCard({ s, state, onRun, disabled }: { s: LabScenario; state: Ca
       </div>
       <p className="mt-1.5 text-[13px] leading-5 text-text-2">{s.story}</p>
       <p className="mt-2 text-[13px] leading-5">
-        <span className="font-medium text-brass">Aerar should </span>
-        {s.expected.charAt(0).toLowerCase() + s.expected.slice(1)}
+        <span className="font-medium text-brass">What Aerar does: </span>
+        {s.expected}
       </p>
 
       <div aria-live="polite" className="mt-auto">
@@ -215,22 +215,22 @@ function Result({ r }: { r: RunView }) {
           return (
             <li key={i} className="flex gap-2 text-[13px] leading-5">
               <Icon className={`mt-0.5 size-3.5 shrink-0 ${t.cls}`} aria-hidden />
-              <span className={t.cls === "text-text-2" ? "text-text-2" : ""}>{line}</span>
+              <span className={`min-w-0 [overflow-wrap:anywhere] ${t.cls === "text-text-2" ? "text-text-2" : ""}`}>{line}</span>
             </li>
           );
         })}
       </ol>
-      <p className="mt-3 text-[13px] font-medium">{r.verdict}</p>
+      <p className="mt-3 text-[13px] font-medium [overflow-wrap:anywhere]">{r.verdict}</p>
       <dl className="tabular mt-3 grid grid-cols-2 gap-2 text-[13px]">
-        <div className="rounded-md bg-danger-tint px-2.5 py-1.5">
-          <dt className="text-xs text-danger">Plain wallet would pay</dt>
-          <dd className="font-semibold text-danger">{r.plainWalletFormatted}</dd>
+        <div className={`rounded-md px-2.5 py-1.5 ${saved > 0n ? "bg-danger-tint text-danger" : "bg-surface-2 text-text-2"}`}>
+          <dt className="text-xs">Plain wallet</dt>
+          <dd className="font-semibold">{r.plainWalletFormatted}</dd>
         </div>
-        <div className="rounded-md bg-success-tint px-2.5 py-1.5">
-          <dt className="text-xs text-success">Aerar paid</dt>
-          <dd className="font-semibold text-success">
+        <div className="rounded-md bg-success-tint px-2.5 py-1.5 text-success">
+          <dt className="text-xs">With Aerar</dt>
+          <dd className="font-semibold">
             {r.aerarPaidFormatted}
-            {saved > 0n && <span className="ml-1 font-normal">· {usd(saved)} kept</span>}
+            {saved > 0n && <span className="font-normal"> · {usd(saved)} kept</span>}
           </dd>
         </div>
       </dl>
