@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>.arch{stroke:#15171c}@media (prefers-color-scheme: dark){.arch{stroke:#e9ebf1}}</style>
+  <path class="arch" d="M5 21V11a7 7 0 0 1 14 0v10M3 21h18" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11.65 9.52A3.5 3.5 0 1 0 15.25 14.31A3 3 0 0 1 11.65 9.52Z" fill="#c9962f"/>
+</svg>
