@@ -92,7 +92,7 @@ export function ReportView({ r, w, mode, q }: { r: Report; w: Window; mode: View
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile tone="success" label="Paid" value={t.formatted.spent} note={t.delivered ? `${t.delivered} purchases · ${t.verified} checked onchain` : "nothing paid"} />
         <StatTile tone="info" label="Saved by reuse" value={t.formatted.saved} note={`${t.reused} served from memory`} />
-        <StatTile tone="danger" label="Declined" value={t.refused} note={t.blocked > 0n ? `${t.formatted.blocked} in quotes stopped` : "nothing stopped"} />
+        <StatTile tone="danger" label="Declined" value={t.refused} note={t.refused === 0 ? "nothing declined" : t.blocked > 0n ? `${t.formatted.blocked} in quotes stopped` : "stopped before paying"} />
         <StatTile tone="warning" label="Needs approval" value={t.waiting} note={t.waiting ? (mode.readOnly ? "waiting for the operator" : "waiting for you, below") : "nothing waiting"} />
       </div>
 
@@ -211,10 +211,10 @@ export function ReportView({ r, w, mode, q }: { r: Report; w: Window; mode: View
           )}
         </Card>
         <Card title="Providers">
-          <Rows rows={r.providers.map((p) => ({ k: p.host, mono: true, v: p.paidFormatted, sub: `${p.purchases} requests · ${p.reused} reused · ${p.refused} declined` }))} empty="No providers contacted." />
+          <Rows rows={r.providers.map((p) => ({ k: p.host, mono: true, v: p.paidFormatted, sub: `${plural(p.purchases, "request")} · ${p.reused} reused · ${p.refused} declined` }))} empty="No providers contacted." />
         </Card>
         <Card title="Agents">
-          <Rows rows={r.agents.map((a) => ({ k: a.name, v: a.paidFormatted, sub: `${a.purchases} requests · ${a.refused} declined` }))} empty="No agent activity." />
+          <Rows rows={r.agents.map((a) => ({ k: a.name, v: a.paidFormatted, sub: `${plural(a.purchases, "request")} · ${a.refused} declined` }))} empty="No agent activity." />
         </Card>
       </div>
 
@@ -229,7 +229,7 @@ export function ReportView({ r, w, mode, q }: { r: Report; w: Window; mode: View
               <div className="mb-3 min-w-0">
                 <div className="truncate font-medium">{task.title}</div>
                 <div className="text-xs text-text-2">
-                  <span className="capitalize">{task.status}</span> · {task.counts.total} purchases · {task.avoidedByReuseFormatted} saved by reuse
+                  <span className="capitalize">{task.status}</span> · {plural(task.counts.total, "purchase")} · {task.avoidedByReuseFormatted} saved by reuse
                 </div>
               </div>
               <BudgetMeter budget={task.money.budget} spent={task.money.spent} reserved={task.money.reserved} formatted={task.money.formatted} compact />
@@ -241,6 +241,8 @@ export function ReportView({ r, w, mode, q }: { r: Report; w: Window; mode: View
     </div>
   );
 }
+
+const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`;
 
 function TaskBox({ id, mode, children }: { id: string; mode: ViewMode; children: ReactNode }) {
   const cls = "block rounded-xl border border-border bg-surface p-4 shadow-card";
