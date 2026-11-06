@@ -108,7 +108,7 @@ function pickQuote(quotes: Quote[], rail: PaymentRail): Quote | null {
 }
 
 export async function submitPurchase(ctx: Ctx, agentId: string, req: PurchaseRequest): Promise<Purchase> {
-  const { db, rail } = ctx;
+  const { db } = ctx;
   const now = ctx.now?.() ?? new Date();
 
   // ---- validate the request itself
