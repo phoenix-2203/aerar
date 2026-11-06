@@ -71,6 +71,19 @@ async function Task({ params, searchParams }: { params: PageProps<"/tasks/[id]">
       <div className="grid gap-4 lg:grid-cols-3">
         <Card title="Budget" className="lg:col-span-2">
           <BudgetMeter budget={money.budget} spent={money.spent} reserved={money.reserved} formatted={money.formatted} />
+          <dl className="tabular mt-5 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+            {[
+              ["Paid", purchases.filter((p) => p.status === "delivered").length],
+              ["Reused", purchases.filter((p) => p.status === "reused").length],
+              ["Declined", purchases.filter((p) => ["declined", "rejected", "payment_failed"].includes(p.status)).length],
+              ["Needs approval", purchases.filter((p) => p.status === "awaiting_approval").length],
+            ].map(([k, v]) => (
+              <div key={k} className="rounded-lg bg-surface-2 px-3 py-2">
+                <dt className="text-xs text-text-2">{k}</dt>
+                <dd className="text-lg font-semibold">{v}</dd>
+              </div>
+            ))}
+          </dl>
         </Card>
         <Card title="Agents on this task">
           {agents.length === 0 ? (
