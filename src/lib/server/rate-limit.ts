@@ -84,6 +84,8 @@ function makeShared() {
   return {
     /** Scenario runs per IP. */
     scenarioRuns: createRateLimiter({ max: 20, windowMs: 10 * 60_000 }),
+    /** "Run all" plays every scenario; counted separately so it isn't blocked by single runs. */
+    runAll: createRateLimiter({ max: 3, windowMs: 10 * 60_000 }),
     // Runs share one sandbox and take turns; allow a short queue, refuse beyond it.
     scenarioGate: createGate(4),
     /** Page views of the public pages. */
