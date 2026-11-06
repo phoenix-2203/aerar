@@ -49,6 +49,42 @@ export function Shell({ active, children }: { active?: string; children: ReactNo
   );
 }
 
+const PUBLIC_NAV = [
+  { href: "/scenarios", label: "Scenarios" },
+  { href: "/demo", label: "Last night's report" },
+];
+
+/** Header for the no-login pages judges and visitors can open. */
+export function PublicShell({ active, children }: { active?: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-1 flex-col">
+      <header className="sticky top-0 z-10 border-b border-line/70 bg-ink/80 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:gap-6 sm:px-6">
+          <Link href="/" aria-label="Aerar home">
+            <Logo />
+          </Link>
+          <nav className="flex gap-1 text-sm">
+            {PUBLIC_NAV.map((n) => (
+              <Link
+                key={n.href}
+                href={n.href}
+                className={`rounded-md px-2.5 py-1.5 transition sm:px-3 ${active === n.href ? "bg-panel-2 text-text" : "text-muted hover:text-text"}`}
+              >
+                {n.label}
+              </Link>
+            ))}
+          </nav>
+          <span className="ml-auto hidden rounded-full border border-line px-2.5 py-0.5 text-xs text-muted md:inline">Public demo · no login</span>
+          <Link href="/login" className="ml-auto text-sm text-muted hover:text-text md:ml-0">
+            Sign in
+          </Link>
+        </div>
+      </header>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">{children}</main>
+    </div>
+  );
+}
+
 export function Card({ title, aside, children, className = "" }: { title?: ReactNode; aside?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <section className={`rounded-2xl border border-line bg-panel/80 ${className}`}>
