@@ -304,6 +304,12 @@ npm run dev
 npm test                     # Vitest
 npm run typecheck
 npm run lint
+
+# Demos (no money moves: in-memory sandbox, simulated providers)
+npm run scenarios            # narrated: all 25 scenarios (--fast, --problem duplicate, --only parallel-race, --list)
+npm run night-shift          # one night, plain wallet vs Aerar, then the morning report
+npm run seed:sim             # local only: fill the dashboard with a simulated night
+npm run screenshots          # every page at 375/1440 px, light/dark, via your installed Chrome
 ```
 
 The seed puts `DEMO_PROVIDER_HOST` (default `localhost:3000`) on the task's provider list. If `npm run dev` picks another port, set `DEMO_PROVIDER_HOST` to match before seeding. For `http://localhost` purchases, set `AERAR_ALLOW_INSECURE_HTTP=1` (development only).
@@ -323,6 +329,8 @@ docker compose -f deploy/compose.yaml --env-file deploy/.env exec app npm run se
 ```
 
 Migrations run when the container starts. To update: `git pull`, then the `up -d --build` line again.
+
+**On a server that already runs other apps behind Caddy** (how the live site runs), skip Docker: [`deploy/vps`](deploy/vps) has a systemd unit, a Caddy site block, `make-env.sh` (creates the secrets, a fresh testnet wallet and the scenario sandbox database on the server, printing only public addresses) and `deploy.sh` (ships the committed code, rebuilds, restarts only Aerar).
 
 ### Environment
 
