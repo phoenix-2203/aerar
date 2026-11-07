@@ -1,12 +1,58 @@
 [
- ["s01_hook", "Imagine you hire an assistant to research Ethereum analytics. You give them one task, and ten dollars. Halfway through, a web page tells them the research needs an eight dollar gift card. They can afford it. The payment is valid. But it is not what they were hired to buy."],
- ["s02_problem", "AI agents are now that assistant. They buy data and APIs on their own, a few cents at a time, over x402 on Base. Spending limits ask one question: can the agent afford it? Aerar asks the one that matters: is this what it was asked to buy?"],
- ["s03_mandate", "Every task in Aerar starts with a mandate that a person signs. The purpose, the budget, the limits, and the kinds of things the agent may buy. Aerar signs it too, so nobody can quietly change the rules later."],
- ["s04_intentlock", "Here is that gift card attack, run through Aerar's real purchase pipeline. Eight dollars, inside a ten dollar budget, from a marketplace the task trusts. Every spending limit passes. IntentLock refuses it anyway. The item is a gift card, and the mandate is for blockchain analytics. The Ethereum data the task actually needs still gets bought."],
- ["s05_sandbox", "The same rules run live in the sandbox. A normal purchase is paid. When a second agent asks for the same data, Aerar serves it from memory, for zero. And a shop the task doesn't trust is never even contacted."],
- ["s06_outcomes", "Big purchases wait for a person, right here, or in Slack. And when a shop takes the money but sends back nothing, Aerar catches it. The purchase is marked paid, but not delivered, and that shop goes on hold, so it can't happen twice."],
- ["s07_proof", "Every purchase leaves evidence: the signed mandate it was decided under, every reason, and the payment. Anyone can check a receipt in their own browser. This one is real. The U S D C moved on Base Sepolia. Change a single number, and the check fails."],
- ["s08_vault", "For hard guarantees, Aerar Vault keeps the money in a contract you own on Base. It only pays shops you approved, within per payment and daily limits, and you can pause or revoke it at any time. Even a compromised Aerar can't spend outside those lines."],
- ["s09_tests", "None of this is a mock up. Thirty six real attacks run through the real pipeline in seconds. One hundred and eighty six app tests, and eighteen contract tests, all pass."],
- ["s10_close", "Most agent payment tools decide how much an agent can spend. Aerar governs what it buys, proves it, and checks that it arrived. Agents plug in through M C P, or a TypeScript SDK. Today it runs on Base Sepolia. Next: a security review, escrow for failed deliveries, and mainnet. Aerar. Every agent purchase, accounted for."]
+ [
+  "s01_freysa",
+  "November 2024. An AI agent called Freysa guards a crypto prize pool, with one rule: never send the money. Hundreds of attempts fail. Then one message convinces it that its transfer function is for receiving money. It sends the whole pool, about forty seven thousand dollars."
+ ],
+ [
+  "s02_aixbt",
+  "Months later, an attacker slips two instructions into AI X B T, a crypto trading agent. It sends fifty five and a half ether, over a hundred thousand dollars."
+ ],
+ [
+  "s03_problem",
+  "Both agents did what they were told. Nothing stood between the decision and the money. Now agents buy data and APIs on their own, over x four oh two. Spending limits ask: can it afford it? Aerar asks: is this what it was asked to buy?"
+ ],
+ [
+  "s04_what",
+  "Aerar sits between your agents and their money. Research agents buying data, trading bots buying feeds, coding agents paying for APIs. Every purchase is checked first."
+ ],
+ [
+  "s05_mandate",
+  "Each task starts with a mandate a person signs: the purpose, the budget, the limits, and what the agent may buy. Aerar signs it too, so the rules can't be quietly changed."
+ ],
+ [
+  "s06_intentlock",
+  "Here's a Freysa style attack, on Aerar's real pipeline. A web page tells a research agent it needs an eight dollar gift card. Inside the budget, from a trusted shop: every limit passes. IntentLock refuses it: the mandate is for blockchain analytics. The data the task needs still gets bought."
+ ],
+ [
+  "s07_sandbox",
+  "Live in the sandbox: a normal purchase is paid. The same data again comes from memory, for zero. Aerar never pays twice. And a shop the task doesn't trust is never contacted."
+ ],
+ [
+  "s08_guards",
+  "Aerar remembers prices. A shop that quietly charges five times more waits for you. A shop that swaps its payment wallet, the way a hijacked one would, is refused."
+ ],
+ [
+  "s09_delivery",
+  "Big buys wait for a person, here or in Slack. And a shop that takes the money and sends nothing is caught: paid, not delivered, and put on hold."
+ ],
+ [
+  "s10_proof",
+  "Every purchase leaves evidence anyone can check in their browser. This receipt is real: U S D C on Base Sepolia. Change one number, and it fails."
+ ],
+ [
+  "s11_vault",
+  "Freysa paid a wallet nobody approved. Aerar Vault, a contract you own on Base, only pays shops you approved, within daily limits. Even a hacked Aerar can't cross those lines."
+ ],
+ [
+  "s12_compare",
+  "Agent wallets cap how much an agent spends. Aerar checks what it buys, never pays twice, confirms it arrived, and proves it."
+ ],
+ [
+  "s13_tests",
+  "Thirty six real attacks, all handled. One hundred and eighty six app tests, and eighteen contract tests, pass."
+ ],
+ [
+  "s14_close",
+  "Plug in with M C P, or the TypeScript S D K. Live on Base Sepolia, with mainnet after a security review. Aerar. Every agent purchase, accounted for."
+ ]
 ]

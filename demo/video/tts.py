@@ -1,28 +1,35 @@
 #!/usr/bin/env python3
-"""Narration: each sentence synthesised separately with Piper (en-us ryan high, offline), joined with short pauses,
-so subtitle timings are exact. Writes audio/<scene>.wav and audio/<scene>.json ([start, end, sentence] in seconds)."""
-import json, os, re, subprocess, wave
+"""Narration: each sentence synthesised separately with Kokoro (82M, offline, voice am_michael), joined with short
+pauses, so subtitle timings are exact. Writes audio/<scene>.wav and audio/<scene>.json ([start, end, sentence]).
+Model files: github.com/thewh1teagle/kokoro-onnx releases (model-files-v1.0); set KOKORO_DIR to their folder."""
+import json, os, re
+import numpy as np, soundfile as sf
+from kokoro_onnx import Kokoro
+
 HERE = os.path.dirname(os.path.abspath(__file__))
-VOICE = os.environ.get("PIPER_VOICE", "/tmp/claude-0/tts/ryan/en-us-ryan-high.onnx")
-PAUSE = 0.38
+D = os.environ.get("KOKORO_DIR", "/tmp/claude-0/kokoro")
+VOICE = os.environ.get("VOICE", "am_michael")
+SPEED = float(os.environ.get("SPEED", "1.04"))
+PAUSE = 0.32
+k = Kokoro(os.path.join(D, "kokoro-v1.0.onnx"), os.path.join(D, "voices-v1.0.bin"))
 os.makedirs(os.path.join(HERE, "audio"), exist_ok=True)
+total = 0
 for name, text in json.load(open(os.path.join(HERE, "narration.json"))):
     sentences = [s.strip() for s in re.split(r"(?<=[.?!])\s+", text) if s.strip()]
-    frames, rate, t, spans = b"", None, 0.0, []
+    parts, t, spans, sr = [], 0.0, [], 24000
     for i, s in enumerate(sentences):
-        tmp = os.path.join(HERE, "audio", f".tmp_{i}.wav")
-        subprocess.run(["python3", "-m", "piper", "-m", VOICE, "-f", tmp, "--length-scale", "1.1"], input=s.encode(), check=True, capture_output=True)
-        with wave.open(tmp) as w:
-            rate = w.getframerate(); sw = w.getsampwidth(); ch = w.getnchannels(); data = w.readframes(w.getnframes())
-        d = len(data) / (rate * sw * ch)
+        a, sr = k.create(s, voice=VOICE, speed=SPEED, lang="en-us")
+        # trim leading/trailing near-silence so pauses are even
+        nz = np.where(np.abs(a) > 0.01)[0]
+        if len(nz):
+            a = a[max(0, nz[0] - 600): nz[-1] + 1800]
+        d = len(a) / sr
         spans.append([round(t, 3), round(t + d, 3), s])
-        frames += data
-        t += d
+        parts.append(a); t += d
         if i < len(sentences) - 1:
-            frames += b"\x00" * int(PAUSE * rate) * sw * ch
-            t += PAUSE
-        os.remove(tmp)
-    with wave.open(os.path.join(HERE, "audio", f"{name}.wav"), "wb") as w:
-        w.setnchannels(ch); w.setsampwidth(sw); w.setframerate(rate); w.writeframes(frames)
+            parts.append(np.zeros(int(PAUSE * sr), dtype=a.dtype)); t += PAUSE
+    sf.write(os.path.join(HERE, "audio", f"{name}.wav"), np.concatenate(parts), sr, subtype="PCM_16")
     json.dump(spans, open(os.path.join(HERE, "audio", f"{name}.json"), "w"), indent=1)
+    total += t
     print(f"{name:16s} {t:6.2f}s  {len(sentences)} sentences")
+print("narration total", round(total, 1))

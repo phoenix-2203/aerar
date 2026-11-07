@@ -72,27 +72,38 @@ async function record(name, fn, { storage = null, saveStorage = false } = {}) {
   const t0 = Date.now();
   const mark = { start: 0 };
   page.mark = (k) => { mark[k] = (Date.now() - t0) / 1000; };
+  page.boxes = {};
   await fn(page, ctx);
   if (saveStorage) await ctx.storageState({ path: STATE });
   const video = page.video();
   await ctx.close(); await b.close();
   fs.renameSync(await video.path(), path.join(OUT, name + '.webm'));
   fs.rmSync(dir, { recursive: true, force: true });
-  marks[name] = mark;
+  marks[name] = { ...mark, boxes: page.boxes };
   fs.writeFileSync(path.join(OUT, 'marks.json'), JSON.stringify(marks, null, 2));
   console.log('recorded', name, mark);
 }
 
 const hideCounters = (page) => page.addStyleTag({ content: '[aria-label="Live numbers"], section .glass.rounded-lg { }' });
 
+const CARD = (name, file, secs) => record(name, async (p) => { await p.goto(`${CARDS}/${file}`); p.mark('start'); await p.waitForTimeout(secs * 1000); });
+// Remember where an element is (1920x1080 frame coordinates) so the assembler can punch in on it.
+async function box(p, key, loc) {
+  const b = await loc.boundingBox().catch(() => null);
+  if (b) p.boxes[key] = { x: b.x + b.width / 2, y: b.y + b.height / 2, w: b.width, h: b.height };
+}
+
 const SCENES = {
-  // Title cards
-  async s01_hook() { await record('s01_hook', async (p) => { await p.goto(`${CARDS}/hook.html`); p.mark('start'); await p.waitForTimeout(17500); }); },
-  async s02b_questions() { await record('s02b_questions', async (p) => { await p.goto(`${CARDS}/questions.html`); p.mark('start'); await p.waitForTimeout(9000); }); },
-  async s08c_forge() { await record('s08c_forge', async (p) => { await p.goto(`${CARDS}/forge.html`); p.mark('start'); await p.waitForTimeout(6500); }); },
-  async s09b_tests() { await record('s09b_tests', async (p) => { await p.goto(`${CARDS}/tests.html`); p.mark('start'); await p.waitForTimeout(7000); }); },
-  async s10a_compare() { await record('s10a_compare', async (p) => { await p.goto(`${CARDS}/compare.html`); p.mark('start'); await p.waitForTimeout(9000); }); },
-  async s10c_end() { await record('s10c_end', async (p) => { await p.goto(`${CARDS}/end.html`); p.mark('start'); await p.waitForTimeout(13000); }); },
+  // Title cards (v2)
+  c_freysa: () => CARD('c_freysa', 'freysa.html', 21),
+  c_aixbt: () => CARD('c_aixbt', 'aixbt.html', 12),
+  c_bridge: () => CARD('c_bridge', 'bridge.html', 6.5),
+  c_questions: () => CARD('c_questions', 'questions.html', 7),
+  c_flow: () => CARD('c_flow', 'flow.html', 13),
+  c_forge: () => CARD('c_forge', 'forge.html', 6),
+  c_compare: () => CARD('c_compare', 'compare.html', 10),
+  c_tests: () => CARD('c_tests', 'tests.html', 6),
+  c_end: () => CARD('c_end', 'end.html', 11),
 
   // 02a: the landing page (live counters hidden: local numbers aren't the live site's)
   async s02a_landing() {
@@ -142,6 +153,7 @@ const SCENES = {
       await smoothScrollTo(p, card, 110, 900);
       const refused = p.locator('text=Declined: the item doesn').first();
       await moveTo(p, refused, { fx: 0.2, steps: 30 }).catch(() => {});
+      p.mark('refused'); await box(p, 'refused', refused);
       await p.waitForTimeout(5200);
       const paid = p.locator('text=Paid $1.50').first();
       await moveTo(p, paid, { fx: 0.2, steps: 25 }).catch(() => {});
@@ -149,48 +161,64 @@ const SCENES = {
     });
   },
 
-  // 05: sandbox: paid, reused, attacker never contacted
+  // 07 (v2): sandbox: paid, reused, attacker never contacted. Clicks timed to the narration.
   async s05_sandbox() {
     await record('s05_sandbox', async (p) => {
       await p.goto(BASE + '/try', { waitUntil: 'networkidle' });
       const ask = p.locator('section[aria-labelledby="ask"]');
       await smoothScrollTo(p, ask, 80, 10);
+      await p.mouse.move(760, 520);
       await p.waitForTimeout(500); p.mark('start');
+      const t0 = Date.now(); const at = (x) => p.waitForTimeout(Math.max(0, x * 1000 - (Date.now() - t0)));
       const presets = ask.locator('ol li button');
-      for (const [i, wait] of [[0, 3600], [1, 3600], [2, 3600]]) {
-        await smoothScrollTo(p, ask, 80, 500);
-        await click(p, presets.nth(i), { fx: 0.3 });
-        await p.waitForTimeout(wait);
-      }
-      await p.waitForTimeout(800);
+      await click(p, presets.nth(0), { fx: 0.3 });
+      await at(2.9); await click(p, presets.nth(1), { fx: 0.3 });
+      await at(8.0); await click(p, presets.nth(2), { fx: 0.3 });
+      await at(12.8);
     }, { storage: STATE });
   },
 
-  // 06: approval in place, then a shop that takes the money and sends nothing
+  // 08 (v2): price memory (5x price waits) and a payee swap (refused)
+  async s08_guards() {
+    await record('s08_guards', async (p) => {
+      await p.goto(BASE + '/try', { waitUntil: 'networkidle' });
+      const ask = p.locator('section[aria-labelledby="ask"]');
+      await smoothScrollTo(p, ask, 80, 10);
+      await p.mouse.move(760, 520);
+      await p.waitForTimeout(500); p.mark('start');
+      const t0 = Date.now(); const at = (x) => p.waitForTimeout(Math.max(0, x * 1000 - (Date.now() - t0)));
+      const presets = ask.locator('ol li button');
+      await at(0.6); await click(p, presets.nth(8), { fx: 0.3 });
+      await at(5.4); await click(p, presets.nth(9), { fx: 0.3 });
+      await at(11.6);
+    }, { storage: STATE });
+  },
+
+  // 09 (v2): approval in place, then a shop that takes the money and sends nothing
   async s06_outcomes() {
     await record('s06_outcomes', async (p) => {
       await p.goto(BASE + '/try', { waitUntil: 'networkidle' });
       const ask = p.locator('section[aria-labelledby="ask"]');
       await smoothScrollTo(p, ask, 80, 10);
+      await p.mouse.move(760, 520);
       await p.waitForTimeout(500); p.mark('start');
       await click(p, ask.locator('ol li button').nth(5), { fx: 0.3 });
-      await p.waitForTimeout(1500);
+      await p.waitForTimeout(900);
       const card = p.locator('section[aria-label="Needs your approval"] article').filter({ hasText: 'deep report' }).first();
-      await smoothScrollTo(p, card, 260, 700);
-      await p.waitForTimeout(500);
-      await click(p, card.getByRole('button', { name: /Approve/ }));
-      await p.waitForTimeout(2600);
-      await smoothScrollTo(p, ask, 80, 700);
-      await click(p, ask.locator('ol li button').nth(7), { fx: 0.3 });
-      await p.waitForTimeout(2600);
+      await smoothScrollTo(p, card, 260, 600);
+      await click(p, card.getByRole('button', { name: /Approve/ }), { steps: 14 });
+      await p.waitForTimeout(900);
+      await smoothScrollTo(p, ask, 80, 500);
+      await click(p, ask.locator('ol li button').nth(7), { fx: 0.3, steps: 14 });
+      await p.waitForTimeout(1900);
       const sec = p.locator('section[aria-labelledby="security"]');
-      await smoothScrollTo(p, sec, 90, 1100);
-      await moveTo(p, sec.locator('text=is on hold').first(), { steps: 30 });
-      await p.waitForTimeout(4200);
+      await smoothScrollTo(p, sec, 90, 900);
+      await moveTo(p, sec.locator('text=is on hold').first(), { steps: 24 });
+      await p.waitForTimeout(3600);
     }, { storage: STATE });
   },
 
-  // 07: evidence, then the live receipt (replayed), then try to cheat
+  // 10 (v2): evidence, then the live receipt (replayed), then try to cheat
   async s07_proof() {
     await record('s07_proof', async (p) => {
       await p.goto(BASE + '/try', { waitUntil: 'networkidle' });
@@ -198,28 +226,31 @@ const SCENES = {
       await smoothScrollTo(p, act, 80, 10);
       await p.waitForTimeout(500); p.mark('start');
       const row = act.locator('ul > li').filter({ hasText: 'Paid' }).first();
-      await click(p, row.locator('button').first(), { fx: 0.4 });
-      await p.waitForTimeout(700);
-      await click(p, row.getByRole('button', { name: /Evidence/ }));
+      await click(p, row.locator('button').first(), { fx: 0.4, steps: 14 });
+      await p.waitForTimeout(500);
+      await click(p, row.getByRole('button', { name: /Evidence/ }), { steps: 14 });
       await p.waitForSelector('text=What can be checked', { timeout: 15000 });
-      await p.waitForTimeout(600);
+      await p.waitForTimeout(500);
       await p.locator('dialog[open] .overflow-y-auto').evaluate((el) => el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }));
-      await p.waitForTimeout(3000);
+      await p.waitForTimeout(2200);
       await p.keyboard.press('Escape');
-      p.mark('verify');
       await p.goto(BASE + '/verify', { waitUntil: 'networkidle' });
-      await p.waitForTimeout(400);
-      await click(p, p.getByRole('button', { name: /Load a real receipt/ }));
-      await p.waitForTimeout(4800);
-      await click(p, p.getByRole('button', { name: /Try to cheat/ }));
-      await p.waitForTimeout(600);
+      p.mark('verify');
+      await p.waitForTimeout(200);
+      await click(p, p.getByRole('button', { name: /Load a real receipt/ }), { steps: 16 });
+      await p.waitForTimeout(3400);
+      await click(p, p.getByRole('button', { name: /Try to cheat/ }), { steps: 16 });
+      p.mark('cheat');
+      await p.waitForTimeout(300);
       const target = p.getByLabel('Edit paid amount');
-      await smoothScrollTo(p, target, 330, 600);
-      await click(p, target);
+      await smoothScrollTo(p, target, 330, 500);
+      await click(p, target, { steps: 14 });
       await target.press('End'); for (let i = 0; i < 4; i++) await target.press('Backspace');
-      await target.type('0.05', { delay: 110 });
-      await smoothScrollTo(p, p.getByText('Nobody changed it').first(), 200, 700);
-      await p.waitForTimeout(3600);
+      await target.type('0.05', { delay: 90 });
+      await smoothScrollTo(p, p.getByText('Nobody changed it').first(), 200, 600);
+      p.mark('invalid');
+      await box(p, 'invalid', p.getByText('NOT VALID').first());
+      await p.waitForTimeout(3000);
     }, { storage: STATE });
   },
 

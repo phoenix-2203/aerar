@@ -1,0 +1,9 @@
+/* Dark "night shift" palette for the real-incident cold open (matches the site's dark mode). */
+:root { --bg:#0a0d18; --surface:#11162a; --border:#232a45; --text:#e9ecf6; --t2:#aab2cc; --t3:#7d86a6; --accent:#6d8cff; --bad:#ff6b5e; --badt:#3a1717; --ok:#5fd39a; }
+html, body { background: var(--bg); color: var(--text); }
+.wash { opacity: .22; }
+.panel { background: rgb(17 22 42 / .82); border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 40px 90px -30px #000; }
+.foot { position:absolute; left:120px; bottom:34px; font:500 13px Mono,monospace; letter-spacing:.08em; color:var(--t3); }
+.date { font:500 17px Mono,monospace; letter-spacing:.24em; color:var(--bad); text-transform:uppercase; }
+.out { opacity:1; animation: out .5s ease forwards; }
+@keyframes out { to { opacity:.18; } }

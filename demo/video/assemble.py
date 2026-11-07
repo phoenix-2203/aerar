@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Assemble the Aerar demo video from the recorded scenes (rec/out/*.webm), the narration (audio/*.wav) and
-burned-in subtitles. Output: demo/video/aerar-demo.mp4 (1920x1080, 30 fps, H.264 + AAC)."""
-import json, os, re, subprocess
+"""Assemble the Aerar demo video (v2) from the recorded scenes (rec/out/*.webm), the narration (audio/*.wav), a
+generated music bed (music.py) and burned-in subtitles plus chapter tags. Output: demo/video/aerar-demo.mp4
+(1920x1080, 30 fps, H.264 + AAC)."""
+import json, os, subprocess
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "rec", "out")
@@ -9,8 +10,9 @@ BUILD = os.path.join(HERE, "build")
 os.makedirs(BUILD, exist_ok=True)
 marks = json.load(open(os.path.join(OUT, "marks.json")))
 narr = json.load(open(os.path.join(HERE, "narration.json")))
-LEAD = 0.35   # silence before each scene's narration
-TAIL = 0.45   # breathing room after it
+LEAD = 0.30   # silence before each scene's narration
+TAIL = 0.35   # breathing room after it
+EXTRA = {"s01_freysa": 1.0, "s02_aixbt": 0.6, "s10_proof": 1.4, "s11_vault": 0.5, "s14_close": 1.6}
 
 def dur(path):
     return float(subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path]))
@@ -18,32 +20,54 @@ def dur(path):
 def run(args):
     subprocess.run(args, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
-# Each scene: list of (clip, in-point seconds or ("mark", name, offset), source seconds to use, output seconds).
-# The speed of a piece is source/output; >1 speeds idle waits up (cursor moves, page loads), never the results.
 S = lambda name: marks[name]["start"]
+M = lambda name, k: marks[name][k]
+# piece: (clip, in-point (None = take the last `src` seconds), source seconds, output seconds, options)
+# speed = source/output; >1 only speeds up waits (cursor travel, page loads, scrolling), never hides a result.
+# options: zoom=(t0 in output seconds, x, y, factor) punches in on a point recorded by record.js.
+box = lambda clip, k: marks[clip]["boxes"][k]
 PLAN = {
-    "s01_hook":      [("s01_hook", S("s01_hook"), None, None)],
-    "s02_problem":   [("s02a_landing", S("s02a_landing"), 8.8, 8.8), ("s02b_questions", S("s02b_questions"), 8.9, None)],
-    "s03_mandate":   [("s03_mandate", S("s03_mandate"), 17.0, None)],
-    "s04_intentlock":[("s04_intentlock", S("s04_intentlock"), 20.6, None)],
-    "s05_sandbox":   [("s05_sandbox", S("s05_sandbox"), 18.2, None)],
-    "s06_outcomes":  [("s06_outcomes", S("s06_outcomes"), 19.9, None)],
-    "s07_proof":     [("s07_proof", S("s07_proof"), 7.2, 6.0), ("s07_proof", marks["s07_proof"]["verify"] + 0.5, 17.0, None)],
-    "s08_vault":     [("s08_vault", S("s08_vault"), 5.6, 5.2), ("s08c_forge", S("s08c_forge"), 5.6, 5.3), ("s08_vault", None, 5.6, None)],
-    "s09_tests":     [("s09_runall", S("s09_runall"), 11.1, 6.4), ("s09b_tests", S("s09b_tests"), 6.6, None)],
-    "s10_close":     [("s10a_compare", S("s10a_compare"), 8.2, 8.2), ("s10b_sdk", S("s10b_sdk"), 4.6, 4.5), ("s10c_end", S("s10c_end"), 12.6, None)],
+    "s01_freysa":    [("c_freysa", S("c_freysa"), None, None, {})],
+    "s02_aixbt":     [("c_aixbt", S("c_aixbt"), None, None, {})],
+    "s03_problem":   [("c_bridge", S("c_bridge"), 5.5, 5.5, {}), ("s02a_landing", S("s02a_landing"), 4.6, 4.6, {}),
+                      ("c_questions", S("c_questions"), None, None, {})],
+    "s04_what":      [("c_flow", S("c_flow"), None, None, {})],
+    "s05_mandate":   [("s03_mandate", S("s03_mandate"), 15.0, None, {})],
+    "s06_intentlock":[("s04_intentlock", S("s04_intentlock"), None, None,
+                       {"zoom": (M("s04_intentlock", "refused") - S("s04_intentlock") + 0.2, 1155, box("s04_intentlock", "refused")["y"], 1.3)})],
+    "s07_sandbox":   [("s05_sandbox", S("s05_sandbox"), None, None, {})],
+    "s08_guards":    [("s08_guards", S("s08_guards"), None, None, {})],
+    "s09_delivery":  [("s06_outcomes", S("s06_outcomes"), 12.0, None, {})],
+    "s10_proof":     [("s07_proof", S("s07_proof") + 0.4, M("s07_proof", "verify") - S("s07_proof") - 0.6, 3.6, {}),
+                      ("s07_proof", M("s07_proof", "verify") + 0.1, 12.2, None,
+                       {"zoom_at": ("invalid", M("s07_proof", "invalid") - M("s07_proof", "verify") - 0.1, 1180, box("s07_proof", "invalid")["y"], 1.28)})],
+    "s11_vault":     [("s08_vault", S("s08_vault"), 5.6, 3.4, {}), ("c_forge", S("c_forge"), 4.7, 4.7, {}), ("s08_vault", None, 5.6, None, {})],
+    "s12_compare":   [("c_compare", S("c_compare"), None, None, {})],
+    "s13_tests":     [("s09_runall", None, 4.0, 3.0, {}), ("c_tests", S("c_tests"), None, None, {})],
+    "s14_close":     [("s10b_sdk", S("s10b_sdk"), 4.6, 4.2, {}), ("c_end", S("c_end"), None, None, {})],
 }
+TAGS = {"s05_mandate": "Signed mandate", "s06_intentlock": "IntentLock", "s07_sandbox": "Memory · trusted shops",
+        "s08_guards": "Price memory · wallet-swap guard", "s09_delivery": "Approvals · delivery checks",
+        "s10_proof": "Evidence · verifiable receipts", "s11_vault": "Aerar Vault on Base", "s13_tests": "Attack lab · tests"}
+HITS = {"s01_freysa": 15.6, "s02_aixbt": 6.6}   # card-time of the money reveal on each incident card
 
-segments, audio_parts, subs, t = [], [], [], 0.0
+def zoom_vf(t0, cx, cy, z):
+    K = f"clip((t-{t0:.3f})/0.7\\,0\\,1)"
+    Z = f"(1+{z - 1:.3f}*{K}*{K}*(3-2*{K}))"
+    return (f",scale=w='trunc(1920*{Z}/2)*2':h='trunc(1080*{Z}/2)*2':eval=frame:flags=bicubic"
+            f",crop=1920:1080:x='clip({cx:.1f}*({Z}-1)\\,0\\,1920*({Z}-1))':y='clip({cy:.1f}*({Z}-1)\\,0\\,1080*({Z}-1))'")
+
+segments, audio_parts, subs, tags, hits, t = [], [], [], [], [], 0.0
 for name, text in narr:
     wav = os.path.join(HERE, "audio", f"{name}.wav")
     adur = dur(wav)
-    slot = LEAD + adur + TAIL + (1.6 if name == "s10_close" else 0)
+    slot = LEAD + adur + TAIL + EXTRA.get(name, 0)
     pieces = PLAN[name]
     fixed = sum(p[3] for p in pieces if p[3] is not None)
     flex = [p for p in pieces if p[3] is None]
     left = slot - fixed
-    for i, (clip, start, src, outd) in enumerate(pieces):
+    pt = t
+    for i, (clip, start, src, outd, opt) in enumerate(pieces):
         path = os.path.join(OUT, clip + ".webm")
         total = dur(path)
         if outd is None:
@@ -56,48 +80,61 @@ for name, text in narr:
         speed = src / outd
         seg = os.path.join(BUILD, f"{name}_{i}.mp4")
         pad = max(0.0, outd - src / speed)
-        vf = f"trim=start={start:.3f}:duration={src:.3f},setpts=(PTS-STARTPTS)/{speed:.5f},fps=30,scale=1920:1080:flags=lanczos,format=yuv420p"
-        vf += f",tpad=stop_mode=clone:stop_duration={pad + 0.2:.3f},trim=duration={outd:.3f}"
+        vf = f"trim=start={start:.3f}:duration={src:.3f},setpts=(PTS-STARTPTS)/{speed:.5f},fps=30,scale=1920:1080:flags=lanczos"
+        if "zoom" in opt:
+            t0, cx, cy, z = opt["zoom"]; vf += zoom_vf(t0 / speed, cx, cy, z)
+        if "zoom_at" in opt:
+            _, t0, cx, cy, z = opt["zoom_at"]; vf += zoom_vf(t0 / speed, cx, cy, z)
+        vf += f",format=yuv420p,tpad=stop_mode=clone:stop_duration={pad + 0.2:.3f},trim=duration={outd:.3f}"
         vf += f",fade=t=in:st=0:d=0.18,fade=t=out:st={max(0, outd - 0.18):.3f}:d=0.18"
-        run(["ffmpeg", "-y", "-i", path, "-vf", vf, "-an", "-c:v", "libx264", "-preset", "medium", "-crf", "17", "-r", "30", seg])
+        run(["ffmpeg", "-y", "-i", path, "-vf", vf, "-an", "-c:v", "libx264", "-preset", "medium", "-crf", "16", "-r", "30", seg])
         segments.append(seg)
         print(f"{name}[{i}] {clip}: src {src:.2f}s -> {outd:.2f}s (x{speed:.2f})")
-    # Narration for the slot, padded with silence
+        pt += outd
+    if name in TAGS:
+        tags.append((t + 0.25, t + slot - 0.25, TAGS[name]))
+    if name in HITS:
+        hits.append(t + HITS[name])
     a = os.path.join(BUILD, f"{name}.wav")
     run(["ffmpeg", "-y", "-i", wav, "-af", f"adelay={int(LEAD*1000)}:all=1,apad=whole_dur={slot:.3f},aresample=48000", "-ac", "2", a])
     audio_parts.append(a)
-    # Subtitles: exact sentence timings from tts.py; a one-word sentence ("Aerar.") joins the next.
     spans = json.load(open(os.path.join(HERE, "audio", f"{name}.json")))
     merged = []
-    for st, en, sen in spans:
+    for st, en, sen in spans:  # a one-word sentence ("Aerar.") joins the next
         if merged and len(merged[-1][2].split()) == 1:
             merged[-1] = [merged[-1][0], en, merged[-1][2] + " " + sen]
         else:
             merged.append([st, en, sen])
     for st, en, sen in merged:
-        subs.append((t + LEAD + st, t + LEAD + en + 0.25, sen))
+        subs.append((t + LEAD + st, t + LEAD + en + 0.2, sen))
     t += slot
 
-# Video concat
 lst = os.path.join(BUILD, "list.txt")
 open(lst, "w").write("".join(f"file '{s}'\n" for s in segments))
 video = os.path.join(BUILD, "video.mp4")
 run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", video])
 alst = os.path.join(BUILD, "alist.txt")
 open(alst, "w").write("".join(f"file '{a}'\n" for a in audio_parts))
-audio = os.path.join(BUILD, "narration.wav")
-run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", alst, "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-ar", "48000", audio])
+voice = os.path.join(BUILD, "narration.wav")
+run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", alst, "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-ar", "48000", voice])
+music = os.path.join(BUILD, "music.wav")
+run(["python3", os.path.join(HERE, "music.py"), f"{t:.2f}", music] + [f"{h:.2f}" for h in hits])
+audio = os.path.join(BUILD, "mix.wav")
+# Music ~20 dB under the voice, ducked further while the narrator speaks.
+run(["ffmpeg", "-y", "-i", voice, "-i", music, "-filter_complex",
+     "[1:a]volume=0.24[m];[0:a]asplit[v][sc];[m][sc]sidechaincompress=threshold=0.03:ratio=6:attack=40:release=500[md];"
+     "[v][md]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.89", "-ar", "48000", audio])
 
-# Subtitles (ASS): clean lower-third captions in the site's fonts
 def ts(x):
     h, r = divmod(x, 3600); m, s = divmod(r, 60)
     return f"{int(h)}:{int(m):02d}:{s:05.2f}"
-spoken = {"U S D C": "USDC", "M C P": "MCP", "x402": "x402", "mock up": "mock-up", "per payment": "per-payment"}
+REPL = [("AI X B T", "AIXBT"), ("x four oh two", "x402"), ("U S D C", "USDC"), ("M C P", "MCP"), ("S D K", "SDK"),
+        ("forty seven thousand dollars", "$47,000"), ("fifty five and a half ether", "55.5 ETH"),
+        ("over a hundred thousand dollars", "over $100,000"), ("eight dollar", "$8"), ("five times more", "5x more"),
+        ("Thirty six", "36"), ("One hundred and eighty six", "186"), ("eighteen", "18"), ("Freysa style", "Freysa-style")]
 def clean(s):
-    for k, v in spoken.items():
+    for k, v in REPL:
         s = s.replace(k, v)
-    s = s.replace("ten dollars", "$10").replace("eight dollar", "$8").replace("Eight dollars", "$8").replace("ten dollar", "$10")
-    s = s.replace("Thirty six", "36").replace("One hundred and eighty six", "186").replace("eighteen", "18")
     return s
 ass = os.path.join(BUILD, "subs.ass")
 with open(ass, "w") as f:
@@ -110,14 +147,16 @@ WrapStyle: 0
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: Cap,Inter,38,&H00FFFFFF,&H00FFFFFF,&H00000000,&H9A18201C,0,0,0,0,100,100,0,0,3,14,0,2,260,260,46,1
+Style: Tag,Inter,27,&H00FFFFFF,&H00FFFFFF,&H00D6552B,&H00D6552B,1,0,0,0,100,100,1,0,3,12,0,7,56,56,96,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """)
+    for a, b, s in tags:
+        f.write(f"Dialogue: 1,{ts(a)},{ts(b)},Tag,,0,0,0,,{{\\fad(250,250)}}{s}\n")
     for a, b, s in subs:
         f.write(f"Dialogue: 0,{ts(a)},{ts(b)},Cap,,0,0,0,,{clean(s)}\n")
 final = os.path.join(HERE, "aerar-demo.mp4")
-fontsdir = os.path.join(HERE, "cards", "fonts")
 run(["ffmpeg", "-y", "-i", video, "-i", audio, "-vf", f"ass={ass}", "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p",
      "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-shortest", final])
 print("total", round(t, 2), "s ->", final, round(dur(final), 2))
