@@ -7,8 +7,10 @@ AI agents now pay for APIs and data by themselves, a few cents at a time, over x
 Agents never hold a wallet. They ask Aerar to buy a resource for a task. Aerar reads the provider's real price, checks it against the task's rules, serves an identical earlier purchase for $0 instead of paying twice, pays exactly the approved quote, checks the USDC transfer onchain, and writes every step into a tamper-evident ledger. Your agents work the night shift; Aerar is the morning report.
 
 - **Demo video:** *coming before submission*
-- **Try it yourself, no login or wallet:** [your own sandbox](https://aerar.duckdns.org/try) (set the rules, let a test agent shop, approve what waits for you, or connect your own agent over MCP) · [attack lab](https://aerar.duckdns.org/scenarios) (29 real-world scenarios, Run all in ~5 s) · [last night's report](https://aerar.duckdns.org/demo) (real Base Sepolia purchases, read-only)
-- **Connect an agent:** REST API or MCP server (`buy_resource`, `get_purchase`), [setup below](#connect-an-ai-agent-over-mcp)
+- **Try it, no login or wallet:** [your own sandbox](https://aerar.duckdns.org/try) · [attack lab](https://aerar.duckdns.org/scenarios) (29 scenarios, Run all in ~5 s) · [live report](https://aerar.duckdns.org/demo) (real Base Sepolia purchases)
+- **With your wallet:** [open a Vault](https://aerar.duckdns.org/vault) on Base Sepolia, sign its limits, let your agent pay from it
+- **Check a receipt:** [verify](https://aerar.duckdns.org/verify), then try to cheat
+- **Connect an agent:** Claude, ChatGPT, Claude Code, MCP or REST ([builders page](https://aerar.duckdns.org/builders))
 
 Built for [Vibestarter's Vibeathon 02](https://blog.vibestarter.xyz/vibeathon-02), theme *Night shift*.
 
@@ -18,7 +20,7 @@ Built for [Vibestarter's Vibeathon 02](https://blog.vibestarter.xyz/vibeathon-02
 
 ## Contents
 
-[The problem](#the-problem) · [Why nothing fixes it today](#why-nothing-fixes-it-today) · [What Aerar does](#what-aerar-does) · [A night shift, step by step](#a-night-shift-step-by-step) · [When money moves](#when-money-moves) · [Features](#features) · [Use cases](#use-cases) · [How it compares](#how-it-compares) · [Why Base and x402](#why-base-and-x402) · [Potential](#potential) · [Live on testnet](#live-on-testnet) · [What has been verified](#what-has-been-verified) · [Trust model and limits](#trust-model-and-limits) · [Architecture](#architecture) · [Run it](#run-it) · [APIs](#agent-api) · [Roadmap](#roadmap)
+[The problem](#the-problem) · [Why nothing fixes it today](#why-nothing-fixes-it-today) · [What Aerar does](#what-aerar-does) · [A night shift, step by step](#a-night-shift-step-by-step) · [When money moves](#when-money-moves) · [Features](#features) · [Use cases](#use-cases) · [How it compares](#how-it-compares) · [Why Base and x402](#why-base-and-x402) · [The market](#the-market) · [Live on testnet](#live-on-testnet) · [What has been verified](#what-has-been-verified) · [Trust model and limits](#trust-model-and-limits) · [Architecture](#architecture) · [Run it](#run-it) · [APIs](#agent-api) · [Roadmap](#roadmap)
 
 ---
 
@@ -54,21 +56,14 @@ Aerar sits between the agent and the wallet:
 
 - **The agent** asks for a resource, names the task and says why. It never sees a key, and gets back the result plus a plain-language decision.
 - **The operator** sets each task's budget and rules, approves what's above a threshold, and reads in the morning what was bought, reused, refused and proven.
-- **The provider** gets paid exactly what it quoted, by a wallet only Aerar controls.
+- **The provider** gets paid exactly what it quoted, from the user's own Vault or a wallet only Aerar controls.
 
-```mermaid
-flowchart LR
-    A["Agent<br/>(REST or MCP)"] -->|buy this, for task X| G{"Aerar"}
-    G -->|not allowed| D["Declined<br/>provider never contacted"]
-    G -->|identical purchase<br/>already made| R["Reused<br/>$0"]
-    G -->|above threshold| H["Waits for a person"]
-    G -->|within the rules| P["Pays the quote<br/>USDC on Base"]
-    P --> V["Transfer checked onchain"]
-    V --> L[("Hash-chained ledger")]
-    R --> L
-    D --> L
-    H --> L
-```
+| The agent asks to buy… | Aerar's answer |
+|---|---|
+| from a shop not on the task's list | **Declined**; the shop is never contacted |
+| something already bought | **Reused** for $0 |
+| something big, or much pricier than last time | **Waits for a person** (in Slack, Discord or Telegram) |
+| within every rule | **Paid** from the Vault or Aerar's wallet, transfer checked on Base, signed receipt |
 
 In order, for every request:
 
@@ -97,24 +92,7 @@ Every step has its reasons in plain words, its policy version, and (for payments
 
 ### The life of a purchase
 
-```mermaid
-stateDiagram-v2
-    [*] --> declined: access or policy says no
-    [*] --> reused: identical purchase in window
-    [*] --> free: provider didn't ask for payment
-    [*] --> awaiting_approval: above threshold
-    [*] --> reserved: within the rules
-    awaiting_approval --> reserved: operator approves (re-checked)
-    awaiting_approval --> rejected: operator rejects
-    awaiting_approval --> expired: task or mandate expires
-    reserved --> paying
-    paying --> delivered: paid, transfer verified
-    paying --> payment_failed: provider or chain refused
-    paying --> unknown: network failure after sending
-    delivered --> [*]
-    reused --> [*]
-    declined --> [*]
-```
+`declined` · `reused` · `free` · `awaiting_approval` → (`reserved` | `rejected` | `expired`) · `reserved` → `paying` → (`delivered` | `payment_failed` | `unknown`)
 
 An approved purchase is not a paid purchase, and a paid purchase is not proof the data was useful. Aerar records each step separately. `unknown` keeps the budget reserved until it is reconciled, rather than guessing.
 
@@ -183,19 +161,20 @@ An approved purchase is not a paid purchase, and a paid purchase is not proof th
 
 ## How it compares
 
-Based on public documentation found on 6 Nov 2026. "Not documented" means we couldn't find it, not that it can't exist.
+From public pages read on 6–7 Nov 2026 ([notes](docs/competitors.md)). "Not described" means we couldn't find it, not that it can't exist.
 
-| | **Aerar** | Coinbase Agentic Wallets | AWS AgentCore Payments | Budget/receipt tools (Locus, PayAI, x402-cfo) |
-|---|---|---|---|---|
-| Spending limits | ✅ per task | ✅ per wallet/session | ✅ per session | ✅ |
-| Human approval above a threshold | ✅ | Not documented | Not documented | ✅ some |
-| Decision uses the provider's real 402 quote | ✅ re-quoted before paying | Payee/asset allowlists | Not documented | Not documented |
-| Reuses an identical earlier purchase across agents | ✅ | ❌ | ❌ | Not documented |
-| Onchain check of the transfer | ✅ | n/a (it is the wallet) | Not documented | Not documented |
-| Tamper-evident ledger | ✅ hash-chained | Not documented | Not documented | ✅ some |
-| Agent never holds a key | ✅ | Agent holds a wallet | Managed wallet | Varies |
+| | **Aerar** | Nevermined | Coinbase CDP wallets | Google AP2 | Payman |
+|---|---|---|---|---|---|
+| Spending limits | ✅ per task and provider | ✅ amount, count, expiry | ✅ wallet policies | Budget in an open mandate | ✅ policy layer |
+| Limits enforced on-chain, in a wallet the user owns | ✅ Aerar Vault | ❌ their service | Their signing service | ❌ protocol only | ❌ bank-side |
+| Human approval above a threshold, in chat | ✅ Slack / Discord / Telegram | Not described | Not described | Not described | ✅ one-time code |
+| Never pays twice (memory across agents) | ✅ | Not described | ❌ | ❌ | Not described |
+| Price memory and provider reliability scores | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Agents hiring agents (budgets roll up) | ✅ | ❌ | ❌ | Agent roles only | ❌ |
+| Receipts anyone can verify | ✅ signed, checked on-chain | Per-purchase record | n/a (it is the wallet) | Signed mandate trail | Audit trail |
+| Works on x402 | ✅ | ✅ | ✅ | Demo | ❌ bank rails |
 
-**What we learned from them (not copied):** session budgets with expiry (AWS), payee allowlists (Coinbase), signed authorisation trails (AP2). What none of them do, as far as we can find, is treat a purchase as something to *account for*: tied to a task, deduplicated across agents, bound to the quote, and proven onchain.
+**What we learned from them (not copied):** spend mandates with expiry (Nevermined, AP2), payee allowlists (Coinbase), signed authorisation trails (AP2), a kill switch (Payman). What none of them do, as far as we can find, is treat a purchase as something to *account for*: tied to a task, never paid twice, price-checked, approved where people are, and enforced by a contract the user owns.
 
 ## Why Base and x402
 
@@ -206,11 +185,21 @@ Based on public documentation found on 6 Nov 2026. "Not documented" means we cou
 | **Public chain** | Every payment can be checked independently; Aerar checks the transfer itself rather than trusting a response header. |
 | **MCP** | Agents built on Claude and other models can use Aerar as a tool, without any wallet code. |
 
-## Potential
+## The market
 
-- **The activity is already there.** 138M+ x402 payments on Base, mostly under ten cents ([Chainalysis via Blockhead](https://www.blockhead.co/2026/10/15/ai-agents-have-made-138-million-payments-over-x402-most-of-them-under-10-cents/)).
-- **The trust gap is the barrier.** Only 5% of consumers would trust an AI platform with an agent's payment ([Wildfire Systems](https://www.prnewswire.com/news-releases/survey-agentic-commerce-has-a-payment-trust-problem-302913466.html)). Teams need records they can show, not just limits.
-- **Business model (planned, not live):** a share of the money procurement memory saves, or a per-seat price for the operator dashboard. Aerar charges nothing today.
+**The activity is real, and early.** Chainalysis counts more than 138 million x402 payments on Base, 87% of them under ten cents ([Chainalysis via Blockhead](https://www.blockhead.co/2026/10/15/ai-agents-have-made-138-million-payments-over-x402-most-of-them-under-10-cents/)). Base's build page shows 75M+ agent transactions, 12K+ active agents and 22K+ x402 APIs ([base.org/build](https://www.base.org/build); the page gives no source). The money is still small: Artemis estimates about half of x402 volume is artificial, with real daily volume closer to $28k ([Forkast](https://forkast.news/half-of-x402s-transaction-volume-is-artificial-the-infrastructure-layer-keeps-building-anyway/)).
+
+**The pain is real.** An agent on Base sent about $204k after a Morse-coded prompt ([OECD AI incident monitor](https://oecd.ai/en/incidents/2026-05-04-4a73)). Researchers found duplicate-settlement and paid-but-not-delivered flaws in x402 tools ([arXiv 2605.30998](https://arxiv.org/abs/2605.30998), [arXiv 2605.11781](https://arxiv.org/abs/2605.11781)). Only 5% of consumers would trust an AI platform with an agent's payment ([Wildfire Systems](https://www.prnewswire.com/news-releases/survey-agentic-commerce-has-a-payment-trust-problem-302913466.html)).
+
+**Who uses it first:**
+
+1. **Builders and agencies running several agents**, often for clients: budgets per project, approvals, receipts to bill against.
+2. **Platforms where users run agents**: a Vault per user means the platform never holds user money.
+3. **Companies letting agents buy data and APIs**, as the amounts grow: audit trails and approvals before anything else.
+
+**What the field charges** (published pricing pages, read 7 Nov 2026): Nevermined, the closest product, Free / $50 / $250 / $500 a month plus 1–2% of settled spend; Privy $299–$499 a month by active users; Turnkey $99 a month plus $0.05 a signature; Coinbase's x402 facilitator $0.001 per on-chain payment after 1,000 free a month. Aerar's own cost per purchase is about a tenth of a cent. Aerar is free on testnet; pricing comes with mainnet.
+
+**Risks, said plainly:** dollar volume is small today, and wallet providers (Coinbase especially) may add basic limits themselves. Aerar's answer is to sit above any wallet: memory, price memory, approvals, receipts, teams and a user-owned Vault.
 
 ## Live on testnet
 
@@ -230,15 +219,22 @@ The first night's purchases, made by the demo agent through the live API on 6 No
 
 ## Screens
 
-All 36 (every page, 375 and 1440 px, light and dark) are in [`docs/screenshots`](docs/screenshots). Public pages are from the live site; operator pages use a local simulated night (`npm run seed:sim`), marked "[simulated]".
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/v2-landing.png" width="420" alt="Landing: the night ledger"><br><sub><b>Landing:</b> one night shift as a ledger you can scrub</sub></td>
+<td width="50%"><img src="docs/screenshots/v2-one-purchase.png" width="420" alt="Watch one purchase"><br><sub><b>Watch one purchase:</b> where each situation stops, and why</sub></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/v2-sandbox.png" width="420" alt="Sandbox"><br><sub><b>Sandbox:</b> your rules, real situations, simulated shops</sub></td>
+<td><img src="docs/screenshots/v2-vault.png" width="420" alt="Vault"><br><sub><b>Vault:</b> your wallet, on-chain limits, "Pretend Aerar got hacked"</sub></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/v2-receipt.png" width="420" alt="Signed receipt"><br><sub><b>Signed receipt:</b> checked in your browser</sub></td>
+<td><img src="docs/screenshots/v2-agents-hiring.png" width="420" alt="Agents hiring agents"><br><sub><b>Agents hiring agents:</b> a smaller budget that counts up</sub></td>
+</tr>
+</table>
 
-| | |
-|---|---|
-| **Landing:** an injected purchase stopped at step 1, and the same night paid by a plain wallet vs Aerar (computed by the real pipeline) ![Landing](docs/screenshots/landing-1440-dark.png) | **Attack lab:** 26 scenarios, each graded by its own checks, with what a plain wallet would have paid ![Attack lab](docs/screenshots/scenarios-1440-light.png) |
-| **Morning report:** one-sentence lead, four tiles, approvals first ![Morning report](docs/screenshots/report-1440-dark.png) | **Purchase drawer:** every step, the rules that decided, and onchain proof ![Drawer](docs/screenshots/demo-drawer-1440-light.png) |
-| **Task:** budget, rules as sentences, history as a diff, kill switches ![Task](docs/screenshots/task-1440-light.png) | **Audit log:** recompute the hash chain on demand ![Audit](docs/screenshots/audit-1440-dark.png) |
-
-On a phone: ![Report on a phone](docs/screenshots/report-375-light.png)
+More screens (every page, phone and desktop, both themes) are in [`docs/screenshots`](docs/screenshots).
 
 ## What has been verified
 
@@ -271,39 +267,22 @@ On a phone: ![Report on a phone](docs/screenshots/report-375-light.png)
 
 ## Architecture
 
-```mermaid
-flowchart TB
-    subgraph Agents
-        AG["Claude / any agent"]
-    end
-    subgraph App["Next.js app"]
-        API["Agent API /api/v1 · MCP /api/mcp"]
-        OP["Operator dashboard + API"]
-        PIPE["Purchase pipeline<br/>access · memory · quote · policy · reserve · pay · evidence"]
-        DEMO["Demo x402 providers"]
-    end
-    DB[("Postgres / PGlite<br/>tasks · policies · purchases · audit chain")]
-    BASE["Base Sepolia<br/>USDC"]
-    AG --> API --> PIPE
-    OP --> PIPE
-    PIPE --> DB
-    PIPE -->|402 quote, pay| DEMO
-    PIPE -->|verify transfer| BASE
-```
+**Agent** (Claude, ChatGPT, any MCP or REST client) → **Aerar** (access → memory → quote → rules → reserve → pay → prove) → **Vault** on Base (the user's limits, enforced on-chain) → **x402 shop** (USDC on Base Sepolia). Every step goes into a hash-chained audit log; each morning its head is sealed on Base.
 
 | Path | What it is |
 |---|---|
-| `src/lib/purchase/` | The purchase pipeline |
-| `src/lib/policy/` | Policy engine (pure functions) |
+| `src/lib/purchase/` | The purchase pipeline, sub-task roll-up |
+| `src/lib/policy/` | Rules engine (pure functions, no AI) |
 | `src/lib/memory/` | Request normalisation and reuse keys |
-| `src/lib/x402/` | Payment rail on Base Sepolia and onchain transfer check |
+| `src/lib/x402/` | x402 payment rail on Base Sepolia, on-chain transfer check |
+| `src/lib/vault/`, `contracts/` | Aerar Vault + factory, Morning Seal (Solidity, Foundry tests) |
+| `src/lib/receipts/`, `src/lib/seal/` | Signed receipts, Morning Seal |
+| `src/lib/notify/`, `src/lib/wallet/` | Approvals in Slack/Discord/Telegram, wallet sign-in and teams |
 | `src/lib/audit/` | Hash-chained audit log |
-| `src/lib/mcp/` | MCP server tools |
-| `src/app/report/`, `src/app/tasks/`, `src/app/audit/` | Operator dashboard: morning report, task pages, audit log |
-| `src/app/api/` | Agent, operator, MCP and demo-provider routes |
-| `src/lib/server/report.ts` | Morning report numbers and headline |
+| `src/lib/mcp/` | MCP tools |
+| `src/app/` | Pages and API routes |
 | `src/db/`, `drizzle/` | Schema and migrations |
-| `scripts/` | Migrate and seed |
+| `scripts/` | Migrate, seed, deploy contracts, live smoke test |
 
 ## Run it
 
@@ -408,11 +387,11 @@ Log in with `POST /api/auth/login {"password": "…"}` (sets an httpOnly, SameSi
 
 ## Roadmap
 
-- **Was it worth it?** Mark each purchase as used or unused when a task closes, and report useful spend per provider.
-- **Public receipt pages**: quote, policy version, BaseScan link and chain proof for any purchase, checkable by anyone.
-- **Price-drift alerts**: send a purchase to approval when a provider's quote jumps from what was last paid.
-- **Authorise-then-capture** with x402's `auth-capture` scheme, so failed deliveries aren't charged.
-- **Multiple organisations and operators.**
+- **Mainnet** after an audit of the Vault and Seal contracts.
+- **Authorise-then-capture** with x402's `auth-capture` scheme, so a failed delivery isn't charged.
+- **Outcome checks**: an empty or malformed paid response counts against the provider's score and opens a dispute.
+- **"Was it worth it?"**: mark each purchase used or unused when a task closes; useful spend per provider.
+- **Organisations with many operators** beyond wallet teams.
 
 ---
 
