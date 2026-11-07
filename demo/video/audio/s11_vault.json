@@ -1,17 +1,17 @@
 [
  [
   0.0,
-  2.317,
-  "Freysa paid a wallet nobody approved."
+  2.54,
+  "Grok's agent paid a wallet nobody approved."
  ],
  [
-  2.637,
-  8.351,
-  "Aerar Vault, a contract you own on Base, only pays shops you approved, within daily limits."
+  3.33,
+  5.94,
+  "Aerar Vault is a contract you own on Base."
  ],
  [
-  8.671,
-  11.143,
-  "Even a hacked Aerar can't cross those lines."
+  6.43,
+  11.819,
+  "It only pays shops you approved, within daily limits, even if Aerar itself is hacked."
  ]
 ]

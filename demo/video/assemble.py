@@ -10,9 +10,9 @@ BUILD = os.path.join(HERE, "build")
 os.makedirs(BUILD, exist_ok=True)
 marks = json.load(open(os.path.join(OUT, "marks.json")))
 narr = json.load(open(os.path.join(HERE, "narration.json")))
-LEAD = 0.30   # silence before each scene's narration
-TAIL = 0.35   # breathing room after it
-EXTRA = {"s01_freysa": 1.0, "s02_aixbt": 0.6, "s10_proof": 1.4, "s11_vault": 0.5, "s14_close": 1.6}
+LEAD = 0.28   # silence before each scene's narration
+TAIL = 0.30   # breathing room after it
+EXTRA = {"s01_grok": 0.6, "s14_close": 1.4}
 
 def dur(path):
     return float(subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path]))
@@ -27,11 +27,11 @@ M = lambda name, k: marks[name][k]
 # options: zoom=(t0 in output seconds, x, y, factor) punches in on a point recorded by record.js.
 box = lambda clip, k: marks[clip]["boxes"][k]
 PLAN = {
-    "s01_freysa":    [("c_freysa", S("c_freysa"), None, None, {})],
-    "s02_aixbt":     [("c_aixbt", S("c_aixbt"), None, None, {})],
-    "s03_problem":   [("c_bridge", S("c_bridge"), 5.5, 5.5, {}), ("s02a_landing", S("s02a_landing"), 4.6, 4.6, {}),
-                      ("c_questions", S("c_questions"), None, None, {})],
-    "s04_what":      [("c_flow", S("c_flow"), None, None, {})],
+    "s01_grok":      [("c_grok", 0, None, None, {})],
+    "s02_openai":    [("c_openai", 0, None, None, {})],
+    "s03_problem":   [("c_bridge", 0, 5.0, 5.0, {}), ("s02a_landing", S("s02a_landing"), 4.8, 4.8, {}),
+                      ("c_questions", 0, None, None, {})],
+    "s04_what":      [("c_flow", 0, None, None, {})],
     "s05_mandate":   [("s03_mandate", S("s03_mandate"), 15.0, None, {})],
     "s06_intentlock":[("s04_intentlock", S("s04_intentlock"), None, None,
                        {"zoom": (M("s04_intentlock", "refused") - S("s04_intentlock") + 0.2, 1155, box("s04_intentlock", "refused")["y"], 1.3)})],
@@ -41,15 +41,15 @@ PLAN = {
     "s10_proof":     [("s07_proof", S("s07_proof") + 0.4, M("s07_proof", "verify") - S("s07_proof") - 0.6, 3.6, {}),
                       ("s07_proof", M("s07_proof", "verify") + 0.1, 12.2, None,
                        {"zoom_at": ("invalid", M("s07_proof", "invalid") - M("s07_proof", "verify") - 0.1, 1180, box("s07_proof", "invalid")["y"], 1.28)})],
-    "s11_vault":     [("s08_vault", S("s08_vault"), 5.6, 3.4, {}), ("c_forge", S("c_forge"), 4.7, 4.7, {}), ("s08_vault", None, 5.6, None, {})],
-    "s12_compare":   [("c_compare", S("c_compare"), None, None, {})],
-    "s13_tests":     [("s09_runall", None, 4.0, 3.0, {}), ("c_tests", S("c_tests"), None, None, {})],
-    "s14_close":     [("s10b_sdk", S("s10b_sdk"), 4.6, 4.2, {}), ("c_end", S("c_end"), None, None, {})],
+    "s11_vault":     [("s08_vault", S("s08_vault"), 5.6, 3.4, {}), ("c_forge", 0, 4.7, 4.7, {}), ("s08_vault", None, 5.6, None, {})],
+    "s12_compare":   [("c_compare", 0, None, None, {})],
+    "s13_tests":     [("s09_runall", None, 4.0, 3.0, {}), ("c_tests", 0, None, None, {})],
+    "s14_close":     [("s10b_sdk", S("s10b_sdk"), 4.6, 4.2, {}), ("c_end", 0, None, None, {})],
 }
 TAGS = {"s05_mandate": "Signed mandate", "s06_intentlock": "IntentLock", "s07_sandbox": "Memory · trusted shops",
         "s08_guards": "Price memory · wallet-swap guard", "s09_delivery": "Approvals · delivery checks",
         "s10_proof": "Evidence · verifiable receipts", "s11_vault": "Aerar Vault on Base", "s13_tests": "Attack lab · tests"}
-HITS = {"s01_freysa": 15.6, "s02_aixbt": 6.6}   # card-time of the money reveal on each incident card
+HITS = {"s01_grok": 13.8, "s02_openai": 7.0}   # card-time of the money reveal on each incident card
 
 def zoom_vf(t0, cx, cy, z):
     K = f"clip((t-{t0:.3f})/0.7\\,0\\,1)"
@@ -69,6 +69,8 @@ for name, text in narr:
     pt = t
     for i, (clip, start, src, outd, opt) in enumerate(pieces):
         path = os.path.join(OUT, clip + ".webm")
+        if not os.path.exists(path):
+            path = os.path.join(OUT, clip + ".mp4")  # title cards are rendered frame by frame (rec/cards.js)
         total = dur(path)
         if outd is None:
             outd = left / len(flex)
@@ -116,14 +118,13 @@ run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", vide
 alst = os.path.join(BUILD, "alist.txt")
 open(alst, "w").write("".join(f"file '{a}'\n" for a in audio_parts))
 voice = os.path.join(BUILD, "narration.wav")
-run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", alst, "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-ar", "48000", voice])
+run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", alst, "-af", "highpass=f=70,equalizer=f=3500:t=q:w=1.2:g=-2,equalizer=f=180:t=q:w=1:g=1.5,acompressor=threshold=0.1:ratio=2:attack=20:release=250,loudnorm=I=-16:TP=-1.5:LRA=11", "-ar", "48000", voice])
 music = os.path.join(BUILD, "music.wav")
 run(["python3", os.path.join(HERE, "music.py"), f"{t:.2f}", music] + [f"{h:.2f}" for h in hits])
 audio = os.path.join(BUILD, "mix.wav")
-# Music ~20 dB under the voice, ducked further while the narrator speaks.
+# Music steady, about 20 dB under the voice (no ducking, so nothing pumps).
 run(["ffmpeg", "-y", "-i", voice, "-i", music, "-filter_complex",
-     "[1:a]volume=0.24[m];[0:a]asplit[v][sc];[m][sc]sidechaincompress=threshold=0.03:ratio=6:attack=40:release=500[md];"
-     "[v][md]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.89", "-ar", "48000", audio])
+     "[1:a]volume=0.13[m];[0:a][m]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.89", "-ar", "48000", audio])
 
 def ts(x):
     h, r = divmod(x, 3600); m, s = divmod(r, 60)
@@ -131,7 +132,7 @@ def ts(x):
 REPL = [("AI X B T", "AIXBT"), ("x four oh two", "x402"), ("U S D C", "USDC"), ("M C P", "MCP"), ("S D K", "SDK"),
         ("forty seven thousand dollars", "$47,000"), ("fifty five and a half ether", "55.5 ETH"),
         ("over a hundred thousand dollars", "over $100,000"), ("eight dollar", "$8"), ("five times more", "5x more"),
-        ("Thirty six", "36"), ("One hundred and eighty six", "186"), ("eighteen", "18"), ("Freysa style", "Freysa-style")]
+        ("Thirty six", "36"), ("One hundred and eighty six", "186"), ("eighteen", "18"), ("three billion", "3 billion"), ("a hundred and fifty thousand dollars", "$150,000")]
 def clean(s):
     for k, v in REPL:
         s = s.replace(k, v)

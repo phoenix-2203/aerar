@@ -94,16 +94,7 @@ async function box(p, key, loc) {
 }
 
 const SCENES = {
-  // Title cards (v2)
-  c_freysa: () => CARD('c_freysa', 'freysa.html', 21),
-  c_aixbt: () => CARD('c_aixbt', 'aixbt.html', 12),
-  c_bridge: () => CARD('c_bridge', 'bridge.html', 6.5),
-  c_questions: () => CARD('c_questions', 'questions.html', 7),
-  c_flow: () => CARD('c_flow', 'flow.html', 13),
-  c_forge: () => CARD('c_forge', 'forge.html', 6),
-  c_compare: () => CARD('c_compare', 'compare.html', 10),
-  c_tests: () => CARD('c_tests', 'tests.html', 6),
-  c_end: () => CARD('c_end', 'end.html', 11),
+  // Title cards are rendered frame by frame by cards.js.
 
   // 02a: the landing page (live counters hidden: local numbers aren't the live site's)
   async s02a_landing() {

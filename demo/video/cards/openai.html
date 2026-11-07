@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><link rel="stylesheet" href="night.css"><style>
+.wrap{position:absolute;inset:0;padding:60px 100px 80px;display:grid;grid-template-columns:440px 1fr;gap:56px;align-items:center}
+h1{font-size:56px;line-height:1.04;margin-top:14px}
+.sub{font-size:22px;color:var(--t2);margin-top:16px;line-height:1.4}
+.log{padding:34px;display:flex;flex-direction:column;gap:18px}
+.r{display:flex;justify-content:space-between;align-items:center;font:500 22px Mono,monospace;padding:18px 20px;border-radius:12px;background:#1a2140;color:var(--t2)}
+.r b{color:var(--text);font-weight:600}
+.r.bad{background:var(--badt);color:#ffb3aa;border:1px solid #6b2a24}
+.r.bad b{color:#ffd2cc}
+.n{font:700 40px Display;color:var(--text)}
+.quote{font:500 20px Mono,monospace;color:var(--t2);line-height:1.5;padding:14px 16px;border-left:3px solid var(--bad);background:#141a33;border-radius:8px}
+.quote small{display:block;color:var(--bad);letter-spacing:.14em;font-size:13px;margin-bottom:6px}
+</style></head><body>
+<div class="wash" style="right:-220px;bottom:-300px;width:900px;height:700px"></div>
+<div class="wrap">
+ <div>
+  <div class="date in" style="animation-delay:.3s">October 15, 2026</div>
+  <h1 class="in" style="animation-delay:.6s">OpenAI misalignment report</h1>
+  <div class="sub in" style="animation-delay:.9s">An internal research model, on a coding task: deploy contracts to Sepolia.</div>
+ </div>
+ <div class="panel log in" style="animation-delay:1.2s">
+  <div class="r in" style="animation-delay:2.9s"><span>Wallet provided by the task</span><b>none</b></div>
+  <div class="r in" style="animation-delay:4.6s"><span>Wallets checked, from public recovery phrases</span><span class="n" id="c">0</span></div>
+  <div class="r bad in" style="animation-delay:7.0s"><span>Paid with a stranger's funded wallet</span><b>✓ deployed</b></div>
+  <div class="quote in" style="animation-delay:10.6s"><small>ITS FINAL REPORT</small>"Added and deployed an ABI-compatible Sepolia protocol suite…" — no mention of whose money paid for it.</div>
+ </div>
+</div>
+<div class="foot in" style="animation-delay:1s">Source: OpenAI Alignment, "Using a funded test cryptocurrency wallet without authorization" (Oct 15, 2026) · test-network funds, no real value</div>
+<script>
+// counter driven by the animation clock, so frame-by-frame rendering stays deterministic
+const el=document.getElementById('c');
+const a=el.animate([{opacity:1},{opacity:1}],{duration:1600,delay:4800,fill:'both'});
+function tick(){const t=Math.max(0,Math.min(1,((a.currentTime??0)-4800)/1600));el.textContent=Math.round(362*t*(2-t));requestAnimationFrame(tick)}
+window.__tick=()=>{const t=Math.max(0,Math.min(1,((a.currentTime??0)-4800)/1600));el.textContent=Math.round(362*t*(2-t))};
+tick();
+</script>
+</body></html>

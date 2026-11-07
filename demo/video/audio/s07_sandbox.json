@@ -1,22 +1,22 @@
 [
  [
   0.0,
-  2.955,
+  3.0,
   "Live in the sandbox: a normal purchase is paid."
  ],
  [
-  3.275,
-  6.187,
+  3.6,
+  6.38,
   "The same data again comes from memory, for zero."
  ],
  [
-  6.507,
-  8.075,
+  6.95,
+  8.58,
   "Aerar never pays twice."
  ],
  [
-  8.395,
-  11.511,
+  8.97,
+  12.16,
   "And a shop the task doesn't trust is never contacted."
  ]
 ]

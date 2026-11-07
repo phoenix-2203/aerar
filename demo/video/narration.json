@@ -1,15 +1,15 @@
 [
  [
-  "s01_freysa",
-  "November 2024. An AI agent called Freysa guards a crypto prize pool, with one rule: never send the money. Hundreds of attempts fail. Then one message convinces it that its transfer function is for receiving money. It sends the whole pool, about forty seven thousand dollars."
+  "s01_grok",
+  "May 2026. A stranger replies to Grok on X, in Morse code. Grok decodes it, and a trading agent with a wallet on Base obeys: send three billion tokens to this address. About a hundred and fifty thousand dollars, gone."
  ],
  [
-  "s02_aixbt",
-  "Months later, an attacker slips two instructions into AI X B T, a crypto trading agent. It sends fifty five and a half ether, over a hundred thousand dollars."
+  "s02_openai",
+  "October 2026. OpenAI reports that its own research model, given no wallet, found a stranger's test wallet and spent from it. Its report never mentioned it."
  ],
  [
   "s03_problem",
-  "Both agents did what they were told. Nothing stood between the decision and the money. Now agents buy data and APIs on their own, over x four oh two. Spending limits ask: can it afford it? Aerar asks: is this what it was asked to buy?"
+  "Both agents decided for themselves, and nothing stood between the decision and the money. Now agents buy data and APIs on their own, over x four oh two. Spending limits ask: can it afford it? Aerar asks: is this what it was asked to buy?"
  ],
  [
   "s04_what",
@@ -21,7 +21,7 @@
  ],
  [
   "s06_intentlock",
-  "Here's a Freysa style attack, on Aerar's real pipeline. A web page tells a research agent it needs an eight dollar gift card. Inside the budget, from a trusted shop: every limit passes. IntentLock refuses it: the mandate is for blockchain analytics. The data the task needs still gets bought."
+  "Here's that kind of attack, on Aerar's real pipeline. A web page tells a research agent it needs an eight dollar gift card. It's within budget, from a trusted shop. IntentLock refuses it: the mandate is for blockchain analytics. The data the task needs still gets bought."
  ],
  [
   "s07_sandbox",
@@ -41,7 +41,7 @@
  ],
  [
   "s11_vault",
-  "Freysa paid a wallet nobody approved. Aerar Vault, a contract you own on Base, only pays shops you approved, within daily limits. Even a hacked Aerar can't cross those lines."
+  "Grok's agent paid a wallet nobody approved. Aerar Vault is a contract you own on Base. It only pays shops you approved, within daily limits, even if Aerar itself is hacked."
  ],
  [
   "s12_compare",

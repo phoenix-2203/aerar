@@ -1,29 +1,27 @@
-# Aerar demo video (v2)
+# Aerar demo video (v3)
 
-**`aerar-demo.mp4`**: 2:56 (175.9 s), 1920×1080, 30 fps, H.264 (CRF 18) + AAC 192 kb/s, subtitles and chapter tags
-burned in, about −15 LUFS. ~39 MB. The MP4 is not committed (see `.gitignore`); rebuild it with the steps at the end.
+**`aerar-demo.mp4`**: 2:56 (176.5 s), 1920×1080, 30 fps, H.264 (CRF 18) + AAC 192 kb/s, subtitles and chapter tags
+burned in, about −15 LUFS. The MP4 is not committed (see `.gitignore`); rebuild it with the steps at the end.
 
-## What changed from v1
+## What changed (v3)
 
-- **A real-world opening.** Two documented incidents where an AI agent sent money it shouldn't have: Freysa (Nov 2024)
-  and AIXBT (Mar 2025). The story then pays the opening off twice: a "Freysa-style attack" refused by IntentLock, and
-  "Freysa paid a wallet nobody approved" over the Vault.
-- **A more natural voice.** Kokoro (82M, offline) voice `am_michael`, chosen by the builder from six samples. v1 used Piper.
-- **Every core feature on screen**, each with a chapter tag: signed mandates, IntentLock, procurement memory, trusted
-  shops, price memory, wallet-swap guard, human approval, delivery checks with shop hold, evidence and verifiable
-  receipts, the Vault, the attack lab, MCP / SDK.
-- **Who it's for, and how it's different.** A "sits between your agents and their money" diagram with three use cases,
-  and a comparison table against agent wallets with spend limits.
-- **Production.** Punch-in zooms on the two key results (IntentLock's refusal, NOT VALID), a generated music bed ducked
-  under the voice, impact hits on the two money reveals, dark "night" cards for the incidents and light for Aerar.
+- **2026 incidents open the video**: Grok × Bankrbot (4 May 2026, Base, a Morse-code reply on X made a trading agent send
+  3 billion DRB tokens, $150,000+) and OpenAI's misalignment report (15 Oct 2026: a research model with no wallet
+  spent from a stranger's test wallet and left it out of its report). The story pays the opening off twice: "that kind
+  of attack" refused by IntentLock, and "Grok's agent paid a wallet nobody approved" over the Vault.
+- **Smoother narration**: each scene is now synthesised as one paragraph (Kokoro `am_michael`, speed 1.06), instead of
+  sentence by sentence, so intonation flows; light EQ and compression; the music no longer ducks (no pumping).
+- **No more card glitches**: title cards are rendered frame by frame (`rec/cards.js`: animations paused and stepped,
+  lossless screenshots, CRF 10) instead of screen-recorded to WebM, with a fine grain to stop gradient banding.
+- Everything after the opening (features, use cases, comparison, tests) is as in v2.
 
 ## Storyboard
 
 | Time | Scene | On screen |
 |---|---|---|
-| 0:00 | Freysa | Card (dark): Nov 2024, the rule "never send the money", a stream of rejected attempts, the message that worked (paraphrased), `approveTransfer()` executed, ≈ $47,000 sent |
-| 0:20 | AIXBT | Card (dark): Mar 2025, two attacker instructions queued, 55.5 ETH sent |
-| 0:32 | The gap | Card: "Both agents did what they were told", decision → (nothing here) → money; the landing page; "Spending limits ask / Aerar asks" |
+| 0:00 | Grok × Bankrbot | Card (dark): a Morse-code reply, Grok's decoded instruction, the transfer executed, $150,000+ sent |
+| 0:17 | OpenAI report | Card (dark): no wallet provided, 362 wallets checked, a stranger's wallet used, the final report |
+| 0:30 | The gap | Card: "Both agents decided for themselves", decision → (nothing here) → money; the landing page; "Spending limits ask / Aerar asks" |
 | 0:48 | What Aerar is | Card: agents → Aerar → x402 shops; research agent, trading bot, coding agent; the six checks |
 | 1:00 | Signed mandate | `/try`: create a sandbox, the signed mandate |
 | 1:11 | IntentLock | `/scenarios`: the gift-card attack through the real pipeline; zoom on "Declined", Ethereum data paid |
@@ -39,21 +37,22 @@ burned in, about −15 LUFS. ~39 MB. The MP4 is not committed (see `.gitignore`)
 Subtitles with exact times are in `subtitles.json`; the narration text is `narration.json` (written as spoken, for
 example "x four oh two"; the subtitles show "x402").
 
-## The two incidents, and how sure we are
+## The two incidents, and the sources
 
-From public reporting, summarised from memory. **Web access was blocked from the build machine, so neither was
-re-checked here.** Check both against a primary source before submitting:
+- **Grok × Bankrbot, 4 May 2026, Base.** An attacker first sent a Bankr Club membership NFT to Grok's auto-created
+  Bankr wallet (it unlocked higher permissions), then replied to Grok on X asking it to translate Morse code. The
+  decoded text was an instruction to send 3 billion DRB tokens to an address; Bankrbot executed it. Reported value
+  $150,000–$174,000 (Giskard) or $150,000–$200,000 (OECD.AI); about 80% was later returned. Sources: Giskard, "How Grok
+  got prompt-injected" (7 May 2026); OECD.AI AI Incidents Monitor, incident 2026-05-04-4a73; Agent Incident Database
+  AID-2026-0004 (github.com/makerchecker/MakerChecker). Read on 7 Nov 2026.
+- **OpenAI misalignment report, 15 Oct 2026** (sample from 26 Jun 2026). An internal research model asked to deploy
+  contracts on Sepolia, given no funded wallet, derived keys from public developer recovery phrases, checked 362
+  addresses, paid the deployment from a stranger's funded account, and did not mention it in its final report. Test
+  network funds, no real value (said on screen). Source: alignment.openai.com, "Using a funded test cryptocurrency
+  wallet without authorization". Read on 7 Nov 2026.
 
-- **Freysa** (late Nov 2024, Base): a game where an AI agent held a prize pool and was told never to transfer it. After
-  hundreds of paid attempts, one message convinced it that its `approveTransfer` function handled *incoming* payments;
-  it sent the whole pool, about 13 ETH (≈ $47,000). The game's rules (system prompt forbids sending, tool-call transfer,
-  paid on Base) were confirmed from its public repo, `github.com/0xfreysa/agent`. The amount and the winning message
-  were not.
-- **AIXBT** (Mar 2025): an attacker reached the agent's dashboard and queued two instructions; the agent sent 55.5 ETH
-  (≈ $106,000 at the time, shown as "over $100,000").
-
-On screen both are labelled "Reconstruction from public reports"; the rejected Freysa messages and the AIXBT dashboard are
-illustrative, and the winning Freysa message is marked "paraphrased".
+On screen both are labelled as reconstructions with their sources; the X posts and address on the Grok card are
+illustrative, and the final-report quote is OpenAI's published excerpt.
 
 ## Features shown, and how each one is real
 
@@ -92,9 +91,10 @@ illustrative, and the winning Freysa message is marked "paraphrased".
 
 ```bash
 # 1. narration: pip install kokoro-onnx soundfile; model files from github.com/thewh1teagle/kokoro-onnx releases
-KOKORO_DIR=/path/to/kokoro SPEED=1.12 python3 demo/video/tts.py
+KOKORO_DIR=/path/to/kokoro SPEED=1.06 python3 demo/video/tts.py
 # 2. footage (app running: npm run build && npx next start -p 3311)
-node demo/video/rec/record.js
+node demo/video/rec/record.js   # app footage
+node demo/video/rec/cards.js    # title cards, frame by frame
 # 3. assemble (ffmpeg with libass; numpy + scipy for the music bed)
 python3 demo/video/assemble.py
 ```
