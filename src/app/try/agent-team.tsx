@@ -42,19 +42,19 @@ export function AgentTeam({ team, leadStatus, leadSpent, leadBudget, onResult }:
           <span className="flex items-center gap-2">
             <Bot className="size-4 text-text-2" aria-hidden /> my-agent
           </span>
-          <span className={paused ? "text-warning" : "text-text-2"}>
+          <span className={`shrink-0 whitespace-nowrap ${paused ? "text-warning" : "text-text-2"}`}>
             {paused ? "PAUSED" : `${leadSpent} of ${leadBudget}`}
           </span>
         </div>
         {scout ? (
           <div className="mt-2 pl-2">
             <div className="flex items-center justify-between gap-3">
-              <span className="flex items-center gap-2">
-                <CornerDownRight className="size-3.5 text-text-3" aria-hidden />
-                <Bot className="size-4 text-accent" aria-hidden /> {scout.agentName}
-                <span className="text-text-3">· {scout.title}</span>
+              <span className="flex min-w-0 items-center gap-2">
+                <CornerDownRight className="size-3.5 shrink-0 text-text-3" aria-hidden />
+                <Bot className="size-4 shrink-0 text-accent" aria-hidden /> {scout.agentName}
+                <span className="truncate text-text-3">· {scout.title}</span>
               </span>
-              <span className={paused || scout.status !== "active" ? "text-warning" : "text-text-2"}>{paused ? "STOPPED" : `${scout.spent} of ${scout.budget}`}</span>
+              <span className={`shrink-0 whitespace-nowrap ${paused || scout.status !== "active" ? "text-warning" : "text-text-2"}`}>{paused ? "STOPPED" : `${scout.spent} of ${scout.budget}`}</span>
             </div>
             <div className="ml-6 mt-1.5 h-1 overflow-hidden rounded-full bg-surface-3">
               <div className="h-full rounded-full bg-accent transition-[width] duration-700" style={{ width: `${Math.min(100, scout.pct)}%` }} />

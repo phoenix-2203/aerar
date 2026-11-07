@@ -10,6 +10,7 @@ type Row = {
   url: string;
   reasonCodes: string[];
   createdAt: Date;
+  approvedBy?: string | null;
   intent?: { outcome: string; itemCategories: string[] } | null;
 };
 
@@ -35,7 +36,7 @@ export interface SecurityEvent {
   agentId: string;
   host: string;
   at: string;
-  outcome: "stopped" | "held" | "noted";
+  outcome: "stopped" | "held" | "approved" | "noted";
 }
 
 export interface Signal {
@@ -50,7 +51,14 @@ export function securityView(rows: Row[], names: Record<string, string>, now = n
   for (const r of rows) {
     const k = KINDS.find((x) => x.codes.some((c) => r.reasonCodes.includes(c)));
     if (!k) continue;
-    const outcome = r.status === "awaiting_approval" ? "held" : r.status === "declined" || r.status === "payment_failed" || r.status === "rejected" ? "stopped" : "noted";
+    const outcome =
+      r.status === "awaiting_approval"
+        ? "held"
+        : r.status === "declined" || r.status === "payment_failed" || r.status === "rejected"
+          ? "stopped"
+          : r.approvedBy
+            ? "approved"
+            : "noted";
     events.push({ id: r.id, kind: k.kind, label: k.label, agentId: r.agentId, host: r.host, at: r.createdAt.toISOString(), outcome });
   }
 

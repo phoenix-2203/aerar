@@ -659,11 +659,11 @@ function SecurityPanel({ state }: { state: TryState }) {
       <ul className="divide-y divide-border">
         {s.events.slice(0, 8).map((e) => (
           <li key={e.id} className="flex items-center gap-3 px-5 py-2.5 text-[13px] sm:px-6">
-            <span className={`size-2 shrink-0 rounded-full ${e.outcome === "stopped" ? "bg-danger" : e.outcome === "held" ? "bg-warning" : "bg-info"}`} aria-hidden />
+            <span className={`size-2 shrink-0 rounded-full ${e.outcome === "stopped" ? "bg-danger" : e.outcome === "held" ? "bg-warning" : e.outcome === "approved" ? "bg-success" : "bg-info"}`} aria-hidden />
             <span className="min-w-0 flex-1 truncate">
               {e.label} <span className="font-mono text-[12px] text-text-3">· {e.host}</span>
             </span>
-            <span className="shrink-0 text-[12px] text-text-3">{e.outcome}</span>
+            <span className="shrink-0 text-[12px] text-text-3">{e.outcome === "approved" ? "approved by you" : e.outcome}</span>
             <EvidenceButton id={e.id} className="shrink-0 text-[12px] font-medium text-accent hover:underline">
               Evidence
             </EvidenceButton>

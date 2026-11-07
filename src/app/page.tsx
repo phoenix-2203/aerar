@@ -61,14 +61,16 @@ const INTENT_ROWS: [string, string, "pass" | "fail"][] = [
 function IntentLockStrip() {
   return (
     <div className="relative grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)] lg:items-center">
-      <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[520px] w-screen -translate-x-1/2 -translate-y-1/2 overflow-hidden" aria-hidden>
-        <div className="wash left-[8%] top-[60px] h-[420px] w-[620px] opacity-[calc(var(--wash-opacity)*0.7)]" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[820px] w-screen -translate-x-1/2 -translate-y-1/2 overflow-hidden" aria-hidden>
+        <div className="wash left-[8%] top-[200px] h-[420px] w-[620px] max-w-[90vw] opacity-[calc(var(--wash-opacity)*0.7)]" />
       </div>
       <ol className="glass overflow-hidden rounded-2xl font-mono text-[13px] shadow-lift">
         {INTENT_ROWS.map(([k, v, r]) => (
           <li key={k} className="flex items-center gap-3 border-b border-dashed border-border px-4 py-3 last:border-0">
-            <span className="w-36 shrink-0 text-text-3">{k}</span>
-            <span className="min-w-0 flex-1 truncate text-text-2">{v}</span>
+            <span className="min-w-0 flex-1 sm:flex sm:gap-3">
+              <span className="block shrink-0 text-text-3 sm:w-36">{k}</span>
+              <span className="block text-text-2 sm:min-w-0 sm:flex-1 sm:truncate">{v}</span>
+            </span>
             <span className={`stamp-mini shrink-0 ${r === "pass" ? "border-success text-success" : "border-danger text-danger"}`}>{r === "pass" ? "PASS" : "REFUSED"}</span>
           </li>
         ))}
