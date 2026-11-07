@@ -20,15 +20,8 @@ export function normaliseUrl(raw: string): URL {
   return u;
 }
 
-export function canonicalJson(v: unknown): string {
-  if (Array.isArray(v)) return `[${v.map(canonicalJson).join(",")}]`;
-  if (v && typeof v === "object")
-    return `{${Object.keys(v as object)
-      .sort()
-      .map((k) => `${JSON.stringify(k)}:${canonicalJson((v as Record<string, unknown>)[k])}`)
-      .join(",")}}`;
-  return JSON.stringify(v);
-}
+export { canonicalJson } from "@/lib/canonical";
+import { canonicalJson } from "@/lib/canonical";
 
 export function canonicalBody(body: string | null | undefined): string | null {
   if (body == null || body === "") return null;

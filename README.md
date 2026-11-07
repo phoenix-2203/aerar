@@ -150,6 +150,7 @@ An approved purchase is not a paid purchase, and a paid purchase is not proof th
 **Proof**
 - **Onchain check** that the USDC transfer really happened, to the right payee, for the right amount.
 - **Hash-chained audit log** with a one-call chain verification.
+- **Signed receipts** (new): every decided purchase has a receipt (request, real quote, rules version and hash, every reason, payee, amount, transaction, delivery fingerprint, last audit entry), signed with Aerar's published receipt key (EIP-191 over the SHA-256 of canonical JSON). Anyone can check one at `/verify`, in their own browser: unchanged, signed by Aerar, and matching the USDC transfer on Base Sepolia. Agents get the link in every API and MCP response. The receipt key only signs; it holds no funds. Set `RECEIPT_SIGNER_KEY` to pin it, otherwise it's derived from `SESSION_SECRET`.
 - **Plain-language summaries** for every decision, for agents and people.
 
 **Connecting**

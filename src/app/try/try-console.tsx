@@ -243,7 +243,14 @@ function Row({ p, open, flash, onToggle }: { p: P; open: boolean; flash: boolean
             </p>
           )}
           <PurchaseTimeline purchase={{ status: p.status, reasonCodes: p.reasonCodes, quoteAmountFormatted: p.amountFormatted, paidFormatted: p.paidFormatted, txHash: p.txHash, reusedFromId: p.reusedFromId, approvedBy: p.approvedBy }} />
-          {p.txHash && <p className="mt-3 font-mono text-[11.5px] text-text-3">Simulated transfer {p.txHash.slice(0, 18)}… (no chain in the sandbox)</p>}
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            {p.txHash ? <p className="font-mono text-[11.5px] text-text-3">Simulated transfer {p.txHash.slice(0, 18)}… (no chain in the sandbox)</p> : <span />}
+            {p.status !== "awaiting_approval" && (
+              <a href={`/verify?id=${p.id}`} target="_blank" rel="noreferrer" className="text-[12.5px] font-medium text-info hover:underline">
+                Signed receipt →
+              </a>
+            )}
+          </div>
         </div>
       )}
     </li>

@@ -111,6 +111,11 @@ export function PurchaseDrawer({ detail, closeHref }: { detail: Detail | null; c
             <Row k="Response fingerprint (SHA-256)">
               <Hash value={p.responseHash} label="response hash" head={10} tail={6} />
             </Row>
+            <Row k="Signed receipt">
+              <a href={`/verify?id=${p.id}`} className="text-xs font-medium text-info hover:underline">
+                Check it yourself →
+              </a>
+            </Row>
             {p.reusedFromId && (
               <Row k="Reused from">
                 <a href={`?purchase=${p.reusedFromId}`} className="font-mono text-xs text-info hover:underline">

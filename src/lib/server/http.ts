@@ -69,6 +69,11 @@ export function summarise(p: Purchase): string {
 }
 
 /** Purchase as returned to agents/operators. Bigints become strings via json(). */
+/** The public base URL receipts and verify links point at. */
+export function publicUrl(): string {
+  return (process.env.AERAR_PUBLIC_URL ?? "https://aerar.duckdns.org").replace(/\/$/, "");
+}
+
 export function purchaseView(p: Purchase, opts: { includeBody?: boolean } = {}) {
   const { quoteRaw: _raw, responseBody, requestBody: _rb, ...rest } = p;
   return {
@@ -77,6 +82,7 @@ export function purchaseView(p: Purchase, opts: { includeBody?: boolean } = {}) 
     amountFormatted: p.quoteAmount != null ? fmt$(p.quoteAmount) : null,
     paidFormatted: fmt$(p.paidAmount),
     reasons: p.reasonCodes.map((code) => ({ code, explanation: explain(code) })),
+    receipt: { verifyUrl: `${publicUrl()}/verify?id=${p.id}`, json: `${publicUrl()}/api/receipts/${p.id}` },
     ...(opts.includeBody ? { responseBody } : {}),
   };
 }

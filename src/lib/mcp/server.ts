@@ -6,7 +6,7 @@ import { z } from "zod";
 import { purchases, type agents } from "@/db/schema";
 import { PurchaseError, submitPurchase, type Ctx, type Purchase } from "@/lib/purchase/pipeline";
 import { explain } from "@/lib/copy/reasons";
-import { summarise } from "@/lib/server/http";
+import { publicUrl, summarise } from "@/lib/server/http";
 import { fmt$ } from "@/lib/money/usdc";
 
 type Agent = typeof agents.$inferSelect;
@@ -21,6 +21,7 @@ export function describe(p: Purchase): string {
   ];
   if (p.quoteAmount != null) lines.push(`Quoted price: ${fmt$(p.quoteAmount)}. Paid: ${fmt$(p.paidAmount)}.`);
   if (p.reasonCodes.length) lines.push(`Reasons: ${p.reasonCodes.map((c) => `${c} (${explain(c)})`).join("; ")}.`);
+  if (p.status !== "awaiting_approval") lines.push(`Signed receipt: ${publicUrl()}/verify?id=${p.id}`);
   if (p.status === "awaiting_approval")
     lines.push(`Nothing was bought yet. Call get_purchase with id ${p.id} later to see if a person approved it.`);
   if (p.responseBody != null && (p.status === "delivered" || p.status === "reused" || p.status === "free")) {

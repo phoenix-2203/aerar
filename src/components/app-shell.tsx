@@ -130,7 +130,7 @@ export function AppShell({ active, children }: { active?: "/report" | "/audit" |
   );
 }
 
-export function PublicShell({ active, children }: { active?: "/scenarios" | "/demo" | "/try"; children: ReactNode }) {
+export function PublicShell({ active, children }: { active?: "/scenarios" | "/demo" | "/try" | "/verify"; children: ReactNode }) {
   return (
     <Frame
       nav={
@@ -144,6 +144,11 @@ export function PublicShell({ active, children }: { active?: "/scenarios" | "/de
           <NavLink href="/demo" active={active === "/demo"}>
             <Short short="Report" long="Live report" />
           </NavLink>
+          <span className="hidden sm:contents">
+            <NavLink href="/verify" active={active === "/verify"}>
+              Verify
+            </NavLink>
+          </span>
         </>
       }
       right={
@@ -171,9 +176,10 @@ export function SiteFooter() {
           <Logo size={18} />
           <span className="text-text-3">Built for Vibestarter Vibeathon 02 · testnet only</span>
         </div>
-        <nav className="flex gap-5" aria-label="Footer">
+        <nav className="flex flex-wrap gap-x-5 gap-y-2 whitespace-nowrap" aria-label="Footer">
           <Link href="/try" className="hover:text-text">Try it</Link>
           <Link href="/scenarios" className="hover:text-text">Attack lab</Link>
+          <Link href="/verify" className="hover:text-text">Verify a receipt</Link>
           <Link href="/demo" className="hover:text-text">Live report</Link>
           <a href="https://github.com/phoenix-2203/aerar" className="hover:text-text">GitHub</a>
           <Link href="/login" className="hover:text-text">Sign in</Link>
