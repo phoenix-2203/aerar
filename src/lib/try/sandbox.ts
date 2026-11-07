@@ -145,7 +145,7 @@ export async function loadTryState(db: Db, s: TrySession) {
       paidCount: sum(["delivered"]).length,
       saved: fmt$(saved),
       reusedCount: sum(["reused"]).length,
-      declined: sum(["declined", "rejected", "payment_failed", "disputed"]).length,
+      declined: sum(["declined", "rejected", "payment_failed"]).length,
       waiting: sum(["awaiting_approval"]).length,
     },
     chain,

@@ -104,7 +104,7 @@ async function HeroCounters() {
   if (!s || !s.decided) return null;
   const items: [string, string][] = [
     [s.decided.toLocaleString("en-US"), "decided"],
-    [s.stopped, "stopped"],
+    [s.stoppedCount.toLocaleString("en-US"), "stopped"],
     [s.onchain.toLocaleString("en-US"), "proven on Base"],
   ];
   return (

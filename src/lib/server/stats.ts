@@ -12,6 +12,7 @@ export async function liveStats(db: Db) {
       stopped: sql<string>`coalesce(sum(case when ${purchases.status} in ('declined','rejected') then coalesce(${purchases.quoteAmount}, 0) else 0 end), 0)`,
       saved: sql<string>`coalesce(sum(case when ${purchases.status} = 'reused' then coalesce(${purchases.quoteAmount}, 0) else 0 end), 0)`,
       onchain: sql<number>`count(*) filter (where ${purchases.onchainVerifiedAt} is not null)::int`,
+      stoppedCount: sql<number>`count(*) filter (where ${purchases.status} in ('declined','rejected'))::int`,
     })
     .from(purchases);
   const [o] = await db
@@ -27,6 +28,7 @@ export async function liveStats(db: Db) {
     stopped: fmt$(BigInt(p?.stopped ?? 0)),
     saved: fmt$(BigInt(p?.saved ?? 0)),
     onchain: p?.onchain ?? 0,
+    stoppedCount: p?.stoppedCount ?? 0,
     sandboxes: o?.sandboxes ?? 0,
     wallets: o?.wallets ?? 0,
     seals: s?.n ?? 0,

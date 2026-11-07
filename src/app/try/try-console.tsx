@@ -579,7 +579,7 @@ function Guide({ state, running, onRun }: { state: TryState; running: string | n
         </ol>
       ) : (
         <p className="mt-2 text-[13.5px] leading-6 text-text-2">
-          Now make it yours: change the rules on the right, let your agent hire a scout, or connect Claude below. Everything you do lands in the report under the
+          Now make it yours: change your rules (the Your rules panel), let your agent hire a scout, or connect Claude. Everything you do lands in the report under the
           list.
         </p>
       )}

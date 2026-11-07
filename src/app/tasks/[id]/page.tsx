@@ -75,7 +75,7 @@ async function Task({ params, searchParams }: { params: PageProps<"/tasks/[id]">
             {[
               ["Paid", purchases.filter((p) => p.status === "delivered").length],
               ["Reused", purchases.filter((p) => p.status === "reused").length],
-              ["Declined", purchases.filter((p) => ["declined", "rejected", "payment_failed", "disputed"].includes(p.status)).length],
+              ["Declined", purchases.filter((p) => ["declined", "rejected", "payment_failed"].includes(p.status)).length],
               ["Needs approval", purchases.filter((p) => p.status === "awaiting_approval").length],
             ].map(([k, v]) => (
               <div key={k} className="rounded-lg bg-surface-2 px-3 py-2">
