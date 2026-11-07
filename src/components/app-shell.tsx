@@ -1,4 +1,5 @@
 // Page frame. Operator shell: nav with a live approvals count. Public shell: the judge's path, no login.
+import { MobileMenu } from "./mobile-menu";
 import { and, count, eq } from "drizzle-orm";
 import { LogOut } from "lucide-react";
 import Link from "next/link";
@@ -130,7 +131,7 @@ export function AppShell({ active, children }: { active?: "/report" | "/audit" |
   );
 }
 
-export function PublicShell({ active, children }: { active?: "/scenarios" | "/demo" | "/try" | "/verify" | "/vault"; children: ReactNode }) {
+export function PublicShell({ active, children }: { active?: "/scenarios" | "/demo" | "/try" | "/verify" | "/vault" | "/builders" | "/built"; children: ReactNode }) {
   return (
     <Frame
       nav={
@@ -141,17 +142,20 @@ export function PublicShell({ active, children }: { active?: "/scenarios" | "/de
           <NavLink href="/vault" active={active === "/vault"}>
             Vault
           </NavLink>
-          <NavLink href="/scenarios" active={active === "/scenarios"}>
-            <Short short="Attacks" long="Attack lab" />
-          </NavLink>
           <span className="hidden sm:contents">
+            <NavLink href="/scenarios" active={active === "/scenarios"}>
+              Attack lab
+            </NavLink>
+          </span>
+          <span className="hidden lg:contents">
             <NavLink href="/demo" active={active === "/demo"}>
               Live report
             </NavLink>
-          </span>
-          <span className="hidden sm:contents">
             <NavLink href="/verify" active={active === "/verify"}>
               Verify
+            </NavLink>
+            <NavLink href="/builders" active={active === "/builders"}>
+              Builders
             </NavLink>
           </span>
         </>
@@ -161,9 +165,10 @@ export function PublicShell({ active, children }: { active?: "/scenarios" | "/de
           <NetworkPill />
           <AccentToggle />
           <ThemeToggle />
-          <Link href="/login" className="ml-1 hidden h-8 items-center rounded-lg border border-border bg-surface px-3 text-[13px] font-medium text-text transition-colors hover:border-border-strong sm:inline-flex">
+          <Link href="/login" className="ml-1 hidden h-8 items-center rounded-lg border border-border bg-surface px-3 text-[13px] font-medium text-text transition-colors hover:border-border-strong lg:inline-flex">
             Sign in
           </Link>
+          <MobileMenu />
         </>
       }
       footer={<SiteFooter />}
@@ -187,6 +192,8 @@ export function SiteFooter() {
           <Link href="/scenarios" className="hover:text-text">Attack lab</Link>
           <Link href="/verify" className="hover:text-text">Verify a receipt</Link>
           <Link href="/demo" className="hover:text-text">Live report</Link>
+          <Link href="/builders" className="hover:text-text">Builders</Link>
+          <Link href="/built" className="hover:text-text">How it was built</Link>
           <a href="https://github.com/phoenix-2203/aerar" className="hover:text-text">GitHub</a>
           <Link href="/login" className="hover:text-text">Sign in</Link>
         </nav>
