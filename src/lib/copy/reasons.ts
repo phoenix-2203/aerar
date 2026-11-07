@@ -50,6 +50,11 @@ export const REASONS: Record<string, Reason> = {
   // Payment.
   QUOTE_CHANGED: { kind: "fail", text: "the provider's price or payment address changed before payment, so nothing was paid" },
   PAYMENT_NOT_SETTLED: { kind: "fail", text: "the provider didn't deliver, so the payment didn't settle" },
+  PARENT_TASK_NOT_ACTIVE: { kind: "fail", text: "the task that hired this agent is paused, so it is too" },
+  PARENT_BUDGET_EXCEEDED: { kind: "fail", text: "the task that hired this agent doesn't have enough budget left" },
+  WITHIN_PARENT_BUDGET: { kind: "pass", text: "every task above it has budget left" },
+  PROVIDER_CAP_REACHED: { kind: "fail", text: "this task's spending cap for that provider would be exceeded" },
+  WITHIN_PROVIDER_CAP: { kind: "pass", text: "within the task's cap for this provider" },
   VAULT_REFUSED: { kind: "fail", text: "the owner's Vault refused it on-chain: it's outside the limits the owner signed" },
 };
 

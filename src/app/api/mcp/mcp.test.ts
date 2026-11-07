@@ -44,7 +44,7 @@ describe("MCP endpoint", () => {
     });
     expect(init.result).toBeTruthy();
     const tools = await call(w.apiKey, "tools/list", {});
-    expect(tools.result.tools!.map((t) => t.name).sort()).toEqual(["buy_resource", "get_purchase", "list_tasks", "recent_purchases"]);
+    expect(tools.result.tools!.map((t) => t.name).sort()).toEqual(["buy_resource", "get_purchase", "hire_agent", "list_tasks", "recent_purchases", "stop_hired_agent"]);
   });
 
   it("buy_resource pays, explains in plain words, and fences the provider data; get_purchase reads it back", async () => {

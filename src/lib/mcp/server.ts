@@ -9,6 +9,7 @@ import { PurchaseError, submitPurchase, type Ctx, type Purchase } from "@/lib/pu
 import { explain } from "@/lib/copy/reasons";
 import { publicUrl, summarise } from "@/lib/server/http";
 import { fmt$ } from "@/lib/money/usdc";
+import { hireAgent, setTaskStatus } from "@/lib/workspace";
 import { TRY_PROVIDERS } from "@/lib/try/catalog";
 import { isTryOrg } from "@/lib/try/sandbox";
 import { demoHost } from "@/lib/wallet/session";
@@ -111,6 +112,73 @@ export function buildMcpServer(ctx: Ctx, agent: Agent): McpServer {
       const paid = rows.reduce((n, p) => n + (p.paidAmount ?? 0n), 0n);
       const lines = rows.map((p) => `- ${p.createdAt.toISOString().slice(0, 16).replace("T", " ")} ${p.status.replace(/_/g, " ")} ${p.quoteAmount != null ? fmt$(p.quoteAmount) : ""} ${p.host}${new URL(p.url).pathname} (${p.id})${p.reasonCodes.length ? ` - ${p.reasonCodes.filter((c) => !/^(TASK_ACTIVE|PROVIDER_ALLOWED|WITHIN_)/.test(c)).map(explain).join("; ")}` : ""}`);
       return text([`${rows.length} purchases, ${fmt$(paid)} paid in total.`, ...lines, "", "Purchases waiting for approval are decided by a person in Aerar, not by you."].join("\n"));
+    },
+  );
+
+  server.registerTool(
+    "hire_agent",
+    {
+      title: "Hire another agent for part of a task",
+      description:
+        "Hand part of one of your tasks to a new agent. It gets its own smaller budget, carved out of your task, and rules no wider " +
+        "than yours. Its spending counts against your task, and if your task is paused, so is it. Returns the new agent's key " +
+        "and MCP URL: give them only to the agent you are hiring.",
+      inputSchema: {
+        taskId: z.string().min(1).max(64).optional().describe("Your task to carve the sub-task from. Optional if you have one."),
+        title: z.string().min(1).max(120).describe("What the hired agent is for, e.g. 'Competitor scan'"),
+        purpose: z.string().min(1).max(500),
+        budgetUsd: z.number().positive().max(1000).describe("Its budget in USD, at most what your task has left"),
+        providers: z.array(z.string().min(1).max(253)).max(20).optional().describe("Hosts it may buy from (a subset of yours). Default: all of yours."),
+        maxPerPurchaseUsd: z.number().positive().max(1000).optional(),
+        agentName: z.string().min(1).max(60).default("hired-agent"),
+      },
+      annotations: { destructiveHint: false, openWorldHint: false },
+    },
+    async (args) => {
+      try {
+        const parentTaskId = args.taskId ?? (await onlyTask());
+        if (!parentTaskId) return text("You have more than one task. Call list_tasks and pass a taskId.", true);
+        if (!(await myTasks()).some((t) => t.id === parentTaskId)) return text("That isn't one of your tasks.", true);
+        const usdc = (n: number) => BigInt(Math.round(n * 1e6));
+        const h = await hireAgent(ctx.db, {
+          parentTaskId,
+          title: args.title,
+          purpose: args.purpose,
+          budget: usdc(args.budgetUsd),
+          agentName: args.agentName,
+          providers: args.providers,
+          maxPerPurchase: args.maxPerPurchaseUsd ? usdc(args.maxPerPurchaseUsd) : undefined,
+          by: `agent:${agent.id}`,
+        });
+        return text(
+          [
+            `Hired "${h.agent.name}" for sub-task ${h.task.id} ("${h.task.title}") with a ${fmt$(h.task.budget)} budget.`,
+            `Its key (show it only to that agent): ${h.apiKey}`,
+            `Its MCP URL: ${publicUrl()}/api/mcp/k/${h.apiKey}`,
+            "Its spending counts against your task. Call stop_hired_agent to pause it.",
+          ].join("\n"),
+        );
+      } catch (e) {
+        if (e instanceof PurchaseError) return text(`Couldn't hire: ${e.message}`, true);
+        throw e;
+      }
+    },
+  );
+
+  server.registerTool(
+    "stop_hired_agent",
+    {
+      title: "Pause an agent you hired",
+      description: "Pause one of your sub-tasks. The agent you hired for it (and anyone it hired) can't buy anything until a person resumes it.",
+      inputSchema: { taskId: z.string().min(1).max(64).describe("The sub-task id returned by hire_agent") },
+      annotations: { destructiveHint: false },
+    },
+    async ({ taskId }) => {
+      const mine = (await myTasks()).map((t) => t.id);
+      const [t] = await ctx.db.select().from(tasks).where(eq(tasks.id, taskId));
+      if (!t || !t.parentTaskId || !mine.includes(t.parentTaskId)) return text("That isn't a sub-task you created.", true);
+      await setTaskStatus(ctx.db, taskId, "paused", `agent:${agent.id}`, "Paused by the agent that hired it");
+      return text(`Paused ${taskId} ("${t.title}"). Its agent can't buy anything now.`);
     },
   );
 

@@ -73,9 +73,11 @@ export const tasks = pgTable(
     deadline: ts("deadline"),
     outcomeNote: text("outcome_note"),
     closedAt: ts("closed_at"),
+    /** Sub-task: a budget and rules carved out of this parent for a hired agent. Spend counts up the chain. */
+    parentTaskId: text("parent_task_id"),
     createdAt: ts("created_at").notNull().defaultNow(),
   },
-  (t) => [index("tasks_org").on(t.orgId)],
+  (t) => [index("tasks_org").on(t.orgId), index("tasks_parent").on(t.parentTaskId)],
 );
 
 /** Which agents may spend against which task. */
@@ -106,6 +108,8 @@ export interface PolicyRules {
    * Anything else, even from an allowed provider and under every limit, waits for a person. Empty or absent = off.
    */
   allowedItems?: string[];
+  /** Most this task may spend with one provider (host → atomic USDC), across all its purchases. */
+  providerCaps?: Record<string, string>;
   /** Wallet workspaces: the payee address each trusted provider is paid at (host → address), mirrored in the Vault. */
   payees?: Record<string, string>;
 }

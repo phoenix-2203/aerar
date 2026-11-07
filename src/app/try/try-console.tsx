@@ -7,6 +7,7 @@ import { PurchaseTimeline } from "@/components/purchase-timeline";
 import { ConnectAi } from "@/components/connect-ai";
 import { NotifyCard } from "@/components/notify-card";
 import { ReceiptButton } from "@/components/receipt-slip";
+import { AgentTeam } from "./agent-team";
 import { StatusChip } from "@/components/status-chip";
 import { explain, reasonKind } from "@/lib/copy/reasons";
 import type { TryState } from "@/lib/try/sandbox";
@@ -181,6 +182,13 @@ export function TryConsole({
         {/* Side: rules + connect */}
         <aside className="min-w-0 space-y-6 lg:sticky lg:top-20">
           <Rules state={state} providers={providers} onDone={(r) => (r?.error ? setToast({ tone: "err", text: r.error }) : r?.done && setToast({ tone: "ok", text: r.done }))} />
+          <AgentTeam
+            team={state.team}
+            leadStatus={state.task.status}
+            leadSpent={state.task.spentFormatted}
+            leadBudget={state.task.budgetFormatted}
+            onResult={(r) => (r?.error ? setToast({ tone: "err", text: r.error }) : r?.done && setToast({ tone: "ok", text: r.done }))}
+          />
           <ConnectAi
             url={`${site}/api/mcp/k/${apiKey}`}
             examples={["What are my task's rules?", "Buy the FX rates from api.marketdata.dev", "What did you buy so far, and what was refused?"]}
@@ -233,7 +241,10 @@ function Row({ p, open, flash, onToggle }: { p: P; open: boolean; flash: boolean
       <button onClick={onToggle} aria-expanded={open} className="group flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-surface-2/40 sm:px-6">
         <StatusChip status={p.status} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14px] font-medium">{p.purpose}</span>
+          <span className="block truncate text-[14px] font-medium">
+            {p.agentName !== "my-agent" && <span className="mr-1.5 rounded bg-accent-tint px-1.5 py-0.5 font-mono text-[11px] text-accent">{p.agentName}</span>}
+            {p.purpose}
+          </span>
           <span className="block truncate font-mono text-[12px] text-text-3">{p.url.replace(/^https:\/\//, "")}</span>
         </span>
         <span className={`tabular shrink-0 text-[14px] font-medium ${p.status === "reused" ? "text-text-3 line-through" : ""}`}>{p.amountFormatted ?? "—"}</span>

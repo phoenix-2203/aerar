@@ -88,6 +88,37 @@ async function agentRateCount(db: Db, agentId: string, now: Date) {
   return r?.n ?? 0;
 }
 
+/** Parent tasks of a sub-task, nearest first (at most 5 levels). */
+async function parentsOf(db: Db, task: { parentTaskId: string | null }, lock = false): Promise<(typeof tasks.$inferSelect)[]> {
+  const out: (typeof tasks.$inferSelect)[] = [];
+  let next = task.parentTaskId;
+  while (next && out.length < 5) {
+    const q = db.select().from(tasks).where(eq(tasks.id, next));
+    const [t] = lock ? await q.for("update") : await q;
+    if (!t) break;
+    out.push(t);
+    next = t.parentTaskId;
+  }
+  return out;
+}
+const asParents = (ps: (typeof tasks.$inferSelect)[]) =>
+  ps.map((t) => ({ id: t.id, title: t.title, status: t.status, budget: t.budget, reserved: t.reserved, spent: t.spent }));
+
+/** Reserved or paid to one provider on one task (for per-provider caps). */
+async function spentWithProvider(db: Db, taskId: string, host: string): Promise<bigint> {
+  const [r] = await db
+    .select({ n: sql<string>`coalesce(sum(coalesce(${purchases.paidAmount}, ${purchases.reservedAmount}, 0)), 0)` })
+    .from(purchases)
+    .where(and(eq(purchases.taskId, taskId), eq(purchases.host, host), inArray(purchases.status, ["reserved", "paying", "delivered", "unknown"])));
+  return BigInt(r?.n ?? 0);
+}
+
+/** Apply the same change to every parent's running totals, so a hired agent's spend counts up the chain. */
+async function rollUp(t: Db, taskId: string, set: (tbl: typeof tasks) => Record<string, unknown>) {
+  const [task] = await t.select({ parentTaskId: tasks.parentTaskId }).from(tasks).where(eq(tasks.id, taskId));
+  for (const parent of await parentsOf(t, task ?? { parentTaskId: null }, true)) await t.update(tasks).set(set(tasks)).where(eq(tasks.id, parent.id));
+}
+
 async function provider(db: Db, orgId: string, host: string) {
   const [p] = await db
     .select()
@@ -199,8 +230,10 @@ async function submitNew(
     reuseKey: key,
     policyVersion: policy.version,
   };
+  const parents = asParents(await parentsOf(db, task));
   const accessInput = {
     now,
+    parents,
     task: { status: task.status, budget: task.budget, reserved: task.reserved, spent: task.spent, deadline: task.deadline },
     policy: { version: policy.version, rules: policy.rules },
     agent: { revoked: !!agent.revokedAt, assignedToTask: !!assignment },
@@ -266,6 +299,7 @@ async function submitNew(
     quote,
     knownPayTo: prov?.knownPayTo ?? null,
     agentPurchasesLastHour: await agentRateCount(db, agent.id, now),
+    providerSpent: await spentWithProvider(db, task.id, url.host),
     rails: { network: rail.network, asset: rail.asset, scheme: rail.scheme },
   };
   const verdict = evaluatePolicy(input);
@@ -339,6 +373,7 @@ async function reserve(
     const fresh = evaluatePolicy({
       ...input,
       task: { status: task.status, budget: task.budget, reserved: task.reserved, spent: task.spent, deadline: task.deadline },
+      parents: asParents(await parentsOf(t, task, true)),
     });
     const ok = fresh.decision === "approve" || (approvedBy && fresh.decision === "needs_approval");
     const row: NewPurchase = ok
@@ -350,7 +385,10 @@ async function reserve(
     } else {
       [p] = await t.insert(purchases).values(row).returning();
     }
-    if (ok) await t.update(tasks).set({ reserved: sql`${tasks.reserved} + ${quote.amount}` }).where(eq(tasks.id, task.id));
+    if (ok) {
+      await t.update(tasks).set({ reserved: sql`${tasks.reserved} + ${quote.amount}` }).where(eq(tasks.id, task.id));
+      await rollUp(t, task.id, (x) => ({ reserved: sql`${x.reserved} + ${quote.amount}` }));
+    }
     await audit(t, {
       orgId: base.orgId,
       actor,
@@ -443,6 +481,7 @@ export async function execute(ctx: Ctx, purchaseId: string): Promise<Purchase> {
       .update(tasks)
       .set({ reserved: sql`${tasks.reserved} - ${p.reservedAmount}`, spent: sql`${tasks.spent} + ${paid}` })
       .where(eq(tasks.id, p.taskId));
+    await rollUp(t, p.taskId, (x) => ({ reserved: sql`${x.reserved} - ${p.reservedAmount}`, spent: sql`${x.spent} + ${paid}` }));
     const prov = await provider(t, p.orgId, p.host);
     if (!prov) await t.insert(providers).values({ id: newId("prv"), orgId: p.orgId, host: p.host, knownPayTo: approved.payTo });
     else if (!prov.knownPayTo) await t.update(providers).set({ knownPayTo: approved.payTo }).where(eq(providers.id, prov.id));
@@ -475,6 +514,7 @@ async function release(ctx: Ctx, p: Purchase, status: PurchaseStatus, code: stri
       .where(eq(purchases.id, p.id))
       .returning();
     await t.update(tasks).set({ reserved: sql`${tasks.reserved} - ${p.reservedAmount}` }).where(eq(tasks.id, p.taskId));
+    await rollUp(t, p.taskId, (x) => ({ reserved: sql`${x.reserved} - ${p.reservedAmount}` }));
     await audit(t, { orgId: p.orgId, actor: "system", kind: `purchase.${status}`, subjectId: p.id, data: { code, reason, released: p.reservedAmount } });
     return row;
   });
@@ -506,6 +546,8 @@ export async function approvePurchase(ctx: Ctx, purchaseId: string, approver: st
     quote,
     knownPayTo: prov?.knownPayTo ?? null,
     agentPurchasesLastHour: 0, // already counted when the request was made
+    parents: asParents(await parentsOf(db, task)),
+    providerSpent: await spentWithProvider(db, task.id, p.host),
     rails: { network: rail.network, asset: rail.asset, scheme: rail.scheme },
   };
   const r = await reserve(

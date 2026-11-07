@@ -32,6 +32,19 @@ export interface PolicyInput {
   agentPurchasesLastHour: number;
   /** What this deployment can settle on. */
   rails: { network: string; asset: string; scheme: string };
+  /** Parent tasks, nearest first, when this is a sub-task given to a hired agent. Their status and budget apply too. */
+  parents?: ParentTask[];
+  /** Already reserved or paid to this provider on this task (for per-provider caps). */
+  providerSpent?: bigint;
+}
+
+export interface ParentTask {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  budget: bigint;
+  reserved: bigint;
+  spent: bigint;
 }
 
 export interface PolicyResult {
@@ -52,7 +65,7 @@ export function hostAllowed(host: string, allowed: string[]): boolean {
   });
 }
 
-export type AccessInput = Pick<PolicyInput, "now" | "task" | "policy" | "agent" | "host">;
+export type AccessInput = Pick<PolicyInput, "now" | "task" | "policy" | "agent" | "host" | "parents">;
 
 /** Is this URL on the task's shopping list? "host/path" prefixes; an empty or absent list means no list. */
 export function onShoppingList(url: string | undefined, items: string[] | undefined): boolean {
@@ -82,6 +95,9 @@ export function accessChecks(input: AccessInput): { declines: [string, string][]
   if (!agent.assignedToTask) declines.push(["AGENT_NOT_ASSIGNED", "This agent is not assigned to the task."]);
   if (task.status !== "active") declines.push(["TASK_NOT_ACTIVE", `The task is ${task.status}.`]);
   else passes.push("TASK_ACTIVE");
+  // Pausing a lead task stops every agent it hired, all the way down.
+  const stopped = (input.parents ?? []).find((p) => p.status !== "active");
+  if (stopped) declines.push(["PARENT_TASK_NOT_ACTIVE", `The task that hired this agent ("${stopped.title}") is ${stopped.status}.`]);
   if (task.deadline && input.now > task.deadline) declines.push(["TASK_DEADLINE_PASSED", "The task deadline has passed."]);
   if (rules.expiresAt && input.now > new Date(rules.expiresAt))
     declines.push(["MANDATE_EXPIRED", `Policy v${policy.version} expired at ${rules.expiresAt}.`]);
@@ -119,6 +135,17 @@ export function evaluatePolicy(input: PolicyInput): PolicyResult {
   const available = task.budget - task.reserved - task.spent;
   if (quote.amount > available) declines.push(["OVER_TASK_BUDGET", "Not enough budget left on the task."]);
   else passes.push("WITHIN_TASK_BUDGET");
+  // A hired agent's spend counts against every task above it.
+  if (input.parents?.length) {
+    const short = input.parents.find((p) => p.budget - p.reserved - p.spent < quote.amount);
+    if (short) declines.push(["PARENT_BUDGET_EXCEEDED", `Not enough left on "${short.title}", the task that hired this agent.`]);
+    else passes.push("WITHIN_PARENT_BUDGET");
+  }
+  const cap = rules.providerCaps?.[input.host.toLowerCase()];
+  if (cap != null) {
+    if ((input.providerSpent ?? 0n) + quote.amount > BigInt(cap)) declines.push(["PROVIDER_CAP_REACHED", `This task's cap for ${input.host} would be exceeded.`]);
+    else passes.push("WITHIN_PROVIDER_CAP");
+  }
   if (input.agentPurchasesLastHour >= rules.maxPurchasesPerHour)
     declines.push(["RATE_LIMITED", `Agent already made ${input.agentPurchasesLastHour} purchases this hour.`]);
 

@@ -66,6 +66,7 @@ export async function createTask(
     rules: PolicyRules;
     agentIds: string[];
     createdBy: string;
+    parentTaskId?: string | null;
   },
 ) {
   const rules = validateRules(input.rules);
@@ -83,6 +84,7 @@ export async function createTask(
         expectedDeliverable: input.expectedDeliverable,
         budget: input.budget,
         deadline: input.deadline ?? null,
+        parentTaskId: input.parentTaskId ?? null,
       })
       .returning();
     await t.insert(policies).values({ taskId: id, version: 1, rules, createdBy: input.createdBy, changeNote: "Initial mandate" });
@@ -92,7 +94,7 @@ export async function createTask(
       actor: `user:${input.createdBy}`,
       kind: "task.created",
       subjectId: id,
-      data: { title: input.title, budget: input.budget, rules, agentIds: input.agentIds },
+      data: { title: input.title, budget: input.budget, rules, agentIds: input.agentIds, parentTaskId: input.parentTaskId ?? null },
     });
     return task;
   });
@@ -127,4 +129,65 @@ export async function setBudget(db: Db, taskId: string, budget: bigint, by: stri
   const [task] = await db.update(tasks).set({ budget }).where(eq(tasks.id, taskId)).returning();
   await audit(db, { orgId: task.orgId, actor: `user:${by}`, kind: "task.budget_changed", subjectId: taskId, data: { budget } });
   return task;
+}
+
+
+/**
+ * Agents hiring agents. A task hands part of its job to a new agent: a sub-task with its own budget and rules, carved
+ * out of the parent and never wider than it. The sub-task's spend counts against the parent (and every task above),
+ * pausing the parent stops the sub-task, and the new agent's key only works for the sub-task.
+ */
+export async function hireAgent(
+  db: Db,
+  input: {
+    parentTaskId: string;
+    title: string;
+    purpose: string;
+    budget: bigint;
+    agentName: string;
+    providers?: string[];
+    maxPerPurchase?: bigint;
+    by: string;
+  },
+) {
+  const [parent] = await db.select().from(tasks).where(eq(tasks.id, input.parentTaskId));
+  if (!parent) throw new PurchaseError("NO_TASK", "No such task", 404);
+  if (parent.status !== "active") throw new PurchaseError("TASK_NOT_ACTIVE", "A paused or closed task can't hire agents", 409);
+  let depth = 0;
+  for (let p: string | null = parent.parentTaskId; p && depth < 6; depth++) {
+    const [x] = await db.select({ parentTaskId: tasks.parentTaskId }).from(tasks).where(eq(tasks.id, p));
+    p = x?.parentTaskId ?? null;
+  }
+  if (depth >= 3) throw new PurchaseError("TOO_DEEP", "Hired agents can hire at most three levels deep", 409);
+  const left = parent.budget - parent.spent - parent.reserved;
+  if (input.budget <= 0n) throw new PurchaseError("INVALID_TASK", "Give the hired agent a budget above $0", 400);
+  if (input.budget > left) throw new PurchaseError("OVER_TASK_BUDGET", "The sub-task's budget can't be more than the parent has left", 409);
+  const [pol] = await db.select().from(policies).where(and(eq(policies.taskId, parent.id), eq(policies.version, parent.currentPolicyVersion)));
+  const pr = pol.rules;
+  // Never wider than the parent: providers a subset, limits no higher, same expiry, same shopping list.
+  const providers = (input.providers?.length ? input.providers : pr.allowedProviders).map((h) => h.trim().toLowerCase());
+  const outside = providers.filter((h) => !pr.allowedProviders.map((x) => x.toLowerCase()).includes(h));
+  if (outside.length) throw new PurchaseError("WIDER_THAN_PARENT", `The parent task can't buy from ${outside.join(", ")}, so neither can an agent it hires`, 409);
+  const parentMax = BigInt(pr.maxPerPurchase);
+  const maxPer = input.maxPerPurchase && input.maxPerPurchase < parentMax ? input.maxPerPurchase : parentMax;
+  const rules: PolicyRules = {
+    ...pr,
+    allowedProviders: providers,
+    maxPerPurchase: (maxPer < input.budget ? maxPer : input.budget).toString(),
+    approvalAbove: (BigInt(pr.approvalAbove) < maxPer ? BigInt(pr.approvalAbove) : maxPer).toString(),
+    payees: pr.payees ? Object.fromEntries(Object.entries(pr.payees).filter(([h]) => providers.includes(h))) : undefined,
+    providerCaps: pr.providerCaps ? Object.fromEntries(Object.entries(pr.providerCaps).filter(([h]) => providers.includes(h))) : undefined,
+  };
+  const { agent, apiKey } = await createAgent(db, parent.orgId, input.agentName.slice(0, 60), `Hired by ${parent.title}`);
+  const task = await createTask(db, {
+    orgId: parent.orgId,
+    title: input.title.slice(0, 120),
+    purpose: input.purpose.slice(0, 500),
+    budget: input.budget,
+    rules,
+    agentIds: [agent.id],
+    createdBy: input.by,
+    parentTaskId: parent.id,
+  });
+  return { task, agent, apiKey };
 }

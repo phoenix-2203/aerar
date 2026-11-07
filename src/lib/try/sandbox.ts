@@ -4,7 +4,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { and, desc, eq } from "drizzle-orm";
 import type { Db } from "@/db";
-import { agents, policies, purchases, tasks, type PolicyRules } from "@/db/schema";
+import { agents, policies, purchases, taskAgents, tasks, type PolicyRules } from "@/db/schema";
 import { verifyChain } from "@/lib/audit/log";
 import { fmt$ } from "@/lib/money/usdc";
 import { PurchaseError, type Ctx } from "@/lib/purchase/pipeline";
@@ -104,6 +104,7 @@ export async function loadTryState(db: Db, s: TrySession) {
   const [agent] = await db.select().from(agents).where(eq(agents.id, s.agentId));
   const rows = await db.select().from(purchases).where(eq(purchases.orgId, s.orgId)).orderBy(desc(purchases.createdAt)).limit(50);
   const chain = await verifyChain(db, s.orgId);
+  const names: Record<string, string> = Object.fromEntries((await db.select({ id: agents.id, name: agents.name }).from(agents).where(eq(agents.orgId, s.orgId))).map((a) => [a.id, a.name]));
   const sum = (st: string[]) => rows.filter((p) => st.includes(p.status));
   const saved = sum(["reused"]).reduce((n, p) => n + (p.quoteAmount ?? 0n), 0n);
   return {
@@ -130,8 +131,24 @@ export async function loadTryState(db: Db, s: TrySession) {
       waiting: sum(["awaiting_approval"]).length,
     },
     chain,
+    team: await Promise.all(
+      (await db.select().from(tasks).where(eq(tasks.parentTaskId, task.id))).map(async (t) => {
+        const [link] = await db.select().from(taskAgents).where(eq(taskAgents.taskId, t.id));
+        const [a] = link ? await db.select().from(agents).where(eq(agents.id, link.agentId)) : [];
+        return {
+          taskId: t.id,
+          title: t.title,
+          status: t.status,
+          agentName: a?.name ?? "hired agent",
+          budget: fmt$(t.budget),
+          spent: fmt$(t.spent),
+          pct: t.budget > 0n ? Number((t.spent * 100n) / t.budget) : 0,
+        };
+      }),
+    ),
     purchases: rows.map((p) => ({
       id: p.id,
+      agentName: names[p.agentId] ?? "agent",
       status: p.status,
       url: p.url,
       host: p.host,

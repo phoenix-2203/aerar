@@ -9,8 +9,8 @@ import { clientIp, publicLimits } from "@/lib/server/rate-limit";
 import { parseUsdc } from "@/lib/money/usdc";
 import { PRESETS, TRY_PROVIDERS } from "@/lib/try/catalog";
 import { createTrySandbox, decodeSession, DEFAULT_TRY_BUDGET, DEFAULT_TRY_RULES, encodeSession, TRY_COOKIE, TRY_TTL_SECONDS, tryContext, type TrySession } from "@/lib/try/sandbox";
-import { setBudget, updatePolicy } from "@/lib/workspace";
-import { policies, tasks } from "@/db/schema";
+import { hireAgent, setBudget, setTaskStatus, updatePolicy } from "@/lib/workspace";
+import { policies, taskAgents, tasks } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 
 export type TryResult = { error?: string; done?: string; ids?: string[] } | undefined;
@@ -147,5 +147,69 @@ export async function saveRules(f: RulesForm): Promise<TryResult> {
     return { done: "Rules saved as a new version." };
   } catch (e) {
     return { error: e instanceof Error && /USDC amount/.test(e.message) ? "Use plain dollar amounts, like 0.25." : msg(e) };
+  }
+}
+
+// ------------------------------------------------------------------ agents hiring agents
+
+const SCOUT = { title: "Competitor scan", purpose: "Find who else sells agent spend controls, for the memo.", budget: 300_000n, providers: ["api.leads.dev", "reports.acme.dev"] };
+
+/** Your agent hires a helper ("scout") for part of the task: its own $0.30 budget, fewer shops, same limits or tighter. */
+export async function hireHelper(): Promise<TryResult> {
+  const s = await session();
+  if (!s) return { error: "Your sandbox expired. Start a new one." };
+  const lim = await limited();
+  if (lim) return { error: lim };
+  try {
+    const ctx = await tryContext();
+    const existing = await ctx.db.select().from(tasks).where(eq(tasks.parentTaskId, s.taskId));
+    if (existing.length) return { error: "Your agent already hired a scout." };
+    await hireAgent(ctx.db, { parentTaskId: s.taskId, title: SCOUT.title, purpose: SCOUT.purpose, budget: SCOUT.budget, agentName: "scout", providers: SCOUT.providers, by: "agent:my-agent" });
+    refresh();
+    return { done: "Your agent hired a scout with a $0.30 budget." };
+  } catch (e) {
+    return { error: msg(e) };
+  }
+}
+
+const SCOUT_BUYS: Record<string, { url: string; purpose: string }> = {
+  competitors: { url: "https://api.leads.dev/competitors", purpose: "Competitor list for the scan" },
+  report: { url: "https://reports.acme.dev/market-report", purpose: "Market report for the scan" },
+  dataset: { url: "https://reports.acme.dev/full-dataset", purpose: "Full dataset, to be thorough" },
+  fx: { url: "https://api.marketdata.dev/fx-rates", purpose: "FX rates (not the scout's job)" },
+};
+
+export async function scoutBuy(kind: string): Promise<TryResult> {
+  const s = await session();
+  if (!s) return { error: "Your sandbox expired. Start a new one." };
+  const lim = await limited();
+  if (lim) return { error: lim };
+  const b = SCOUT_BUYS[kind];
+  if (!b) return { error: "Pick something for the scout to buy." };
+  try {
+    const ctx = await tryContext();
+    const [sub] = await ctx.db.select().from(tasks).where(eq(tasks.parentTaskId, s.taskId));
+    if (!sub) return { error: "Hire the scout first." };
+    const [link] = await ctx.db.select().from(taskAgents).where(eq(taskAgents.taskId, sub.id));
+    const p = await submitPurchase(ctx, link.agentId, { taskId: sub.id, url: b.url, method: "GET", body: null, purpose: b.purpose, idempotencyKey: `try-${randomBytes(8).toString("hex")}` });
+    refresh();
+    return { done: "Done", ids: [p.id] };
+  } catch (e) {
+    return { error: msg(e) };
+  }
+}
+
+/** Pause or resume your agent's task. Pausing it stops the scout too. */
+export async function toggleLead(): Promise<TryResult> {
+  const s = await session();
+  if (!s) return { error: "Your sandbox expired. Start a new one." };
+  try {
+    const ctx = await tryContext();
+    const [t] = await ctx.db.select().from(tasks).where(eq(tasks.id, s.taskId));
+    await setTaskStatus(ctx.db, t.id, t.status === "active" ? "paused" : "active", "you");
+    refresh();
+    return { done: t.status === "active" ? "Paused your agent's task, and with it the scout." : "Resumed." };
+  } catch (e) {
+    return { error: msg(e) };
   }
 }
