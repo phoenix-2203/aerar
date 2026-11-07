@@ -6,8 +6,23 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { createPublicClient, createWalletClient, custom, http, parseAbi, parseUnits, type Hex } from "viem";
 import { baseSepolia } from "viem/chains";
+import { ConnectAi } from "@/components/connect-ai";
 import { factoryAbi, vaultAbi } from "@/lib/vault/artifacts";
-import { attackOwnVault, getSignInMessage, signIn, signOut, vaultBuy, vaultDecide, vaultState, type VaultView } from "./actions";
+import {
+  attackOwnVault,
+  getSignInMessage,
+  inspectProvider,
+  signIn,
+  signOut,
+  trustProvider,
+  untrustProvider,
+  vaultBuy,
+  vaultBuyUrl,
+  vaultDecide,
+  vaultState,
+  type ProviderView,
+  type VaultView,
+} from "./actions";
 
 const USDC = "0x036CbD53842c5426634e7929541eC2318f3dCF7e" as const;
 const usdcAbi = parseAbi(["function transfer(address to, uint256 value) returns (bool)", "function balanceOf(address) view returns (uint256)"]);
@@ -105,6 +120,7 @@ export function VaultConsole(props: {
   mandateId: Hex;
   approvalAbove: string;
   purchases: Purchase[];
+  connectUrl: string;
 }) {
   const router = useRouter();
   const [view, setView] = useState<VaultView | null>(null);
@@ -209,7 +225,6 @@ export function VaultConsole(props: {
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-3">Mandate · your research task</p>
               {mandateLive && m ? (
                 <dl className="mt-3 space-y-1.5 font-mono text-[12.5px]">
-                  <Line k="Pays only" v={<a className="hover:underline" href={scan("address", view!.payTo)} target="_blank" rel="noreferrer">demo shop {short(view!.payTo)}</a>} />
                   <Line k="Per payment" v={`≤ ${$(m.maxPerPayment)}`} />
                   <Line k="Per day" v={`≤ ${$(m.periodLimit)} · ${$(m.leftInPeriod)} left`} />
                   <Line k="Spent so far" v={$(m.spentTotal)} />
@@ -226,12 +241,39 @@ export function VaultConsole(props: {
                         address: v.address,
                         abi: vaultAbi,
                         functionName: "setMandate",
-                        args: [props.mandateId, [view!.payTo], parseUnits(per, 6), parseUnits(day, 6), 86_400n, BigInt(Math.floor(Date.now() / 1000) + Number(days) * 86_400)],
+                        args: [props.mandateId, view!.providers.map((p) => p.payTo), parseUnits(per, 6), parseUnits(day, 6), 86_400n, BigInt(Math.floor(Date.now() / 1000) + Number(days) * 86_400)],
                       }),
                     )
                   }
                 />
               )}
+
+              <hr className="receipt-rule my-5" />
+              <Providers
+                view={view!}
+                busy={busy}
+                canSign={mandateLive}
+                onTrust={(p) =>
+                  tx(`Trusted ${p.host}`, async (w) => {
+                    const h = await w.client.writeContract({ address: v.address, abi: vaultAbi, functionName: "setPayee", args: [props.mandateId, p.payTo, true] });
+                    await pub.waitForTransactionReceipt({ hash: h });
+                    const r = await trustProvider(p.host, p.payTo);
+                    if (r?.error) throw new Error(r.error);
+                    router.refresh();
+                    return h;
+                  })
+                }
+                onRemove={(p) =>
+                  tx(`Removed ${p.host}`, async (w) => {
+                    const h = await w.client.writeContract({ address: v.address, abi: vaultAbi, functionName: "setPayee", args: [props.mandateId, p.payTo, false] });
+                    await pub.waitForTransactionReceipt({ hash: h });
+                    const r = await untrustProvider(p.host);
+                    if (r?.error) throw new Error(r.error);
+                    router.refresh();
+                    return h;
+                  })
+                }
+              />
 
               <hr className="receipt-rule my-5" />
               <div className="flex flex-wrap gap-2">
@@ -262,6 +304,10 @@ export function VaultConsole(props: {
         <div className="min-w-0 space-y-6">
           <Agent ready={!!v && !!m && m.maxPerPayment !== "0" && v.balance !== "0"} stopped={!!v && (v.paused || !mandateLive)} approvalAbove={props.approvalAbove} purchases={props.purchases} onChange={reload} />
           <BreakIt ready={!!v} />
+          <ConnectAi
+            url={props.connectUrl}
+            examples={["How much is left in my Vault task?", "Buy this hour's market update", "What did you buy, and what did my Vault refuse?"]}
+          />
         </div>
       </div>
     </div>
@@ -367,7 +413,7 @@ function SignMandate({ busy, revoked, onSign }: { busy: string | null; revoked: 
       </p>
       <div className="flex justify-between gap-4 pt-1">
         <span className="text-text-3">Pays only</span>
-        <span>the demo shop</span>
+        <span>the providers you trust (below)</span>
       </div>
       {field("per", "Per payment", per, setPer, "$")}
       {field("day", "Per day", day, setDay, "$")}
@@ -431,6 +477,23 @@ function Agent({ ready, stopped, approvalAbove, purchases, onChange }: { ready: 
           </button>
         ))}
       </div>
+      <form
+        className="mt-3 flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const url = new FormData(e.currentTarget).get("url") as string;
+          if (url) run("url", () => vaultBuyUrl(url, "Requested by you from the Vault page"));
+        }}
+      >
+        <label htmlFor="buy-url" className="sr-only">
+          Any x402 URL
+        </label>
+        <input id="buy-url" name="url" placeholder="Or paste any x402 URL from a provider you trust" className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-bg/40 px-3 font-mono text-[12px] outline-none focus:border-border-strong" />
+        <button disabled={!ready || pending} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 text-[13px] font-medium hover:border-border-strong disabled:opacity-50">
+          {pending && which === "url" && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
+          Buy
+        </button>
+      </form>
       {!ready && <p className="mt-2 text-[12.5px] text-text-3">Open, fund and sign limits on your Vault first.</p>}
       {ready && stopped && (
         <p className="mt-2 text-[12.5px] text-warning">Your Vault is paused or its limits are revoked. Let the agent try anyway: Aerar will pass it, and the Vault will refuse.</p>
@@ -526,5 +589,87 @@ function BreakIt({ ready }: { ready: boolean }) {
         </div>
       )}
     </section>
+  );
+}
+
+function Providers({ view, busy, canSign, onTrust, onRemove }: { view: VaultView; busy: string | null; canSign: boolean; onTrust: (p: ProviderView) => void; onRemove: (p: ProviderView) => void }) {
+  const [url, setUrl] = useState("");
+  const [found, setFound] = useState<{ host: string; payTo: Hex; price: string } | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const onChain = view.vault?.mandate.payees ?? {};
+  return (
+    <div>
+      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-3">Providers you trust</p>
+      <ul className="mt-3 space-y-2">
+        {view.providers.length === 0 && <li className="text-[12.5px] text-text-3">None yet: the Vault pays no one.</li>}
+        {view.providers.map((p) => {
+          const live = !!onChain[p.payTo.toLowerCase()];
+          return (
+            <li key={p.host} className="group flex items-center justify-between gap-3 font-mono text-[12.5px]">
+              <span className="min-w-0">
+                <span className="block truncate">{p.demo ? `${p.host} (demo shop)` : p.host}</span>
+                <a href={scan("address", p.payTo)} target="_blank" rel="noreferrer" className="text-[11.5px] text-text-3 hover:underline">
+                  pays {short(p.payTo)}
+                </a>
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
+                <span className={`rounded px-1.5 py-0.5 text-[10.5px] font-semibold ${live ? "bg-success-tint text-success" : "bg-warning-tint text-warning"}`} title={live ? "Allowed in your Vault" : "Not allowed in your Vault yet"}>
+                  {live ? "ON-CHAIN" : "NOT IN VAULT"}
+                </span>
+                {!p.demo && (
+                  <button onClick={() => onRemove(p)} disabled={!!busy} className="text-text-3 opacity-0 transition hover:text-danger group-hover:opacity-100 focus:opacity-100" aria-label={`Stop trusting ${p.host}`}>
+                    <XCircle className="size-4" aria-hidden />
+                  </button>
+                )}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {canSign && (
+        <form
+          className="mt-3 flex gap-2"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setErr(null);
+            setFound(null);
+            setChecking(true);
+            const r = await inspectProvider(url);
+            setChecking(false);
+            if (r.error || !r.host || !r.payTo || !r.price) setErr(r.error ?? "No quote.");
+            else setFound({ host: r.host, payTo: r.payTo, price: r.price });
+          }}
+        >
+          <label htmlFor="trust-url" className="sr-only">
+            URL of a paid resource from the provider
+          </label>
+          <input id="trust-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://provider.example/paid-endpoint" className="h-8 min-w-0 flex-1 rounded-md border border-border bg-bg/40 px-2 font-mono text-[11.5px] outline-none focus:border-border-strong" />
+          <button disabled={checking || !url} className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-2.5 text-[12px] font-medium hover:border-border-strong disabled:opacity-50">
+            {checking && <Loader2 className="size-3 animate-spin" aria-hidden />}
+            Check
+          </button>
+        </form>
+      )}
+      {err && <p className="mt-2 text-[12px] text-danger">{err}</p>}
+      {found && (
+        <div className="mt-2 animate-arrive rounded-lg border border-border bg-bg/40 p-3 text-[12.5px]">
+          <p>
+            <b>{found.host}</b> asks {found.price} and is paid at <span className="font-mono">{short(found.payTo)}</span>.
+          </p>
+          <button
+            disabled={!!busy}
+            onClick={() => {
+              onTrust({ host: found.host, payTo: found.payTo, demo: false });
+              setFound(null);
+              setUrl("");
+            }}
+            className="mt-2 inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[12.5px] font-medium text-on-primary disabled:opacity-60"
+          >
+            Trust it · sign in wallet
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

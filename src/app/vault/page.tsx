@@ -47,6 +47,7 @@ async function Body() {
           mandateId={mandateIdFor(s.taskId)}
           approvalAbove={activity.task.approvalAbove}
           purchases={activity.purchases}
+          connectUrl={`${process.env.AERAR_PUBLIC_URL || "https://aerar.duckdns.org"}/api/mcp/k/${s.apiKey}`}
         />
       </div>
     </>

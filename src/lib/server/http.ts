@@ -45,6 +45,7 @@ export function summarise(p: Purchase): string {
   const why = blockingReasons(p.reasonCodes).map(explain).join("; ");
   switch (p.status) {
     case "delivered":
+      if (p.txHash?.startsWith("0xsim")) return `Delivered. Paid ${fmt$(p.paidAmount)} to ${p.host} (simulated transfer, sandbox only).`;
       return `Delivered. Paid ${fmt$(p.paidAmount)} to ${p.host}${p.txHash ? ` (tx ${p.txHash})` : ""}${p.onchainVerifiedAt ? ", transfer verified on Base Sepolia" : ", onchain check pending or failed"}.`;
     case "reused":
       return `Reused an identical purchase (${p.reusedFromId}) made earlier. Cost $0.00, avoided ${amount}.`;

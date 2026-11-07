@@ -9,6 +9,10 @@ import { approvePurchase, PurchaseError, rejectPurchase, submitPurchase } from "
 import { requirePurchaseInOrg } from "@/lib/server/queries";
 import { clientIp, publicLimits } from "@/lib/server/rate-limit";
 import { getDbOnly } from "@/lib/server/context";
+import { and, eq } from "drizzle-orm";
+import { policies, tasks } from "@/db/schema";
+import { updatePolicy } from "@/lib/workspace";
+import { fmt$ } from "@/lib/money/usdc";
 import { demoPayTo } from "@/lib/demo/x402-server";
 import { mandateIdFor, readVault, simulateAuthorize, vaultOf, VAULT_REFUSALS, type VaultState } from "@/lib/vault/chain";
 import {
@@ -70,11 +74,36 @@ export async function signOut(): Promise<void> {
   refresh();
 }
 
+export interface ProviderView {
+  host: string;
+  payTo: Hex;
+  demo: boolean;
+}
+
 export interface VaultView {
   owner: Hex;
   vault: VaultState | null;
   payTo: Hex;
+  providers: ProviderView[];
   error?: string;
+}
+
+async function currentRules(s: WalletSession) {
+  const db = await getDbOnly();
+  const [task] = await db.select().from(tasks).where(and(eq(tasks.id, s.taskId), eq(tasks.orgId, s.orgId)));
+  if (!task) throw new PurchaseError("NO_TASK", "Your workspace has no task", 409);
+  const [pol] = await db.select().from(policies).where(and(eq(policies.taskId, task.id), eq(policies.version, task.currentPolicyVersion)));
+  return { db, task, rules: pol.rules };
+}
+
+/** Providers this workspace trusts: the demo shop, plus every host the owner added (with its payee address). */
+async function trustedProviders(s: WalletSession): Promise<ProviderView[]> {
+  const { rules } = await currentRules(s);
+  const demo: ProviderView = { host: demoHost(), payTo: demoPayTo(), demo: true };
+  const extra = Object.entries(rules.payees ?? {})
+    .filter(([h]) => h !== demo.host && rules.allowedProviders.includes(h))
+    .map(([host, payTo]) => ({ host, payTo: getAddress(payTo), demo: false }));
+  return rules.allowedProviders.includes(demo.host) ? [demo, ...extra] : extra;
 }
 
 /** On-chain state of the signed-in wallet's Vault (read fresh from Base Sepolia). */
@@ -82,11 +111,13 @@ export async function vaultState(): Promise<VaultView | null> {
   const s = await session();
   if (!s) return null;
   const payTo = demoPayTo();
+  let providers: ProviderView[] = [];
   try {
+    providers = await trustedProviders(s);
     const v = await vaultOf(s.owner);
-    return { owner: s.owner, payTo, vault: v ? await readVault(v, mandateIdFor(s.taskId), [payTo, ATTACKER]) : null };
+    return { owner: s.owner, payTo, providers, vault: v ? await readVault(v, mandateIdFor(s.taskId), [...new Set([payTo, ...providers.map((p) => p.payTo), ATTACKER])]) : null };
   } catch (e) {
-    return { owner: s.owner, payTo, vault: null, error: `Couldn't read Base Sepolia: ${msg(e)}` };
+    return { owner: s.owner, payTo, providers, vault: null, error: `Couldn't read Base Sepolia: ${msg(e)}` };
   }
 }
 
@@ -158,6 +189,95 @@ export async function attackOwnVault(kind: "attacker" | "too-big"): Promise<Vaul
         : await simulateAuthorize(v, mandateIdFor(s.taskId), demoPayTo(), 50_000_000n);
     if (r.ok) return { error: "The Vault would have allowed it. Check your limits.", code: "ALLOWED" };
     return { done: VAULT_REFUSALS[r.code] ?? r.code, code: r.code };
+  } catch (e) {
+    return { error: msg(e) };
+  }
+}
+
+// ------------------------------------------------------------------ trusted providers
+
+const hostOf = (u: URL) => u.host.toLowerCase();
+
+/** Ask an x402 resource for its price and payee, without paying. */
+export async function inspectProvider(url: string): Promise<{ error?: string; host?: string; payTo?: Hex; price?: string; url?: string }> {
+  const s = await session();
+  if (!s) return { error: "Sign in with your wallet first." };
+  const lim = await limited();
+  if (lim) return { error: lim };
+  let u: URL;
+  try {
+    u = new URL(url.trim());
+  } catch {
+    return { error: "That isn't a URL." };
+  }
+  if (u.protocol !== "https:" && process.env.AERAR_ALLOW_INSECURE_HTTP !== "1") return { error: "Use an https:// URL." };
+  try {
+    const ctx = await walletContext(s.orgId);
+    const q = await ctx.rail.quote({ url: u.toString(), method: "GET", headers: {}, body: null });
+    if (q.kind === "free") return { error: "That URL didn't ask for payment, so there's nothing for the Vault to pay." };
+    const usdc = q.quotes.find((x) => x.network === "eip155:84532" && x.asset.toLowerCase() === "0x036cbd53842c5426634e7929541ec2318f3dcf7e");
+    if (!usdc) return { error: "That provider doesn't accept USDC on Base Sepolia." };
+    return { host: hostOf(u), payTo: getAddress(usdc.payTo), price: fmt$(usdc.amount), url: u.toString() };
+  } catch (e) {
+    return { error: `Couldn't get a quote: ${msg(e)}` };
+  }
+}
+
+/** After the owner allowed the payee in their Vault (wallet transaction), allow the host in the task's rules too. */
+export async function trustProvider(host: string, payTo: string): Promise<VaultResult> {
+  const s = await session();
+  if (!s) return { error: "Sign in with your wallet first." };
+  try {
+    const { db, task, rules } = await currentRules(s);
+    const h = host.trim().toLowerCase();
+    await updatePolicy(
+      db,
+      task.id,
+      { ...rules, allowedProviders: [...new Set([...rules.allowedProviders, h])], payees: { ...(rules.payees ?? {}), [h]: getAddress(payTo) } },
+      s.owner,
+      `Trusted ${h}`,
+    );
+    refresh();
+    return { done: `${h} is trusted.` };
+  } catch (e) {
+    return { error: msg(e) };
+  }
+}
+
+export async function untrustProvider(host: string): Promise<VaultResult> {
+  const s = await session();
+  if (!s) return { error: "Sign in with your wallet first." };
+  try {
+    const { db, task, rules } = await currentRules(s);
+    const h = host.trim().toLowerCase();
+    const payees = { ...(rules.payees ?? {}) };
+    delete payees[h];
+    await updatePolicy(db, task.id, { ...rules, allowedProviders: rules.allowedProviders.filter((x) => x !== h), payees }, s.owner, `Stopped trusting ${h}`);
+    refresh();
+    return { done: `${h} removed.` };
+  } catch (e) {
+    return { error: msg(e) };
+  }
+}
+
+/** The agent buys any URL; Aerar's rules and the Vault decide. */
+export async function vaultBuyUrl(url: string, purpose: string): Promise<VaultResult> {
+  const s = await session();
+  if (!s) return { error: "Sign in with your wallet first." };
+  const lim = await limited();
+  if (lim) return { error: lim };
+  try {
+    const ctx = await walletContext(s.orgId);
+    const p = await submitPurchase(ctx, s.agentId, {
+      taskId: s.taskId,
+      url: url.trim(),
+      method: "GET",
+      body: null,
+      purpose: purpose.trim() || "Requested from the Vault page",
+      idempotencyKey: `vault-${randomBytes(8).toString("hex")}`,
+    });
+    refresh();
+    return { done: p.status, ids: [p.id] };
   } catch (e) {
     return { error: msg(e) };
   }

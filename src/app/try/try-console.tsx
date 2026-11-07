@@ -1,10 +1,10 @@
 "use client";
 // The sandbox console: 1) your rules, 2) ask your agent to buy, 3) what happened. Plus "connect your own agent".
-import { ArrowRight, Bot, Check, ChevronDown, Link2, ListChecks, Play, RotateCcw, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ArrowRight, Bot, Check, ChevronDown, ListChecks, Play, RotateCcw, ShieldCheck, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/button";
-import { CopyButton } from "@/components/copy-button";
 import { PurchaseTimeline } from "@/components/purchase-timeline";
+import { ConnectAi } from "@/components/connect-ai";
 import { StatusChip } from "@/components/status-chip";
 import { explain, reasonKind } from "@/lib/copy/reasons";
 import type { TryState } from "@/lib/try/sandbox";
@@ -43,7 +43,6 @@ export function TryConsole({
   presets,
   providers,
   apiKey,
-  taskId,
   site,
 }: {
   state: TryState;
@@ -180,7 +179,10 @@ export function TryConsole({
         {/* Side: rules + connect */}
         <aside className="min-w-0 space-y-6 lg:sticky lg:top-20">
           <Rules state={state} providers={providers} onDone={(r) => (r?.error ? setToast({ tone: "err", text: r.error }) : r?.done && setToast({ tone: "ok", text: r.done }))} />
-          <Connect apiKey={apiKey} taskId={taskId} site={site} />
+          <ConnectAi
+            url={`${site}/api/mcp/k/${apiKey}`}
+            examples={["What are my task's rules?", "Buy the FX rates from api.marketdata.dev", "What did you buy so far, and what was refused?"]}
+          />
         </aside>
       </div>
 
@@ -423,32 +425,3 @@ function Money({ id, label, value, onChange }: { id: string; label: string; valu
   );
 }
 
-function Connect({ apiKey, taskId, site }: { apiKey: string; taskId: string; site: string }) {
-  const [show, setShow] = useState(false);
-  const masked = `${apiKey.slice(0, 10)}${"•".repeat(16)}`;
-  const snippet = `claude mcp add --transport http aerar-sandbox \\\n  ${site}/api/mcp \\\n  --header "Authorization: Bearer ${apiKey}"`;
-  return (
-    <section className="rounded-2xl border border-border bg-surface p-5 shadow-card" aria-labelledby="connect">
-      <h2 id="connect" className="flex items-center gap-2 text-[15px] font-semibold">
-        <Link2 className="size-4 text-accent" aria-hidden /> Connect your own agent
-      </h2>
-      <p className="mt-1 text-[12.5px] text-text-3">
-        This test key only works in your sandbox and only pays simulated shops. Its purchases show up here. Task id: <span className="font-mono">{taskId}</span>
-      </p>
-      <div className="mt-3 overflow-hidden rounded-xl border border-border bg-bg/40">
-        <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
-          <button onClick={() => setShow(!show)} className="text-xs text-text-2 hover:text-text">
-            {show ? "Hide key" : "Show key"}
-          </button>
-          <CopyButton text={snippet} />
-        </div>
-        <pre className="overflow-x-auto p-3 font-mono text-[11.5px] leading-5 text-text-2">
-          {show ? snippet : snippet.replace(apiKey, masked)}
-        </pre>
-      </div>
-      <p className="mt-2 text-[12px] text-text-3">
-        Then ask Claude: &ldquo;Use buy_resource to buy https://api.marketdata.dev/fx-rates for task {taskId}.&rdquo;
-      </p>
-    </section>
-  );
-}

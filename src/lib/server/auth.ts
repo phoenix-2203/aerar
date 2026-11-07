@@ -18,6 +18,13 @@ export async function requireAgent(db: Db, req: Request) {
   return agent;
 }
 
+/** Same check for a key that arrived in a connector URL instead of a header. */
+export async function requireAgentKey(db: Db, key: string) {
+  const agent = await authenticateAgent(db, key);
+  if (!agent) throw new PurchaseError("UNAUTHORIZED", "Invalid or revoked agent key in the connector URL", 401);
+  return agent;
+}
+
 function secret(): string {
   const s = process.env.SESSION_SECRET;
   if (!s || s.length < 32) throw new PurchaseError("AUTH_NOT_CONFIGURED", "SESSION_SECRET must be set (32+ characters)", 503);
