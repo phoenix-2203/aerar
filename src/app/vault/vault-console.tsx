@@ -8,6 +8,7 @@ import { createPublicClient, createWalletClient, custom, http, parseAbi, parseUn
 import { baseSepolia } from "viem/chains";
 import { ConnectAi } from "@/components/connect-ai";
 import { NotifyCard } from "@/components/notify-card";
+import { ReceiptButton } from "@/components/receipt-slip";
 import { TeamCard } from "./team-card";
 import { factoryAbi, vaultAbi } from "@/lib/vault/artifacts";
 import {
@@ -534,9 +535,9 @@ function Agent({ canBuy, canDecide, ready, stopped, approvalAbove, purchases, on
                   </a>
                 )}
                 {p.status !== "awaiting_approval" && (
-                  <a className="hover:text-text hover:underline" href={`/verify?id=${p.id}`} target="_blank" rel="noreferrer">
+                  <ReceiptButton id={p.id} className="hover:text-text hover:underline">
                     receipt
-                  </a>
+                  </ReceiptButton>
                 )}
               </p>
               {why.map((r) => (

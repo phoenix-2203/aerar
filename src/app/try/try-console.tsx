@@ -6,6 +6,7 @@ import { Button } from "@/components/button";
 import { PurchaseTimeline } from "@/components/purchase-timeline";
 import { ConnectAi } from "@/components/connect-ai";
 import { NotifyCard } from "@/components/notify-card";
+import { ReceiptButton } from "@/components/receipt-slip";
 import { StatusChip } from "@/components/status-chip";
 import { explain, reasonKind } from "@/lib/copy/reasons";
 import type { TryState } from "@/lib/try/sandbox";
@@ -250,9 +251,9 @@ function Row({ p, open, flash, onToggle }: { p: P; open: boolean; flash: boolean
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             {p.txHash ? <p className="font-mono text-[11.5px] text-text-3">Simulated transfer {p.txHash.slice(0, 18)}… (no chain in the sandbox)</p> : <span />}
             {p.status !== "awaiting_approval" && (
-              <a href={`/verify?id=${p.id}`} target="_blank" rel="noreferrer" className="text-[12.5px] font-medium text-info hover:underline">
+              <ReceiptButton id={p.id} className="text-[12.5px] font-medium text-info hover:underline">
                 Signed receipt →
-              </a>
+              </ReceiptButton>
             )}
           </div>
         </div>
