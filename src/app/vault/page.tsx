@@ -7,7 +7,7 @@ import { Suspense } from "react";
 import { PublicShell } from "@/components/app-shell";
 import { factoryAddress, mandateIdFor, operatorAddress } from "@/lib/vault/chain";
 import { walletActivity } from "@/lib/wallet/activity";
-import { decodeWalletSession, WALLET_COOKIE } from "@/lib/wallet/session";
+import { decodeWalletSession, ownerOfOrg, WALLET_COOKIE } from "@/lib/wallet/session";
 import { ConnectWallet, VaultConsole } from "./vault-console";
 
 export const metadata: Metadata = {
@@ -47,6 +47,8 @@ async function Body() {
           mandateId={mandateIdFor(s.taskId)}
           approvalAbove={activity.task.approvalAbove}
           purchases={activity.purchases}
+          role={s.role}
+          workspaceOwner={ownerOfOrg(s.orgId)}
           connectUrl={`${process.env.AERAR_PUBLIC_URL || "https://aerar.duckdns.org"}/api/mcp/k/${s.apiKey}`}
         />
       </div>

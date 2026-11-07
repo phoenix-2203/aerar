@@ -10,7 +10,7 @@ import { requirePurchaseInOrg } from "@/lib/server/queries";
 import { clientIp, publicLimits } from "@/lib/server/rate-limit";
 import { getDbOnly } from "@/lib/server/context";
 import { and, eq } from "drizzle-orm";
-import { policies, tasks } from "@/db/schema";
+import { orgMembers, policies, tasks, type MemberRole } from "@/db/schema";
 import { updatePolicy } from "@/lib/workspace";
 import { fmt$ } from "@/lib/money/usdc";
 import { demoPayTo } from "@/lib/demo/x402-server";
@@ -24,7 +24,12 @@ import {
   signInMessage,
   WALLET_COOKIE,
   WALLET_TTL_SECONDS,
+  membershipsOf,
+  openAsMember,
+  ownerOfOrg,
+  stillMember,
   walletContext,
+  walletOrgId,
   type WalletSession,
 } from "@/lib/wallet/session";
 
@@ -36,6 +41,14 @@ const ATTACKER = "0xbad00000000000000000000000000000000bad00" as Hex;
 async function session(): Promise<WalletSession | null> {
   return decodeWalletSession((await cookies()).get(WALLET_COOKIE)?.value);
 }
+
+/** The session, if the signed-in wallet still holds one of these roles in its current workspace. */
+async function as(roles: MemberRole[]): Promise<WalletSession | null> {
+  const s = await session();
+  if (!s) return null;
+  return (await stillMember(await getDbOnly(), s, roles)) ? s : null;
+}
+const OWNER_ONLY = "Only the workspace owner can do that.";
 
 async function limited(): Promise<string | null> {
   const r = publicLimits().tryActions.check(clientIp(await headers()));
@@ -114,10 +127,10 @@ export async function vaultState(): Promise<VaultView | null> {
   let providers: ProviderView[] = [];
   try {
     providers = await trustedProviders(s);
-    const v = await vaultOf(s.owner);
-    return { owner: s.owner, payTo, providers, vault: v ? await readVault(v, mandateIdFor(s.taskId), [...new Set([payTo, ...providers.map((p) => p.payTo), ATTACKER])]) : null };
+    const v = await vaultOf(ownerOfOrg(s.orgId));
+    return { owner: ownerOfOrg(s.orgId), payTo, providers, vault: v ? await readVault(v, mandateIdFor(s.taskId), [...new Set([payTo, ...providers.map((p) => p.payTo), ATTACKER])]) : null };
   } catch (e) {
-    return { owner: s.owner, payTo, providers, vault: null, error: `Couldn't read Base Sepolia: ${msg(e)}` };
+    return { owner: ownerOfOrg(s.orgId), payTo, providers, vault: null, error: `Couldn't read Base Sepolia: ${msg(e)}` };
   }
 }
 
@@ -128,8 +141,8 @@ const ITEMS: Record<string, { path: string; purpose: string }> = {
 
 /** The agent buys from the real x402 demo shop; the money comes from the visitor's Vault. */
 export async function vaultBuy(item: string): Promise<VaultResult> {
-  const s = await session();
-  if (!s) return { error: "Sign in with your wallet first." };
+  const s = await as(["owner"]);
+  if (!s) return { error: OWNER_ONLY };
   const lim = await limited();
   if (lim) return { error: lim };
   const it =
@@ -155,15 +168,15 @@ export async function vaultBuy(item: string): Promise<VaultResult> {
 }
 
 export async function vaultDecide(id: string, kind: "approve" | "reject"): Promise<VaultResult> {
-  const s = await session();
-  if (!s) return { error: "Sign in with your wallet first." };
+  const s = await as(["owner", "approver"]);
+  if (!s) return { error: "Only the owner or an approver can decide." };
   const lim = await limited();
   if (lim) return { error: lim };
   try {
     const ctx = await walletContext(s.orgId);
     await requirePurchaseInOrg(ctx.db, s.orgId, id);
     if (kind === "approve") await approvePurchase(ctx, id, s.owner);
-    else await rejectPurchase(ctx, id, s.owner, "Declined by the owner");
+    else await rejectPurchase(ctx, id, s.owner, s.role === "owner" ? "Declined by the owner" : "Declined by an approver");
     refresh();
     return { done: kind === "approve" ? "Approved" : "Declined", ids: [id] };
   } catch (e) {
@@ -176,12 +189,12 @@ export async function vaultDecide(id: string, kind: "approve" | "reject"): Promi
  * would never allow. Dry-run against the live contract, so nothing is sent and no gas is spent.
  */
 export async function attackOwnVault(kind: "attacker" | "too-big"): Promise<VaultResult> {
-  const s = await session();
-  if (!s) return { error: "Sign in with your wallet first." };
+  const s = await as(["owner"]);
+  if (!s) return { error: OWNER_ONLY };
   const lim = await limited();
   if (lim) return { error: lim };
   try {
-    const v = await vaultOf(s.owner);
+    const v = await vaultOf(ownerOfOrg(s.orgId));
     if (!v) return { error: "Create your Vault first." };
     const r =
       kind === "attacker"
@@ -200,8 +213,8 @@ const hostOf = (u: URL) => u.host.toLowerCase();
 
 /** Ask an x402 resource for its price and payee, without paying. */
 export async function inspectProvider(url: string): Promise<{ error?: string; host?: string; payTo?: Hex; price?: string; url?: string }> {
-  const s = await session();
-  if (!s) return { error: "Sign in with your wallet first." };
+  const s = await as(["owner"]);
+  if (!s) return { error: OWNER_ONLY };
   const lim = await limited();
   if (lim) return { error: lim };
   let u: URL;
@@ -225,8 +238,8 @@ export async function inspectProvider(url: string): Promise<{ error?: string; ho
 
 /** After the owner allowed the payee in their Vault (wallet transaction), allow the host in the task's rules too. */
 export async function trustProvider(host: string, payTo: string): Promise<VaultResult> {
-  const s = await session();
-  if (!s) return { error: "Sign in with your wallet first." };
+  const s = await as(["owner"]);
+  if (!s) return { error: OWNER_ONLY };
   try {
     const { db, task, rules } = await currentRules(s);
     const h = host.trim().toLowerCase();
@@ -245,8 +258,8 @@ export async function trustProvider(host: string, payTo: string): Promise<VaultR
 }
 
 export async function untrustProvider(host: string): Promise<VaultResult> {
-  const s = await session();
-  if (!s) return { error: "Sign in with your wallet first." };
+  const s = await as(["owner"]);
+  if (!s) return { error: OWNER_ONLY };
   try {
     const { db, task, rules } = await currentRules(s);
     const h = host.trim().toLowerCase();
@@ -262,8 +275,8 @@ export async function untrustProvider(host: string): Promise<VaultResult> {
 
 /** The agent buys any URL; Aerar's rules and the Vault decide. */
 export async function vaultBuyUrl(url: string, purpose: string): Promise<VaultResult> {
-  const s = await session();
-  if (!s) return { error: "Sign in with your wallet first." };
+  const s = await as(["owner"]);
+  if (!s) return { error: OWNER_ONLY };
   const lim = await limited();
   if (lim) return { error: lim };
   try {
@@ -278,6 +291,83 @@ export async function vaultBuyUrl(url: string, purpose: string): Promise<VaultRe
     });
     refresh();
     return { done: p.status, ids: [p.id] };
+  } catch (e) {
+    return { error: msg(e) };
+  }
+}
+
+// ------------------------------------------------------------------ team
+
+const setCookie = async (s: WalletSession) =>
+  (await cookies()).set(WALLET_COOKIE, encodeWalletSession(s), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: WALLET_TTL_SECONDS });
+
+export interface TeamView {
+  role: MemberRole;
+  workspaceOwner: Hex;
+  members: { address: Hex; role: MemberRole }[];
+  /** Other workspaces this wallet can open. */
+  workspaces: { orgId: string; owner: Hex; role: MemberRole; current: boolean }[];
+}
+
+export async function teamState(): Promise<TeamView | null> {
+  const s = await session();
+  if (!s) return null;
+  const db = await getDbOnly();
+  const rows = await db.select().from(orgMembers).where(eq(orgMembers.orgId, s.orgId));
+  const mine = await membershipsOf(db, s.owner);
+  return {
+    role: s.role,
+    workspaceOwner: ownerOfOrg(s.orgId),
+    members: rows.map((r) => ({ address: getAddress(r.address), role: r.role })),
+    workspaces: [
+      { orgId: walletOrgId(s.owner), owner: s.owner, role: "owner" as MemberRole, current: s.orgId === walletOrgId(s.owner) },
+      ...mine.map((m) => ({ orgId: m.orgId, owner: m.owner, role: m.role, current: m.orgId === s.orgId })),
+    ],
+  };
+}
+
+export async function addMember(address: string, role: MemberRole): Promise<VaultResult> {
+  const s = await as(["owner"]);
+  if (!s) return { error: OWNER_ONLY };
+  const lim = await limited();
+  if (lim) return { error: lim };
+  if (role !== "approver" && role !== "viewer") return { error: "Pick approver or viewer." };
+  let a: Hex;
+  try {
+    a = getAddress(address.trim());
+  } catch {
+    return { error: "That isn't a wallet address." };
+  }
+  if (a.toLowerCase() === s.owner.toLowerCase()) return { error: "That's you: you're already the owner." };
+  const db = await getDbOnly();
+  if ((await db.select().from(orgMembers).where(eq(orgMembers.orgId, s.orgId))).length >= 20) return { error: "A workspace can have up to 20 teammates." };
+  await db
+    .insert(orgMembers)
+    .values({ orgId: s.orgId, address: a.toLowerCase(), role, addedBy: s.owner })
+    .onConflictDoUpdate({ target: [orgMembers.orgId, orgMembers.address], set: { role } });
+  refresh();
+  return { done: `Added ${a.slice(0, 6)}…${a.slice(-4)} as ${role}.` };
+}
+
+export async function removeMember(address: string): Promise<VaultResult> {
+  const s = await as(["owner"]);
+  if (!s) return { error: OWNER_ONLY };
+  await (await getDbOnly()).delete(orgMembers).where(and(eq(orgMembers.orgId, s.orgId), eq(orgMembers.address, address.toLowerCase())));
+  refresh();
+  return { done: "Removed." };
+}
+
+/** Switch between your own workspace and teams you were invited to. */
+export async function switchWorkspace(orgId: string): Promise<VaultResult> {
+  const s = await session();
+  if (!s) return { error: "Sign in with your wallet first." };
+  const db = await getDbOnly();
+  try {
+    const next = orgId === walletOrgId(s.owner) ? await openWalletWorkspace(db, s.owner) : await openAsMember(db, s.owner, orgId);
+    if (!next) return { error: "You're not a member of that workspace any more." };
+    await setCookie(next);
+    refresh();
+    return { done: "Switched." };
   } catch (e) {
     return { error: msg(e) };
   }

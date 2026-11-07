@@ -271,8 +271,12 @@ async function submitNew(
   const verdict = evaluatePolicy(input);
   if (verdict.decision === "decline")
     return record(db, { ...base, ...quoteFields, status: "declined", reasonCodes: verdict.reasonCodes, error: verdict.explanations.join(" "), decidedAt: now }, "purchase.declined", `agent:${agent.id}`);
-  if (verdict.decision === "needs_approval")
-    return record(db, { ...base, ...quoteFields, status: "awaiting_approval", reasonCodes: verdict.reasonCodes, decidedAt: now }, "purchase.awaiting_approval", `agent:${agent.id}`);
+  if (verdict.decision === "needs_approval") {
+    const held = await record(db, { ...base, ...quoteFields, status: "awaiting_approval", reasonCodes: verdict.reasonCodes, decidedAt: now }, "purchase.awaiting_approval", `agent:${agent.id}`);
+    // Tell the people who decide, where they are (Slack / Discord / Telegram). Fire and forget.
+    void import("@/lib/notify/notify").then((n) => n.notifyApproval(db, held));
+    return held;
+  }
 
   // ---- 5. reserve under a row lock, re-checking with fresh totals
   const reserved = await reserve(ctx, base, quoteFields, quote, input, `agent:${agent.id}`, verdict.reasonCodes);

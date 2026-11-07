@@ -7,6 +7,8 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import { createPublicClient, createWalletClient, custom, http, parseAbi, parseUnits, type Hex } from "viem";
 import { baseSepolia } from "viem/chains";
 import { ConnectAi } from "@/components/connect-ai";
+import { NotifyCard } from "@/components/notify-card";
+import { TeamCard } from "./team-card";
 import { factoryAbi, vaultAbi } from "@/lib/vault/artifacts";
 import {
   attackOwnVault,
@@ -121,8 +123,11 @@ export function VaultConsole(props: {
   approvalAbove: string;
   purchases: Purchase[];
   connectUrl: string;
+  role: "owner" | "approver" | "viewer";
+  workspaceOwner: Hex;
 }) {
   const router = useRouter();
+  const isOwner = props.role === "owner";
   const [view, setView] = useState<VaultView | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -170,7 +175,7 @@ export function VaultConsole(props: {
           <a href={scan("address", props.owner)} target="_blank" rel="noreferrer" className="font-mono text-text hover:underline">
             {short(props.owner)}
           </a>{" "}
-          · Base Sepolia
+          · {isOwner ? "your workspace" : `${props.role} in ${short(props.workspaceOwner)}'s workspace`}
         </span>
         <button onClick={() => signOut().then(() => router.refresh())} className="inline-flex items-center gap-1.5 hover:text-text">
           <LogOut className="size-3.5" aria-hidden /> Sign out
@@ -201,6 +206,8 @@ export function VaultConsole(props: {
             <div className="p-6 text-sm text-danger">{view.error}</div>
           ) : !props.factory ? (
             <div className="p-6 text-sm text-text-2">Vaults aren&apos;t switched on for this deployment yet (no factory address).</div>
+          ) : !v && !isOwner ? (
+            <div className="p-6 text-sm text-text-2">The owner hasn&apos;t opened a Vault yet.</div>
           ) : !v ? (
             <CreateVault busy={busy} onCreate={() => tx("Vault created", (w) => w.client.writeContract({ address: props.factory!, abi: factoryAbi, functionName: "create", args: [props.operator] }))} />
           ) : (
@@ -219,7 +226,7 @@ export function VaultConsole(props: {
               <p className="tabular mt-5 text-[40px] font-semibold leading-none tracking-tight">{$(v.balance)}</p>
               <p className="mt-1 text-[13px] text-text-3">test USDC in your Vault · only you can withdraw</p>
 
-              <Fund busy={busy} onFund={(amt) => tx("Funded", (w) => w.client.writeContract({ address: USDC, abi: usdcAbi, functionName: "transfer", args: [v.address, parseUnits(amt, 6)] }))} />
+              {isOwner && <Fund busy={busy} onFund={(amt) => tx("Funded", (w) => w.client.writeContract({ address: USDC, abi: usdcAbi, functionName: "transfer", args: [v.address, parseUnits(amt, 6)] }))} />}
 
               <hr className="receipt-rule my-5" />
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-3">Mandate · your research task</p>
@@ -231,6 +238,8 @@ export function VaultConsole(props: {
                   <Line k="Expires" v={new Date(m.expiresAt * 1000).toUTCString().slice(5, 22)} />
                   <Line k="Operator" v={v.operatorIsAerar ? `Aerar ${short(v.operator)}` : `⚠ ${short(v.operator)}`} />
                 </dl>
+              ) : !isOwner ? (
+                <p className="mt-3 text-[13px] text-text-2">No active limits: the Vault pays nothing until the owner signs some.</p>
               ) : (
                 <SignMandate
                   busy={busy}
@@ -252,7 +261,7 @@ export function VaultConsole(props: {
               <Providers
                 view={view!}
                 busy={busy}
-                canSign={mandateLive}
+                canSign={mandateLive && isOwner}
                 onTrust={(p) =>
                   tx(`Trusted ${p.host}`, async (w) => {
                     const h = await w.client.writeContract({ address: v.address, abi: vaultAbi, functionName: "setPayee", args: [props.mandateId, p.payTo, true] });
@@ -275,8 +284,8 @@ export function VaultConsole(props: {
                 }
               />
 
-              <hr className="receipt-rule my-5" />
-              <div className="flex flex-wrap gap-2">
+              {isOwner && <hr className="receipt-rule my-5" />}
+              {isOwner && <div className="flex flex-wrap gap-2">
                 <SlipButton busy={busy === "Paused" || busy === "Resumed"} onClick={() => tx(v.paused ? "Resumed" : "Paused", (w) => w.client.writeContract({ address: v.address, abi: vaultAbi, functionName: "setPaused", args: [!v.paused] }))}>
                   {v.paused ? <Play className="size-3.5" aria-hidden /> : <Pause className="size-3.5" aria-hidden />}
                   {v.paused ? "Resume" : "Pause all"}
@@ -291,10 +300,11 @@ export function VaultConsole(props: {
                     <ArrowUpRight className="size-3.5" aria-hidden /> Withdraw all
                   </SlipButton>
                 )}
-              </div>
+              </div>}
               <p className="mt-3 text-[12px] leading-5 text-text-3">
-                These run in your wallet. Aerar can&apos;t pause, change limits or withdraw. It can only ask the Vault to pay, and the Vault checks your
-                limits itself.
+                {isOwner
+                  ? "These run in your wallet. Aerar can't pause, change limits or withdraw. It can only ask the Vault to pay, and the Vault checks your limits itself."
+                  : "Only the owner's wallet can fund, pause, change limits or withdraw. The Vault enforces that on-chain."}
               </p>
             </div>
           )}
@@ -302,12 +312,16 @@ export function VaultConsole(props: {
 
         {/* ---------------------------------------------------------------- the agent */}
         <div className="min-w-0 space-y-6">
-          <Agent ready={!!v && !!m && m.maxPerPayment !== "0" && v.balance !== "0"} stopped={!!v && (v.paused || !mandateLive)} approvalAbove={props.approvalAbove} purchases={props.purchases} onChange={reload} />
-          <BreakIt ready={!!v} />
-          <ConnectAi
-            url={props.connectUrl}
-            examples={["How much is left in my Vault task?", "Buy this hour's market update", "What did you buy, and what did my Vault refuse?"]}
-          />
+          <Agent canBuy={isOwner} canDecide={props.role !== "viewer"} ready={!!v && !!m && m.maxPerPayment !== "0" && v.balance !== "0"} stopped={!!v && (v.paused || !mandateLive)} approvalAbove={props.approvalAbove} purchases={props.purchases} onChange={reload} />
+          {isOwner && <BreakIt ready={!!v} />}
+          {isOwner && (
+            <ConnectAi
+              url={props.connectUrl}
+              examples={["How much is left in my Vault task?", "Buy this hour's market update", "What did you buy, and what did my Vault refuse?"]}
+            />
+          )}
+          {isOwner && <NotifyCard where="vault" />}
+          <TeamCard />
         </div>
       </div>
     </div>
@@ -436,7 +450,7 @@ const STATUS: Record<string, { label: string; tone: string }> = {
   unknown: { label: "Checking", tone: "text-warning" },
 };
 
-function Agent({ ready, stopped, approvalAbove, purchases, onChange }: { ready: boolean; stopped: boolean; approvalAbove: string; purchases: Purchase[]; onChange: () => void }) {
+function Agent({ canBuy, canDecide, ready, stopped, approvalAbove, purchases, onChange }: { canBuy: boolean; canDecide: boolean; ready: boolean; stopped: boolean; approvalAbove: string; purchases: Purchase[]; onChange: () => void }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [which, setWhich] = useState<string | null>(null);
@@ -460,7 +474,7 @@ function Agent({ ready, stopped, approvalAbove, purchases, onChange }: { ready: 
       <p className="mt-1 text-[13.5px] text-text-2">
         It buys from a real x402 shop. Aerar checks the task rules first (anything over {approvalAbove} waits for you), then asks your Vault to pay.
       </p>
-      <div className="mt-4 flex flex-wrap gap-2">
+      {canBuy && <div className="mt-4 flex flex-wrap gap-2">
         {[
           { key: "report", label: "Buy a market report · $0.10" },
           { key: "premium", label: "Buy the premium report · $0.50" },
@@ -476,8 +490,8 @@ function Agent({ ready, stopped, approvalAbove, purchases, onChange }: { ready: 
             {b.label}
           </button>
         ))}
-      </div>
-      <form
+      </div>}
+      {canBuy && <form
         className="mt-3 flex gap-2"
         onSubmit={(e) => {
           e.preventDefault();
@@ -493,8 +507,8 @@ function Agent({ ready, stopped, approvalAbove, purchases, onChange }: { ready: 
           {pending && which === "url" && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
           Buy
         </button>
-      </form>
-      {!ready && <p className="mt-2 text-[12.5px] text-text-3">Open, fund and sign limits on your Vault first.</p>}
+      </form>}
+      {canBuy && !ready && <p className="mt-2 text-[12.5px] text-text-3">Open, fund and sign limits on your Vault first.</p>}
       {ready && stopped && (
         <p className="mt-2 text-[12.5px] text-warning">Your Vault is paused or its limits are revoked. Let the agent try anyway: Aerar will pass it, and the Vault will refuse.</p>
       )}
@@ -505,7 +519,7 @@ function Agent({ ready, stopped, approvalAbove, purchases, onChange }: { ready: 
         {purchases.length === 0 && <li className="py-6 text-center text-[13px] text-text-3">Nothing bought yet.</li>}
         {purchases.map((p) => {
           const s = STATUS[p.status] ?? { label: p.status, tone: "text-text-2" };
-          const why = p.reasons.slice(0, 2);
+          const why = p.reasons.filter((r) => !(p.error && r.code === "VAULT_REFUSED")).slice(0, 2);
           return (
             <li key={p.id} className="animate-arrive py-3">
               <div className="flex items-baseline justify-between gap-3">
@@ -530,8 +544,8 @@ function Agent({ ready, stopped, approvalAbove, purchases, onChange }: { ready: 
                   {r.text}
                 </p>
               ))}
-              {p.error && !p.reasons.some((r) => r.code === "VAULT_REFUSED") && <p className="mt-1 text-[12.5px] text-danger [overflow-wrap:anywhere]">{p.error}</p>}
-              {p.status === "awaiting_approval" && (
+              {p.error && <p className="mt-1 text-[12.5px] text-danger [overflow-wrap:anywhere]">{p.error}</p>}
+              {p.status === "awaiting_approval" && canDecide && (
                 <div className="mt-2 flex gap-2">
                   <button disabled={pending} onClick={() => run("a" + p.id, () => vaultDecide(p.id, "approve"))} className="h-8 rounded-lg bg-primary px-3 text-[12.5px] font-medium text-on-primary disabled:opacity-60">
                     Approve

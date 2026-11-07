@@ -18,8 +18,25 @@ const ts = (name: string) => timestamp(name, { withTimezone: true });
 export const organisations = pgTable("organisations", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  /** Where approval requests are posted (Slack / Discord / Telegram / generic webhook URL). Secret; never shown back in full. */
+  notifyUrl: text("notify_url"),
   createdAt: ts("created_at").notNull().defaultNow(),
 });
+
+export type MemberRole = "owner" | "approver" | "viewer";
+
+/** Teammates of a wallet workspace, by wallet address. The workspace's own wallet is always the owner. */
+export const orgMembers = pgTable(
+  "org_members",
+  {
+    orgId: text("org_id").notNull().references(() => organisations.id),
+    address: text("address").notNull(), // lowercase 0x…
+    role: text("role").$type<MemberRole>().notNull(),
+    addedBy: text("added_by").notNull(),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("org_members_pk").on(t.orgId, t.address), index("org_members_address").on(t.address)],
+);
 
 export const agents = pgTable(
   "agents",

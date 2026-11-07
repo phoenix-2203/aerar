@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/button";
 import { PurchaseTimeline } from "@/components/purchase-timeline";
 import { ConnectAi } from "@/components/connect-ai";
+import { NotifyCard } from "@/components/notify-card";
 import { StatusChip } from "@/components/status-chip";
 import { explain, reasonKind } from "@/lib/copy/reasons";
 import type { TryState } from "@/lib/try/sandbox";
@@ -183,6 +184,7 @@ export function TryConsole({
             url={`${site}/api/mcp/k/${apiKey}`}
             examples={["What are my task's rules?", "Buy the FX rates from api.marketdata.dev", "What did you buy so far, and what was refused?"]}
           />
+          <NotifyCard where="try" />
         </aside>
       </div>
 

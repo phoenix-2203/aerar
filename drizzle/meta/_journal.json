@@ -8,6 +8,13 @@
       "when": 1793971914486,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794027157831,
+      "tag": "0001_teams_and_notify",
+      "breakpoints": true
     }
   ]
 }

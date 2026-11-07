@@ -12,8 +12,8 @@ export async function createOrg(db: Db, name: string, id = newId("org")) {
 }
 
 /** Returns the plaintext key exactly once. Only its hash is stored. */
-export async function createAgent(db: Db, orgId: string, name: string, description?: string) {
-  const key = `aer_${randomBytes(24).toString("base64url")}`;
+export async function createAgent(db: Db, orgId: string, name: string, description?: string, presetKey?: string) {
+  const key = presetKey ?? `aer_${randomBytes(24).toString("base64url")}`;
   const id = newId("agt");
   const [a] = await db
     .insert(agents)
