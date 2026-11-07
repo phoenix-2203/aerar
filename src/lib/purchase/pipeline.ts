@@ -22,7 +22,10 @@ import {
 } from "@/db/schema";
 import { audit } from "@/lib/audit/log";
 import { reuseKey, sha256, normaliseUrl, canonicalBody } from "@/lib/memory/reuse-key";
-import { accessChecks, evaluatePolicy, type PolicyInput } from "@/lib/policy/engine";
+import { accessChecks, evaluatePolicy, type PolicyInput, type PolicyResult } from "@/lib/policy/engine";
+import { quoteDescription } from "@/lib/intent/intentlock";
+import { buildMandate, signMandate, verifyMandate, type MandateCheck } from "@/lib/mandate/mandate";
+import type { IntentRecord } from "@/db/schema";
 import type { CapturedResponse, PaymentRail, Quote } from "@/lib/x402/rail";
 
 export type Purchase = typeof purchases.$inferSelect;
@@ -77,6 +80,44 @@ async function loadPolicy(db: Db, taskId: string, version: number) {
     .where(and(eq(policies.taskId, taskId), eq(policies.version, version)));
   if (!p) throw new PurchaseError("POLICY_MISSING", `Task ${taskId} has no policy v${version}`, 500);
   return p;
+}
+
+/**
+ * The task's current mandate, checked against its signature before anything is decided. Rows written before mandates
+ * were signed (older deployments) are signed once, on first use, and that is recorded in the audit log.
+ */
+export async function loadMandate(db: Db, task: typeof tasks.$inferSelect): Promise<{ policy: typeof policies.$inferSelect; check: MandateCheck }> {
+  let policy = await loadPolicy(db, task.id, task.currentPolicyVersion);
+  if (!policy.mandate) {
+    const signed = await signMandate(buildMandate(task, policy.version, policy.rules, "system:backfill"));
+    const [row] = await db
+      .update(policies)
+      .set(signed)
+      .where(and(eq(policies.taskId, task.id), eq(policies.version, policy.version), sql`${policies.mandate} is null`))
+      .returning();
+    if (row) {
+      await audit(db, { orgId: task.orgId, actor: "system", kind: "mandate.signed", subjectId: task.id, data: { version: policy.version, mandateHash: signed.mandateHash, backfill: true } });
+      policy = row;
+    } else policy = await loadPolicy(db, task.id, task.currentPolicyVersion);
+  }
+  return { policy, check: await verifyMandate(policy, task) };
+}
+
+const COUNTS_TOWARD_CAP: PurchaseStatus[] = ["awaiting_approval", "reserved", "paying", "delivered", "unknown"];
+
+/** Purchases a task has made or has waiting, for the mandate's purchase cap. */
+async function taskPurchaseCount(db: Db, taskId: string, excludeId?: string) {
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(purchases)
+    .where(and(eq(purchases.taskId, taskId), inArray(purchases.status, COUNTS_TOWARD_CAP), excludeId ? sql`${purchases.id} <> ${excludeId}` : undefined));
+  return r?.n ?? 0;
+}
+
+function intentRecord(v: PolicyResult): { intent: IntentRecord } | Record<string, never> {
+  if (!v.intent) return {};
+  const { outcome, taskCategories, itemCategories, evidence, described, explanation } = v.intent;
+  return { intent: { outcome, taskCategories, itemCategories, evidence, described, explanation } };
 }
 
 async function agentRateCount(db: Db, agentId: string, now: Date) {
@@ -226,7 +267,7 @@ async function submitNew(
     .select()
     .from(taskAgents)
     .where(and(eq(taskAgents.taskId, task.id), eq(taskAgents.agentId, agent.id)));
-  const policy = await loadPolicy(db, task.id, task.currentPolicyVersion);
+  const { policy, check: mandate } = await loadMandate(db, task);
 
   const base = {
     id: newId("pur"),
@@ -242,7 +283,17 @@ async function submitNew(
     purpose: req.purpose.slice(0, 1000),
     reuseKey: key,
     policyVersion: policy.version,
+    mandateHash: policy.mandateHash,
   };
+  // ---- 0. the mandate must be exactly what was signed; otherwise nothing is bought for this task
+  if (!mandate.ok)
+    return record(
+      db,
+      { ...base, status: "declined", reasonCodes: ["MANDATE_INVALID"], decidedAt: now, error: mandate.problems.join(" ") },
+      "purchase.declined",
+      `agent:${agent.id}`,
+      { security: "mandate_invalid", problems: mandate.problems },
+    );
   const parents = asParents(await parentsOf(db, task));
   const accessInput = {
     now,
@@ -252,6 +303,7 @@ async function submitNew(
     agent: { revoked: !!agent.revokedAt, assignedToTask: !!assignment },
     host: url.host,
     url: url.toString(),
+    taskPurchaseCount: await taskPurchaseCount(db, task.id),
   };
 
   // ---- 1. access checks before touching the provider
@@ -260,7 +312,10 @@ async function submitNew(
     return record(db, { ...base, status: "declined", reasonCodes: access.declines.map((d) => d[0]), decidedAt: now, error: access.declines.map((d) => d[1]).join(" ") }, "purchase.declined", `agent:${agent.id}`);
 
   // ---- 2. procurement memory
-  const reused = await findReusable(db, agent.orgId, key, policy.rules, now);
+  const { hit: reused, altered } = await findReusable(db, agent.orgId, key, policy.rules, now);
+  if (altered)
+    await audit(db, { orgId: agent.orgId, actor: "system", kind: "memory.integrity_failed", subjectId: altered, data: { reuseKey: key, note: "Stored result no longer matches the hash recorded at delivery; not reused." } });
+  const memoryNote = altered ? ["MEMORY_ALTERED"] : [];
   if (reused)
     return record(
       db,
@@ -296,7 +351,7 @@ async function submitNew(
   const quote = pickQuote(q.quotes, rail);
   if (!quote)
     return record(db, { ...base, status: "declined", reasonCodes: ["NO_USABLE_QUOTE"], decidedAt: now, error: "Provider offered no payment options" }, "purchase.declined", `agent:${agent.id}`);
-  const quoteFields = {
+  const quoteFields: Partial<NewPurchase> = {
     quoteAmount: quote.amount,
     quotePayTo: quote.payTo,
     quoteAsset: quote.asset,
@@ -314,26 +369,41 @@ async function submitNew(
     agentPurchasesLastHour: await agentRateCount(db, agent.id, now),
     providerSpent: await spentWithProvider(db, task.id, url.host),
     lastPaidPrice: await lastPaidFor(db, agent.orgId, url.toString()),
+    providerDescription: quoteDescription(quote.raw),
     rails: { network: rail.network, asset: rail.asset, scheme: rail.scheme },
   };
   const verdict = evaluatePolicy(input);
+  Object.assign(quoteFields, intentRecord(verdict));
+  const intentAudit = verdict.intent ? { intent: verdict.intent.outcome, itemCategories: verdict.intent.itemCategories } : {};
   if (verdict.decision === "decline")
-    return record(db, { ...base, ...quoteFields, status: "declined", reasonCodes: verdict.reasonCodes, error: verdict.explanations.join(" "), decidedAt: now }, "purchase.declined", `agent:${agent.id}`);
+    return record(
+      db,
+      { ...base, ...quoteFields, status: "declined", reasonCodes: [...verdict.reasonCodes, ...memoryNote], error: verdict.explanations.join(" "), decidedAt: now },
+      "purchase.declined",
+      `agent:${agent.id}`,
+      intentAudit,
+    );
   if (verdict.decision === "needs_approval") {
-    const held = await record(db, { ...base, ...quoteFields, status: "awaiting_approval", reasonCodes: verdict.reasonCodes, decidedAt: now }, "purchase.awaiting_approval", `agent:${agent.id}`);
+    const held = await record(
+      db,
+      { ...base, ...quoteFields, status: "awaiting_approval", reasonCodes: [...verdict.reasonCodes, ...memoryNote], decidedAt: now },
+      "purchase.awaiting_approval",
+      `agent:${agent.id}`,
+      intentAudit,
+    );
     // Tell the people who decide, where they are (Slack / Discord / Telegram). Fire and forget.
     void import("@/lib/notify/notify").then((n) => n.notifyApproval(db, held));
     return held;
   }
 
   // ---- 5. reserve under a row lock, re-checking with fresh totals
-  const reserved = await reserve(ctx, base, quoteFields, quote, input, `agent:${agent.id}`, verdict.reasonCodes);
+  const reserved = await reserve(ctx, base, quoteFields, quote, input, `agent:${agent.id}`, [...verdict.reasonCodes, ...memoryNote]);
   if (reserved.status !== "reserved") return reserved;
   return execute(ctx, reserved.id);
 }
 
-async function findReusable(db: Db, orgId: string, key: string, rules: PolicyRules, now: Date) {
-  if (!rules.reuseWindowSeconds) return null;
+async function findReusable(db: Db, orgId: string, key: string, rules: PolicyRules, now: Date): Promise<{ hit: Purchase | null; altered: string | null }> {
+  if (!rules.reuseWindowSeconds) return { hit: null, altered: null };
   const since = new Date(now.getTime() - rules.reuseWindowSeconds * 1000);
   const [hit] = await db
     .select()
@@ -349,8 +419,11 @@ async function findReusable(db: Db, orgId: string, key: string, rules: PolicyRul
     .orderBy(desc(purchases.deliveredAt))
     .limit(1);
   // Only reuse something we actually kept and that was a successful response.
-  if (!hit || hit.responseBody == null || !hit.responseStatus || hit.responseStatus >= 300) return null;
-  return hit;
+  if (!hit || hit.responseBody == null || !hit.responseStatus || hit.responseStatus >= 300) return { hit: null, altered: null };
+  // ...and that is still byte-for-byte what was delivered. A stored result that no longer matches the hash taken at
+  // delivery is never served; Aerar buys a fresh copy (under every rule) and records the mismatch.
+  if (hit.responseHash && sha256(hit.responseBody) !== hit.responseHash) return { hit: null, altered: hit.id };
+  return { hit, altered: null };
 }
 
 type NewPurchase = typeof purchases.$inferInsert;
@@ -388,6 +461,8 @@ async function reserve(
       ...input,
       task: { status: task.status, budget: task.budget, reserved: task.reserved, spent: task.spent, deadline: task.deadline },
       parents: asParents(await parentsOf(t, task, true)),
+      // Recount under the task lock so parallel requests can't slip past the mandate's purchase cap.
+      taskPurchaseCount: await taskPurchaseCount(t, task.id, approvedBy ? base.id : undefined),
     });
     const ok = fresh.decision === "approve" || (approvedBy && fresh.decision === "needs_approval");
     const row: NewPurchase = ok
@@ -547,8 +622,17 @@ export async function approvePurchase(ctx: Ctx, purchaseId: string, approver: st
     .select()
     .from(taskAgents)
     .where(and(eq(taskAgents.taskId, p.taskId), eq(taskAgents.agentId, p.agentId)));
-  // Approval runs under the task's *current* policy, not the one the request was made under.
-  const policy = await loadPolicy(db, task.id, task.currentPolicyVersion);
+  // Approval runs under the task's *current* mandate, not the one the request was made under, and only if it is intact.
+  const { policy, check } = await loadMandate(db, task);
+  if (!check.ok) {
+    const [row] = await db
+      .update(purchases)
+      .set({ status: "declined", reasonCodes: [...p.reasonCodes, "MANDATE_INVALID"], error: check.problems.join(" "), updatedAt: new Date() })
+      .where(and(eq(purchases.id, p.id), eq(purchases.status, "awaiting_approval")))
+      .returning();
+    await audit(db, { orgId: p.orgId, actor: `user:${approver}`, kind: "purchase.declined", subjectId: p.id, data: { security: "mandate_invalid", problems: check.problems } });
+    return row ?? p;
+  }
   const quote: Quote = { scheme: p.quoteScheme!, network: p.quoteNetwork!, asset: p.quoteAsset!, amount: p.quoteAmount!, payTo: p.quotePayTo!, raw: p.quoteRaw };
   const prov = await provider(db, p.orgId, p.host);
   const input: PolicyInput = {
@@ -564,11 +648,13 @@ export async function approvePurchase(ctx: Ctx, purchaseId: string, approver: st
     parents: asParents(await parentsOf(db, task)),
     providerSpent: await spentWithProvider(db, task.id, p.host),
     lastPaidPrice: await lastPaidFor(db, p.orgId, p.url),
+    providerDescription: quoteDescription(p.quoteRaw),
+    taskPurchaseCount: await taskPurchaseCount(db, task.id, p.id),
     rails: { network: rail.network, asset: rail.asset, scheme: rail.scheme },
   };
   const r = await reserve(
     ctx,
-    { ...p, policyVersion: policy.version } as NewPurchase,
+    { ...p, policyVersion: policy.version, mandateHash: policy.mandateHash } as NewPurchase,
     {},
     quote,
     input,

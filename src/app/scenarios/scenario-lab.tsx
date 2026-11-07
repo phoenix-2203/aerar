@@ -11,6 +11,7 @@ import {
   Clock,
   Copy as CopyIcon,
   Gauge,
+  Crosshair,
   Loader2,
   Play,
   Repeat2,
@@ -59,6 +60,7 @@ type AllState =
 const usd = (atomic: bigint) => `$${(Number(atomic) / 1e6).toFixed(2)}`;
 
 const GROUP_ICON: Record<string, LucideIcon> = {
+  intent: Crosshair,
   injection: ShieldAlert,
   duplicate: CopyIcon,
   mismatch: AlertTriangle,

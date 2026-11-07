@@ -1,12 +1,14 @@
 "use client";
 // The sandbox console: 1) your rules, 2) ask your agent to buy, 3) what happened. Plus "connect your own agent".
-import { ArrowRight, Bot, Check, ChevronDown, ListChecks, Play, RotateCcw, ShieldCheck, X } from "lucide-react";
+import { ArrowRight, Bot, Check, ChevronDown, Crosshair, FileCheck2, ListChecks, Play, RotateCcw, ShieldAlert, ShieldCheck, X } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/button";
 import { PurchaseTimeline } from "@/components/purchase-timeline";
 import { ConnectAi } from "@/components/connect-ai";
 import { NotifyCard } from "@/components/notify-card";
 import { ReceiptButton } from "@/components/receipt-slip";
+import { EvidenceButton } from "@/components/evidence-button";
+import { CATEGORIES, categoriesForPurpose } from "@/lib/intent/intentlock";
 import { AgentTeam } from "./agent-team";
 import { StatusChip } from "@/components/status-chip";
 import { explain, reasonKind } from "@/lib/copy/reasons";
@@ -179,10 +181,12 @@ export function TryConsole({
               {state.chain.ok ? `Audit log intact: ${state.chain.count} entries, each sealed to the one before.` : `Audit log broken at entry ${state.chain.brokenAt}.`}
             </div>
           </section>
+          <SecurityPanel state={state} />
         </div>
 
         {/* Side: rules + connect */}
         <aside className="min-w-0 space-y-6">
+          <MandateCard state={state} />
           <Rules state={state} providers={providers} onDone={(r) => (r?.error ? setToast({ tone: "err", text: r.error }) : r?.done && setToast({ tone: "ok", text: r.done }))} />
           <AgentTeam
             team={state.team}
@@ -268,14 +272,28 @@ function Row({ p, open, flash, onToggle }: { p: P; open: boolean; flash: boolean
               {why.map(explain).join("; ")}.
             </p>
           )}
+          {p.intent && p.intent.outcome !== "off" && (
+            <p className={`mb-3 flex gap-2 rounded-lg border px-3 py-2 text-[13px] ${p.intent.outcome === "match" ? "border-success/30 bg-success-tint/40" : p.intent.outcome === "mismatch" ? "border-danger/30 bg-danger-tint/40" : "border-warning/30 bg-warning-tint/40"}`}>
+              <Crosshair className={`mt-0.5 size-4 shrink-0 ${p.intent.outcome === "match" ? "text-success" : p.intent.outcome === "mismatch" ? "text-danger" : "text-warning"}`} aria-hidden />
+              <span>
+                <span className="font-medium">IntentLock: </span>
+                {p.intent.explanation}
+              </span>
+            </p>
+          )}
           <PurchaseTimeline purchase={{ status: p.status, reasonCodes: p.reasonCodes, quoteAmountFormatted: p.amountFormatted, paidFormatted: p.paidFormatted, txHash: p.txHash, reusedFromId: p.reusedFromId, approvedBy: p.approvedBy }} />
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             {p.txHash ? <p className="font-mono text-[11.5px] text-text-3">Simulated transfer {p.txHash.slice(0, 18)}… (no chain in the sandbox)</p> : <span />}
-            {p.status !== "awaiting_approval" && (
-              <ReceiptButton id={p.id} className="text-[12.5px] font-medium text-info hover:underline">
-                Signed receipt →
-              </ReceiptButton>
-            )}
+            <span className="flex items-center gap-4">
+              <EvidenceButton id={p.id} className="inline-flex items-center gap-1 text-[12.5px] font-medium text-accent hover:underline">
+                <FileCheck2 className="size-3.5" aria-hidden /> Evidence
+              </EvidenceButton>
+              {p.status !== "awaiting_approval" && (
+                <ReceiptButton id={p.id} className="text-[12.5px] font-medium text-info hover:underline">
+                  Signed receipt →
+                </ReceiptButton>
+              )}
+            </span>
           </div>
         </div>
       )}
@@ -370,6 +388,10 @@ function Rules({ state, providers, onDone }: { state: TryState; providers: Provi
   const [hosts, setHosts] = useState<string[]>(r.allowedProviders);
   const [listOn, setListOn] = useState((r.allowedItems ?? []).length > 0);
   const [items, setItems] = useState<string[]>(r.allowedItems?.length ? r.allowedItems : ["api.marketdata.dev/fx-rates", "api.marketdata.dev/interest-rates", "reports.acme.dev/market-report", "api.leads.dev/competitors"]);
+  const [purpose, setPurpose] = useState(state.mandate.purpose);
+  const [cats, setCats] = useState<string[]>(state.mandate.categories.map((c) => c.id));
+  const [ifUncertain, setIfUncertain] = useState<"hold" | "refuse">(state.mandate.ifUncertain);
+  const suggested = useMemo(() => categoriesForPurpose(purpose), [purpose]);
   const [pending, start] = useTransition();
   const toggle = (arr: string[], v: string, set: (a: string[]) => void) => set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
@@ -386,9 +408,52 @@ function Rules({ state, providers, onDone }: { state: TryState; providers: Provi
         className="mt-4 space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          start(async () => onDone(await saveRules({ budget, approvalAbove: auto, maxPerPurchase: max, providers: hosts, shoppingList: listOn, items })));
+          start(async () => onDone(await saveRules({ budget, approvalAbove: auto, maxPerPurchase: max, providers: hosts, shoppingList: listOn, items, purpose, categories: cats, ifUncertain })));
         }}
       >
+        <fieldset className="rounded-xl border border-border p-3">
+          <legend className="px-1 text-[12.5px] font-medium text-text-2">What this task is for (IntentLock)</legend>
+          <label htmlFor="try-purpose-mandate" className="sr-only">
+            Purpose
+          </label>
+          <textarea
+            id="try-purpose-mandate"
+            value={purpose}
+            onChange={(e) => setPurpose(e.target.value)}
+            rows={2}
+            maxLength={300}
+            className="w-full resize-none rounded-lg border border-border bg-bg/40 px-2.5 py-2 text-[13px] outline-none focus:border-border-strong"
+          />
+          <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Categories the agent may buy">
+            {CATEGORIES.map((c) => {
+              const on = cats.includes(c.id);
+              const hint = !on && suggested.includes(c.id);
+              return (
+                <button
+                  type="button"
+                  key={c.id}
+                  aria-pressed={on}
+                  onClick={() => toggle(cats, c.id, setCats)}
+                  className={`rounded-full border px-2 py-0.5 text-[11.5px] transition-colors ${on ? "border-accent bg-accent text-on-accent" : hint ? "border-accent/60 border-dashed text-accent" : "border-border text-text-3 hover:text-text"}`}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
+          </div>
+          {suggested.some((c) => !cats.includes(c)) && (
+            <button type="button" onClick={() => setCats([...new Set([...cats, ...suggested])])} className="mt-2 text-[12px] font-medium text-accent hover:underline">
+              Add what your purpose suggests
+            </button>
+          )}
+          <label className="mt-2 flex items-center justify-between gap-2 text-[12px] text-text-2">
+            If Aerar can&apos;t tell what an item is
+            <select value={ifUncertain} onChange={(e) => setIfUncertain(e.target.value as "hold" | "refuse")} className="h-7 rounded-md border border-border bg-surface px-1.5 text-[12px]">
+              <option value="hold">ask me</option>
+              <option value="refuse">refuse it</option>
+            </select>
+          </label>
+        </fieldset>
         <div className="grid grid-cols-3 gap-2">
           <Money id="b" label="Budget" value={budget} onChange={setBudget} />
           <Money id="a" label="Auto-pay up to" value={auto} onChange={setAuto} />
@@ -430,7 +495,7 @@ function Rules({ state, providers, onDone }: { state: TryState; providers: Provi
           )}
         </fieldset>
         <Button type="submit" variant="secondary" loading={pending} className="w-full">
-          Save rules
+          Sign a new mandate
         </Button>
       </form>
     </section>
@@ -450,12 +515,13 @@ function Money({ id, label, value, onChange }: { id: string; label: string; valu
 }
 
 
-/** "Your first three minutes": three things to press, ticked off from what actually happened in the sandbox. */
+/** "Your first three minutes": four things to press, ticked off from what actually happened in the sandbox. */
 function Guide({ state, running, onRun }: { state: TryState; running: string | null; onRun: (id: string) => void }) {
   const ps = state.purchases;
   const steps = [
     { id: "buy", label: "Buy something normal", hint: "It's within your rules, so it's paid.", done: ps.some((p) => p.status === "delivered") },
-    { id: "attacker", label: "Let a web page trick your agent", hint: "The shop isn't on your list, so it's refused.", done: ps.some((p) => p.reasonCodes.includes("PROVIDER_NOT_ALLOWED")) },
+    { id: "offpurpose", label: "Push an off-purpose buy", hint: "A $0.20 gift card: trusted shop, within budget. IntentLock refuses it.", done: ps.some((p) => p.reasonCodes.includes("INTENT_MISMATCH")) },
+    { id: "attacker", label: "Let a web page trick your agent", hint: "The shop isn't on your list, so it's never even contacted.", done: ps.some((p) => p.reasonCodes.includes("PROVIDER_NOT_ALLOWED")) },
     { id: "expensive", label: "Ask for something big, then approve it", hint: "Over $0.25 waits for you. Approve it below.", done: ps.some((p) => !!p.approvedBy) },
   ];
   const next = steps.find((x) => !x.done);
@@ -466,10 +532,12 @@ function Guide({ state, running, onRun }: { state: TryState; running: string | n
         <h2 id="guide" className="text-[17px] font-semibold">
           {next ? "Your first three minutes" : "You've seen how it works"}
         </h2>
-        <span className="font-mono text-[12px] text-text-3">{doneCount}/3 done</span>
+        <span className="font-mono text-[12px] text-text-3">
+          {doneCount}/{steps.length} done
+        </span>
       </div>
       {next ? (
-        <ol className="mt-4 grid gap-2 sm:grid-cols-3">
+        <ol className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
           {steps.map((x, i) => {
             const isNext = x === next;
             return (
@@ -497,6 +565,93 @@ function Guide({ state, running, onRun }: { state: TryState; running: string | n
           list.
         </p>
       )}
+    </section>
+  );
+}
+
+/** The signed mandate, at a glance: what the agent may buy, and proof the rules are still the ones that were signed. */
+function MandateCard({ state }: { state: TryState }) {
+  const m = state.mandate;
+  return (
+    <section className={`rounded-2xl border p-5 shadow-card ${m.verified ? "border-accent/30 bg-surface" : "border-danger/50 bg-danger-tint/30"}`} aria-labelledby="mandate">
+      <div className="flex items-center justify-between gap-2">
+        <h2 id="mandate" className="flex items-center gap-2 text-[15px] font-semibold">
+          <Crosshair className="size-4 text-accent" aria-hidden /> Signed mandate
+        </h2>
+        <span className={`rounded-full px-2 py-0.5 font-mono text-[11px] ${m.verified ? "bg-success-tint text-success" : "bg-danger-tint text-danger"}`}>
+          v{m.version} · {m.verified ? "signature valid" : "NOT VALID"}
+        </span>
+      </div>
+      <p className="mt-2 text-[13.5px] leading-5">&ldquo;{m.purpose}&rdquo;</p>
+      {m.categories.length ? (
+        <>
+          <p className="mt-3 text-[12px] text-text-3">Your agent may only buy:</p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {m.categories.map((c) => (
+              <span key={c.id} className="rounded-full bg-accent-tint px-2 py-0.5 text-[11.5px] text-accent">
+                {c.label}
+              </span>
+            ))}
+          </div>
+          <p className="mt-2 text-[12px] text-text-3">
+            Anything else is refused, however cheap. Items Aerar can&apos;t place {m.ifUncertain === "refuse" ? "are refused" : "wait for you"}.
+          </p>
+        </>
+      ) : (
+        <p className="mt-2 text-[12px] text-text-3">No categories: IntentLock isn&apos;t checking purpose for this task.</p>
+      )}
+      {!m.verified && <p className="mt-2 text-[12.5px] text-danger">{m.problems.join(" ")} Nothing is bought until you sign the rules again.</p>}
+      {m.hash && <p className="mt-3 truncate font-mono text-[10.5px] text-text-3" title={m.hash}>sha256 {m.hash}</p>}
+    </section>
+  );
+}
+
+/** What Aerar stopped or held, and the patterns in it. Every line comes from a real decision in this sandbox. */
+function SecurityPanel({ state }: { state: TryState }) {
+  const s = state.security;
+  if (!s.events.length)
+    return (
+      <section className="rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-6" aria-labelledby="security">
+        <h2 id="security" className="flex items-center gap-2 text-[15px] font-semibold">
+          <ShieldCheck className="size-4 text-success" aria-hidden /> Security
+        </h2>
+        <p className="mt-1 text-[13px] text-text-2">Nothing stopped yet. Try the off-purpose or attacker requests above and they&apos;ll show up here.</p>
+      </section>
+    );
+  return (
+    <section className="rounded-2xl border border-border bg-surface shadow-card" aria-labelledby="security">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border px-5 py-4 sm:px-6">
+        <h2 id="security" className="flex items-center gap-2 text-[15px] font-semibold">
+          <ShieldAlert className="size-4 text-danger" aria-hidden /> Security
+        </h2>
+        <span className="font-mono text-[12px] text-text-3">
+          {s.stopped} stopped · {s.held} held for you
+        </span>
+      </div>
+      {s.signals.length > 0 && (
+        <ul className="space-y-2 border-b border-border px-5 py-4 sm:px-6">
+          {s.signals.map((g, i) => (
+            <li key={i} className={`rounded-lg border px-3 py-2 ${g.level === "high" ? "border-danger/35 bg-danger-tint/40" : "border-warning/35 bg-warning-tint/40"}`}>
+              <p className="text-[13.5px] font-medium">{g.text}</p>
+              <p className="mt-0.5 text-[12px] text-text-3">Based on: {g.basis}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+      <ul className="divide-y divide-border">
+        {s.events.slice(0, 8).map((e) => (
+          <li key={e.id} className="flex items-center gap-3 px-5 py-2.5 text-[13px] sm:px-6">
+            <span className={`size-2 shrink-0 rounded-full ${e.outcome === "stopped" ? "bg-danger" : e.outcome === "held" ? "bg-warning" : "bg-info"}`} aria-hidden />
+            <span className="min-w-0 flex-1 truncate">
+              {e.label} <span className="font-mono text-[12px] text-text-3">· {e.host}</span>
+            </span>
+            <span className="shrink-0 text-[12px] text-text-3">{e.outcome}</span>
+            <EvidenceButton id={e.id} className="shrink-0 text-[12px] font-medium text-accent hover:underline">
+              Evidence
+            </EvidenceButton>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

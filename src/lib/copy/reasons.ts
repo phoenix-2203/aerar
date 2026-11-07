@@ -21,7 +21,18 @@ export const REASONS: Record<string, Reason> = {
   PROVIDER_ALLOWED: { kind: "pass", text: "the provider is on the task's allowed list" },
   PROVIDER_NOT_ALLOWED: { kind: "fail", text: "the provider isn't on the task's allowed list" },
 
+  PROVIDER_BLOCKED: { kind: "fail", text: "the provider is on the task's blocked list" },
+  PURCHASE_LIMIT_REACHED: { kind: "fail", text: "the task has made all the purchases its mandate allows" },
+  MANDATE_INVALID: { kind: "fail", text: "the task's rules don't match the mandate that was signed, so nothing is bought until a person signs them again" },
+
+  // IntentLock: does the item serve what the task is for?
+  INTENT_MATCH: { kind: "pass", text: "the item fits what the task is for" },
+  INTENT_MISMATCH: { kind: "fail", text: "the item doesn't serve what this task is for, even though the budget would allow it" },
+  INTENT_UNCERTAIN: { kind: "hold", text: "Aerar can't tell what the item is, so a person decides whether it serves the task" },
+  INTENT_UNCERTAIN_REFUSED: { kind: "fail", text: "Aerar can't tell what the item is, and this task refuses anything it can't place" },
+
   // Memory.
+  MEMORY_ALTERED: { kind: "info", text: "a remembered copy had been altered since delivery, so it wasn't reused" },
   REUSED_EARLIER_PURCHASE: { kind: "info", text: "an identical purchase was already made, so its result was reused" },
 
   // Quote.

@@ -12,6 +12,7 @@ import type { PayResult, Quote } from "@/lib/x402/rail";
 
 /** The problems from the README, in the same order. Every scenario answers one of them. */
 export const PROBLEMS = {
+  intent: { title: "An agent buys the wrong thing, within budget", short: "Wrong purchase" },
   injection: { title: "An agent is talked into paying", short: "Talked into paying" },
   duplicate: { title: "The same thing is paid for twice", short: "Paid twice" },
   mismatch: { title: "Payments and services don't line up", short: "Paid but not delivered" },

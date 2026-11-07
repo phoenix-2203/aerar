@@ -32,7 +32,7 @@ export function tryRail(): PaymentRail {
         asset: SIM_USDC,
         amount: hit.item.price * BigInt(Math.round(surge)),
         payTo: swapped ? SWAPPED_PAYEE : hit.provider.payTo,
-        raw: { simulated: true, accepts: [] },
+        raw: { simulated: true, resource: { url: req.url, description: hit.item.about ?? hit.item.name }, accepts: [] },
       };
       return { kind: "payment_required", quotes: [q] };
     },

@@ -114,6 +114,39 @@ export interface PolicyRules {
   providerCaps?: Record<string, string>;
   /** Wallet workspaces: the payee address each trusted provider is paid at (host → address), mirrored in the Vault. */
   payees?: Record<string, string>;
+  /** IntentLock: the kinds of thing this task may buy (see src/lib/intent). Empty or absent = purpose not checked. */
+  categories?: string[];
+  /** IntentLock: what happens when Aerar can't tell what an item is. Default "hold" (a person decides). */
+  ifUncertain?: "hold" | "refuse";
+  /** Hosts this task must never buy from, even if a wildcard on the allowed list matches them. */
+  blockedProviders?: string[];
+  /** Most purchases (paid or waiting) this task may make in total. Absent = no count limit. */
+  maxPurchases?: number;
+  /** May this task's agents hire other agents with part of its budget? Default true; false stops delegation. */
+  delegationAllowed?: boolean;
+}
+
+/** The signed form of a task's mandate (see src/lib/mandate). Stored next to the rules it covers. */
+export interface MandateDoc {
+  v: 1;
+  kind: "aerar.task-mandate";
+  task: { id: string; org: string; parent: string | null };
+  version: number;
+  purpose: string;
+  budget: string;
+  rules: PolicyRules;
+  issuedBy: string;
+  issuedAt: string;
+}
+
+/** What IntentLock concluded for a purchase, kept as evidence. */
+export interface IntentRecord {
+  outcome: "match" | "mismatch" | "uncertain" | "off";
+  taskCategories: string[];
+  itemCategories: string[];
+  evidence: Record<string, string[]>;
+  described: "provider" | "url-only";
+  explanation: string;
 }
 
 /** Versioned, immutable. A new version is a new row; old purchases keep pointing at the version they ran under. */
@@ -124,6 +157,10 @@ export const policies = pgTable(
     version: integer("version").notNull(),
     rules: jsonb("rules").$type<PolicyRules>().notNull(),
     changeNote: text("change_note"),
+    /** The mandate as signed (purpose, budget, rules, version), its sha256 and Aerar's EIP-191 signature over it. */
+    mandate: jsonb("mandate").$type<MandateDoc>(),
+    mandateHash: text("mandate_hash"),
+    mandateSig: text("mandate_sig"),
     createdBy: text("created_by").notNull(),
     createdAt: ts("created_at").notNull().defaultNow(),
   },
@@ -185,6 +222,9 @@ export const purchases = pgTable(
     // Decision
     status: text("status").$type<PurchaseStatus>().notNull(),
     policyVersion: integer("policy_version").notNull(),
+    /** sha256 of the signed mandate this purchase was decided under. */
+    mandateHash: text("mandate_hash"),
+    intent: jsonb("intent").$type<IntentRecord>(),
     reasonCodes: jsonb("reason_codes").$type<string[]>().notNull().default([]),
     reservedAmount: usdc("reserved_amount").notNull().default(sql`0`),
     // Payment

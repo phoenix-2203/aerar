@@ -40,6 +40,8 @@ export function defaultWalletRules(): PolicyRules {
     reuseWindowSeconds: 3600,
     expiresAt: null,
     allowedItems: [],
+    categories: ["research_reports", "market_data"],
+    ifUncertain: "hold",
   };
 }
 

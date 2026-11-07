@@ -25,6 +25,9 @@ export interface ReceiptBody {
     status: string;
     reasonCodes: string[];
     rules: { version: number; sha256: string | null };
+    /** The signed mandate this purchase was decided under, and what IntentLock concluded. Absent on older receipts. */
+    mandate?: { sha256: string | null };
+    intent?: { outcome: string; item: string[]; task: string[] } | null;
     quote: { amount: string | null; payTo: string | null; asset: string | null; network: string | null; scheme: string | null };
     paid: { amount: string | null; txHash: string | null; payer: string | null; onchainVerified: boolean };
     delivery: { status: number | null; sha256: string | null; bytes: number | null };
@@ -60,6 +63,21 @@ function signerKey(): Hex {
 
 export function receiptSignerAddress(): Hex {
   return privateKeyToAccount(signerKey()).address;
+}
+
+/** Sign a 32-byte hash with Aerar's published key (EIP-191). Used for receipts and task mandates. */
+export async function signHash(hash: Hex): Promise<{ signer: Hex; signature: Hex }> {
+  const account = privateKeyToAccount(signerKey());
+  return { signer: account.address, signature: await account.signMessage({ message: { raw: hash } }) };
+}
+
+/** Who signed this hash, or null if the signature is malformed. */
+export async function recoverHashSigner(hash: Hex, signature: Hex): Promise<Hex | null> {
+  try {
+    return await recoverMessageAddress({ message: { raw: hash }, signature });
+  } catch {
+    return null;
+  }
 }
 
 export async function signReceipt(body: ReceiptBody): Promise<SignedReceipt> {
@@ -131,6 +149,8 @@ export async function receiptFor(db: Db, orgId: string, purchaseId: string, issu
       status: p.status,
       reasonCodes: p.reasonCodes,
       rules: { version: p.policyVersion, sha256: rules ? sha256hex(canonicalJson(rules)) : null },
+      mandate: { sha256: p.mandateHash ?? null },
+      intent: p.intent ? { outcome: p.intent.outcome, item: p.intent.itemCategories, task: p.intent.taskCategories } : null,
       quote: {
         amount: p.quoteAmount?.toString() ?? null,
         payTo: p.quotePayTo ?? null,

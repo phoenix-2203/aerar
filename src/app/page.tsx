@@ -17,7 +17,7 @@ import { runNight } from "@/lib/scenarios/night";
 export const metadata: Metadata = {
   title: { absolute: "Aerar · your agents work the night shift, Aerar keeps the books" },
   description:
-    "AI agents pay for data and APIs all night over x402. Aerar checks every purchase against its task, never pays twice, asks a person about big ones in Slack, Discord or Telegram, and pays from a Vault you own on Base.",
+    "AI agents pay for data and APIs all night over x402. Aerar checks every purchase against the purpose a person signed (IntentLock), never pays twice, asks a person about big ones in Slack, Discord or Telegram, and pays from a Vault you own on Base.",
 };
 
 const FACTS = [
@@ -47,6 +47,47 @@ const DOORS = [
   { href: "/scenarios", title: "Run the attack lab", text: `${SCENARIOS.length} real attacks and mistakes, each through the real pipeline, scored in seconds.`, tag: `${SCENARIOS.length} scenarios` },
 ];
 
+const INTENT_ROWS: [string, string, "pass" | "fail"][] = [
+  ["Task budget", "$8.00 asked, $10.00 left", "pass"],
+  ["Per-purchase limit", "$8.00 under $10.00", "pass"],
+  ["Provider", "a marketplace the task trusts", "pass"],
+  ["IntentLock", "gift card ≠ blockchain analytics", "fail"],
+];
+
+function IntentLockStrip() {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)] lg:items-center">
+      <ol className="overflow-hidden rounded-2xl border border-border bg-surface font-mono text-[13px] shadow-card">
+        {INTENT_ROWS.map(([k, v, r]) => (
+          <li key={k} className="flex items-center gap-3 border-b border-dashed border-border px-4 py-3 last:border-0">
+            <span className="w-36 shrink-0 text-text-3">{k}</span>
+            <span className="min-w-0 flex-1 truncate text-text-2">{v}</span>
+            <span className={`stamp-mini shrink-0 ${r === "pass" ? "border-success text-success" : "border-danger text-danger"}`}>{r === "pass" ? "PASS" : "REFUSED"}</span>
+          </li>
+        ))}
+      </ol>
+      <div className="space-y-3 text-[14.5px] leading-6 text-text-2">
+        <p>
+          The item is judged from what it is (its address and the shop&apos;s own description), never from the agent&apos;s reason, because the agent is the one
+          that was talked into it.
+        </p>
+        <p>
+          The purpose is part of a <b className="text-text">signed mandate</b>. Change the rules behind Aerar&apos;s back and buying stops until a person signs again.
+          Items Aerar can&apos;t place wait for you.
+        </p>
+        <div className="flex flex-wrap gap-3 pt-1">
+          <ButtonLink href="/scenarios#intent" variant="secondary" size="sm">
+            Run it in the attack lab
+          </ButtonLink>
+          <ButtonLink href="/try" variant="ghost" size="sm">
+            Try it in your sandbox
+          </ButtonLink>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   return (
     <PublicShell>
@@ -63,8 +104,8 @@ export default function Home() {
               Your agents work the night shift. <span className="text-text-2">Aerar keeps the books.</span>
             </h1>
             <p className="mt-5 max-w-[540px] text-[17px] leading-7 text-text-2">
-              Agents now buy data and APIs on their own, a few cents at a time, all night. Aerar checks every purchase against its task, never pays twice, asks
-              you about the big ones, and pays from a Vault you own.
+              Budget limits stop agents spending too much. Aerar also stops them buying the wrong thing: every purchase is checked against the purpose you signed,
+              never paid twice, sent to you when it&apos;s big, and paid from a Vault you own.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <ButtonLink href="/try" variant="primary" size="lg" trailing={<ArrowRight className="size-4" aria-hidden />}>
@@ -105,6 +146,16 @@ export default function Home() {
           ))}
         </ol>
       </section>
+
+      {/* IntentLock */}
+      <Section
+        id="intentlock"
+        eyebrow="IntentLock"
+        title="Within budget isn't the same as on purpose."
+        lead="An agent researching Ethereum is told by a web page that the work “requires” an $8 gift card. The budget is $10, so a spending limit says yes. Aerar checks the item against the purpose a person signed, and says no."
+      >
+        <IntentLockStrip />
+      </Section>
 
       {/* One purchase */}
       <Section id="one-purchase" eyebrow="How it works" title="Watch one purchase." lead="Every request walks the same line. Pick a situation and see where it stops, and why.">

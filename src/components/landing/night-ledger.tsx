@@ -24,6 +24,7 @@ const NIGHT: Line[] = [
   { at: 251, agent: "researcher", item: "Market report · acme", amount: 0.08, stamp: "PAID", note: "receipt signed, transfer checked on Base" },
   { at: 290, agent: "researcher", item: "Market report · acme", amount: 0.08, stamp: "REUSED", note: "the loop asked again: served from memory" },
   { at: 336, agent: "analyst", item: "Market report · acme", amount: 0.08, stamp: "REUSED", note: "same data, $0 the third time" },
+  { at: 362, agent: "researcher", item: "Gift card · agentmart", amount: 0.2, stamp: "REFUSED", note: "within budget, wrong purpose: IntentLock" },
   { at: 392, agent: "researcher", item: "Payroll API · unknown", amount: 2.5, stamp: "REFUSED", note: "your Vault refused it on-chain" },
   { at: 431, agent: "analyst", item: "Sector summary · acme", amount: 0.12, stamp: "PAID", note: "within the task's rules" },
 ];

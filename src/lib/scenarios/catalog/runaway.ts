@@ -123,4 +123,20 @@ export const runaway: Scenario[] = [
         return "$0.00 spent after the pause. One switch stops the whole team.";
       }),
   },
+  {
+    id: "purchase-cap",
+    problem: "runaway",
+    title: "A cheap loop that never trips the budget",
+    story: "The mandate says three purchases is enough for this job. The agent keeps buying $0.001 items: far too cheap to worry the budget, but it never stops.",
+    expected: "The signed mandate's purchase cap stops it at three, whatever each one costs.",
+    run: () =>
+      play({ offers: offers(6, 1_000n), rules: { maxPurchases: 3 } }, async (s, log, check) => {
+        const out = [];
+        for (let i = 1; i <= 6; i++) out.push(await s.buy("researcher", `${HOST}/item-${i}`));
+        out.forEach((p) => log(p));
+        check.that(out.filter((p) => p.status === "delivered").length === 3, "three purchases are paid");
+        check.that(out.slice(3).every((p) => p.reasonCodes.includes("PURCHASE_LIMIT_REACHED")), "the rest are refused: the purchase cap is reached");
+        return `${usd(await s.spent())} paid for three items, then the loop was cut off.`;
+      }),
+  },
 ];

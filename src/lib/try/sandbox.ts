@@ -9,7 +9,9 @@ import { verifyChain } from "@/lib/audit/log";
 import { fmt$ } from "@/lib/money/usdc";
 import { forecastLine } from "@/lib/forecast/burn";
 import { burnOf } from "@/lib/server/queries";
-import { PurchaseError, type Ctx } from "@/lib/purchase/pipeline";
+import { loadMandate, PurchaseError, type Ctx } from "@/lib/purchase/pipeline";
+import { categoryLabel } from "@/lib/intent/intentlock";
+import { securityView } from "@/lib/security/signals";
 import { getContext, getDbOnly } from "@/lib/server/context";
 import { createAgent, createOrg, createTask } from "@/lib/workspace";
 import { TRY_PROVIDERS } from "./catalog";
@@ -28,6 +30,9 @@ export const DEFAULT_TRY_RULES: PolicyRules = {
   reuseWindowSeconds: 3600,
   expiresAt: null,
   allowedItems: [],
+  // IntentLock: what this research task may buy. Anything else is refused, however cheap; unplaceable items wait.
+  categories: ["market_data", "research_reports", "business_leads"],
+  ifUncertain: "hold",
 };
 export const DEFAULT_TRY_BUDGET = 2_000_000n; // $2.00
 
@@ -99,10 +104,7 @@ export async function agentContext(orgId: string): Promise<Ctx> {
 export async function loadTryState(db: Db, s: TrySession) {
   const [task] = await db.select().from(tasks).where(and(eq(tasks.id, s.taskId), eq(tasks.orgId, s.orgId)));
   if (!task) return null;
-  const [policy] = await db
-    .select()
-    .from(policies)
-    .where(and(eq(policies.taskId, task.id), eq(policies.version, task.currentPolicyVersion)));
+  const { policy, check } = await loadMandate(db, task);
   const [agent] = await db.select().from(agents).where(eq(agents.id, s.agentId));
   const rows = await db.select().from(purchases).where(eq(purchases.orgId, s.orgId)).orderBy(desc(purchases.createdAt)).limit(50);
   const chain = await verifyChain(db, s.orgId);
@@ -124,6 +126,16 @@ export async function loadTryState(db: Db, s: TrySession) {
       forecast: task.status === "active" ? forecastLine(burnOf(task, rows.filter((p) => p.taskId === task.id)), fmt$, new Date()) : null,
     },
     rules: policy.rules,
+    mandate: {
+      version: policy.version,
+      hash: policy.mandateHash,
+      verified: check.ok,
+      problems: check.problems,
+      purpose: task.purpose,
+      categories: (policy.rules.categories ?? []).map((id) => ({ id, label: categoryLabel(id) })),
+      ifUncertain: policy.rules.ifUncertain ?? "hold",
+    },
+    security: securityView(rows, names),
     agent: { id: agent.id, name: agent.name, revoked: !!agent.revokedAt, keyPrefix: agent.apiKeyPrefix },
     totals: {
       paid: fmt$(task.spent),
@@ -162,6 +174,8 @@ export async function loadTryState(db: Db, s: TrySession) {
       txHash: p.txHash,
       reusedFromId: p.reusedFromId,
       approvedBy: p.approvedBy,
+      intent: p.intent ? { outcome: p.intent.outcome, explanation: p.intent.explanation } : null,
+      error: p.error,
       createdAt: p.createdAt.toISOString(),
     })),
   };

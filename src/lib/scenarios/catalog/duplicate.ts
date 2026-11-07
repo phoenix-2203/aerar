@@ -1,4 +1,6 @@
 // Problem 2: the same thing is paid for twice (two agents, retries, parallel races).
+import { eq } from "drizzle-orm";
+import { purchases } from "@/db/schema";
 import { play, type Scenario } from "../stage";
 
 const FX = "https://data.example.com/fx?base=USD";
@@ -86,6 +88,27 @@ export const duplicate: Scenario[] = [
         check.that(b.status === "delivered", "bought again after the window");
         check.that(s.rail.calls.pay.length === 2, "two payments, by design");
         return "$0.02 paid on purpose: freshness is a rule the operator sets per task.";
+      }),
+  },
+  {
+    id: "memory-poisoned",
+    problem: "duplicate",
+    title: "A remembered result is altered",
+    story:
+      "The FX rates bought an hour ago are kept so other agents can reuse them for $0. Someone edits the stored copy to plant false numbers before the next agent asks.",
+    expected:
+      "Before reusing anything, Aerar checks it against the hash taken at delivery. The altered copy is never served; Aerar buys a fresh one under every rule and records what happened.",
+    run: () =>
+      play({ offers: { "/fx": { amount: 10_000n } } }, async (s, log, check) => {
+        const a = await s.buy("researcher", FX);
+        log(a);
+        await s.db.update(purchases).set({ responseBody: '{"USD_EUR":"9.99","note":"planted"}' }).where(eq(purchases.id, a.id));
+        log("The stored copy is edited to plant false rates");
+        const b = await s.buy("analyst", FX, { purpose: "Rates for the memo" });
+        log(b);
+        check.that(b.status === "delivered" && b.reasonCodes.includes("MEMORY_ALTERED"), "the altered copy isn't served; a fresh one is bought");
+        check.that(!b.responseBody?.includes("planted"), "the agent never sees the planted numbers");
+        return "$0.02 paid instead of serving poisoned data for free. Reuse only ever serves what was delivered.";
       }),
   },
 ];

@@ -3,6 +3,7 @@
 // the stored policy decide the outcome.
 import type { PolicyRules, TaskStatus } from "@/db/schema";
 import { fmt$ } from "@/lib/money/usdc";
+import { evaluateIntent, type IntentResult } from "@/lib/intent/intentlock";
 
 export type Decision = "approve" | "needs_approval" | "decline";
 
@@ -39,6 +40,10 @@ export interface PolicyInput {
   providerSpent?: bigint;
   /** What this organisation last paid for the same item (host + path), if ever. Price memory. */
   lastPaidPrice?: bigint | null;
+  /** The provider's own description of the item, from its 402 quote. IntentLock reads it with the URL. */
+  providerDescription?: string | null;
+  /** Purchases this task has already made or has waiting (not declined ones), for the mandate's purchase cap. */
+  taskPurchaseCount?: number;
 }
 
 /** Default: a person decides if an item costs more than 50% above what was last paid for it. */
@@ -59,6 +64,8 @@ export interface PolicyResult {
   /** Human-readable one-liners, same order as the failing codes. */
   explanations: string[];
   remainingAfter: bigint;
+  /** What IntentLock concluded (absent when the input had no URL). */
+  intent?: IntentResult;
 }
 
 export function hostAllowed(host: string, allowed: string[]): boolean {
@@ -71,7 +78,7 @@ export function hostAllowed(host: string, allowed: string[]): boolean {
   });
 }
 
-export type AccessInput = Pick<PolicyInput, "now" | "task" | "policy" | "agent" | "host" | "parents">;
+export type AccessInput = Pick<PolicyInput, "now" | "task" | "policy" | "agent" | "host" | "parents" | "taskPurchaseCount">;
 
 /** Is this URL on the task's shopping list? "host/path" prefixes; an empty or absent list means no list. */
 export function onShoppingList(url: string | undefined, items: string[] | undefined): boolean {
@@ -107,9 +114,13 @@ export function accessChecks(input: AccessInput): { declines: [string, string][]
   if (task.deadline && input.now > task.deadline) declines.push(["TASK_DEADLINE_PASSED", "The task deadline has passed."]);
   if (rules.expiresAt && input.now > new Date(rules.expiresAt))
     declines.push(["MANDATE_EXPIRED", `Policy v${policy.version} expired at ${rules.expiresAt}.`]);
-  if (!hostAllowed(input.host, rules.allowedProviders))
+  if (rules.blockedProviders?.length && hostAllowed(input.host, rules.blockedProviders))
+    declines.push(["PROVIDER_BLOCKED", `${input.host} is on this task's blocked list.`]);
+  else if (!hostAllowed(input.host, rules.allowedProviders))
     declines.push(["PROVIDER_NOT_ALLOWED", `${input.host} is not on this task's provider list.`]);
   else passes.push("PROVIDER_ALLOWED");
+  if (rules.maxPurchases != null && (input.taskPurchaseCount ?? 0) >= rules.maxPurchases)
+    declines.push(["PURCHASE_LIMIT_REACHED", `This task may make ${rules.maxPurchases} purchases and has made ${input.taskPurchaseCount}.`]);
   return { declines, passes };
 }
 
@@ -155,6 +166,15 @@ export function evaluatePolicy(input: PolicyInput): PolicyResult {
   if (input.agentPurchasesLastHour >= rules.maxPurchasesPerHour)
     declines.push(["RATE_LIMITED", `Agent already made ${input.agentPurchasesLastHour} purchases this hour.`]);
 
+  // IntentLock: does this item serve what the task was authorised for? Judged from the item (URL + the provider's own
+  // description), never from the agent's stated reason. Off-purpose is a decline a person can't approve; unclear holds.
+  const intent = input.url ? evaluateIntent({ taskCategories: rules.categories, url: input.url, providerDescription: input.providerDescription }) : undefined;
+  if (intent?.outcome === "mismatch") declines.push(["INTENT_MISMATCH", intent.explanation]);
+  else if (intent?.outcome === "uncertain") {
+    if (rules.ifUncertain === "refuse") declines.push(["INTENT_UNCERTAIN_REFUSED", intent.explanation]);
+    else needsApproval.push(["INTENT_UNCERTAIN", intent.explanation]);
+  } else if (intent?.outcome === "match") passes.push("INTENT_MATCH");
+
   // Human in the loop
   if (rules.allowedItems?.length) {
     if (onShoppingList(input.url, rules.allowedItems)) passes.push("ON_SHOPPING_LIST");
@@ -178,6 +198,7 @@ export function evaluatePolicy(input: PolicyInput): PolicyResult {
       reasonCodes: declines.map((d) => d[0]),
       explanations: declines.map((d) => d[1]),
       remainingAfter: available,
+      intent,
     };
   if (needsApproval.length)
     return {
@@ -185,6 +206,7 @@ export function evaluatePolicy(input: PolicyInput): PolicyResult {
       reasonCodes: [...passes, ...needsApproval.map((d) => d[0])],
       explanations: needsApproval.map((d) => d[1]),
       remainingAfter,
+      intent,
     };
-  return { decision: "approve", reasonCodes: passes, explanations: [], remainingAfter };
+  return { decision: "approve", reasonCodes: passes, explanations: [], remainingAfter, intent };
 }

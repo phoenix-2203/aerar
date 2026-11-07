@@ -17,7 +17,12 @@ export const metadata: Metadata = {
 const SITE = process.env.AERAR_PUBLIC_URL || "https://aerar.duckdns.org";
 
 const TOOLS: [string, string][] = [
-  ["buy_resource", "Buy an x402 resource for a task. Rules, memory, approvals and the Vault decide; you never touch a wallet."],
+  ["buy_resource", "Buy an x402 resource for a task. The signed mandate, IntentLock, rules, memory, approvals and the Vault decide; you never touch a wallet."],
+  ["get_mandate", "The mandate a person signed for the task: purpose, allowed categories, limits, and whether it still matches its signature."],
+  ["check_intent", "Ask IntentLock, without buying, whether an item fits the task's purpose."],
+  ["check_memory", "Is an identical, still-fresh, untampered copy already in memory? Then buying it again costs $0."],
+  ["compare_providers", "Providers that delivered this kind of item, with prices and measured reliability, from your own ledger only."],
+  ["get_evidence", "A purchase's evidence package, each claim labelled: signed, on Base, Aerar's records, or simulated."],
   ["get_purchase", "A purchase's decision, reasons, payment and (when delivered) the data."],
   ["list_tasks", "Your tasks, what's left, the rules, and what you can buy."],
   ["recent_purchases", "What you bought lately and what was refused, in plain words."],
@@ -75,7 +80,7 @@ export default function BuildersPage() {
       <section className="mt-16" aria-labelledby="tools">
         <p className="eyebrow">MCP tools</p>
         <h2 id="tools" className="mt-2 text-[26px] font-semibold tracking-[-0.03em]">
-          Seven tools. No wallet code.
+          {TOOLS.length} tools. No wallet code.
         </h2>
         <dl className="mt-6 divide-y divide-dashed divide-border overflow-hidden rounded-2xl border border-border bg-surface">
           {TOOLS.map(([k, v]) => (
@@ -86,8 +91,8 @@ export default function BuildersPage() {
           ))}
         </dl>
         <p className="mt-3 text-[13px] text-text-3">
-          REST: <span className="font-mono">POST /api/v1/purchases</span> and <span className="font-mono">GET /api/v1/purchases/:id</span>, same rules, same
-          receipts. Provider responses come back fenced as untrusted data.
+          REST: <span className="font-mono">POST /api/v1/purchases</span>, <span className="font-mono">GET /api/v1/purchases/:id</span> and{" "}
+          <span className="font-mono">GET /api/v1/purchases/:id/evidence</span>, same rules, same receipts. Provider responses come back fenced as untrusted data.
         </p>
       </section>
 

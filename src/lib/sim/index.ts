@@ -29,6 +29,8 @@ export interface FakeOffer {
   network?: string;
   asset?: string;
   scheme?: string;
+  /** The provider's own description of the item (x402 `resource.description`), read by IntentLock. */
+  description?: string;
 }
 
 /** Programmable fake x402 rail: price per URL, counts quotes and payments. */
@@ -58,7 +60,7 @@ export function fakeRail(offers: Record<string, FakeOffer | "free">, opts: { pay
         asset: o.asset ?? USDC,
         amount: o.amount,
         payTo: o.payTo ?? PAYEE,
-        raw: { accepts: [] },
+        raw: o.description ? { resource: { url: req.url, description: o.description }, accepts: [] } : { accepts: [] },
       };
       return { kind: "payment_required", quotes: [q] };
     },

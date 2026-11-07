@@ -1,4 +1,4 @@
-// Aerar as an MCP server. An agent connects with its aer_ key and gets two tools. The tools call the same
+// Aerar as an MCP server. An agent connects with its aer_ key and gets a small set of tools. The tools call the same
 // pipeline as the REST API, so every rule applies; nothing in a tool call can widen what the agent may spend.
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { randomBytes } from "node:crypto";
@@ -14,6 +14,8 @@ import { scoreProviders } from "@/lib/providers/score";
 import { TRY_PROVIDERS } from "@/lib/try/catalog";
 import { isTryOrg } from "@/lib/try/sandbox";
 import { demoHost } from "@/lib/wallet/session";
+import { categoryLabel } from "@/lib/intent/intentlock";
+import { registerProcurementTools } from "./procurement-tools";
 
 type Agent = typeof agents.$inferSelect;
 
@@ -86,6 +88,8 @@ export function buildMcpServer(ctx: Ctx, agent: Agent): McpServer {
         out.push(
           [
             `Task ${t.id}: ${t.title} (${t.status})`,
+            `Purpose: ${t.purpose}`,
+            r?.categories?.length ? `IntentLock: you may only buy ${r.categories.map(categoryLabel).join(", ")}. Off-purpose items are refused even when the budget allows them.` : "",
             `Budget ${fmt$(t.budget)}, spent ${fmt$(t.spent)}, left ${fmt$(t.budget - t.spent - t.reserved)}.`,
             r ? `Allowed providers: ${r.allowedProviders.join(", ") || "none"}. Max per purchase ${fmt$(BigInt(r.maxPerPurchase))}. A person approves anything above ${fmt$(BigInt(r.approvalAbove))}.` : "",
             r?.allowedItems?.length ? `Shopping list: ${r.allowedItems.join(", ")}.` : "",
@@ -206,7 +210,8 @@ export function buildMcpServer(ctx: Ctx, agent: Agent): McpServer {
       description:
         "Buy an x402-paid HTTP resource for one of your assigned tasks. Aerar checks the provider's real price against " +
         "the task's budget and rules, reuses an identical earlier purchase for $0 when it can, may hold the purchase for a " +
-        "person to approve, and pays in USDC on Base Sepolia. You never handle a wallet. Reuse the same idempotencyKey " +
+        "person to approve, and pays in USDC on Base Sepolia. IntentLock refuses items that don't serve the task's signed " +
+        "purpose, even within budget (check_intent tells you first). You never handle a wallet. Reuse the same idempotencyKey " +
         "when retrying the same purchase; it will never be paid twice.",
       inputSchema: {
         taskId: z.string().min(1).max(64).optional().describe("The task this purchase is for. Optional when you have exactly one task (see list_tasks)."),
@@ -260,5 +265,6 @@ export function buildMcpServer(ctx: Ctx, agent: Agent): McpServer {
     },
   );
 
+  registerProcurementTools(server, ctx, agent, myTasks);
   return server;
 }

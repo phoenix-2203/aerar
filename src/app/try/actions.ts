@@ -8,8 +8,9 @@ import { requirePurchaseInOrg } from "@/lib/server/queries";
 import { clientIp, publicLimits } from "@/lib/server/rate-limit";
 import { parseUsdc } from "@/lib/money/usdc";
 import { PRESETS, TRY_PROVIDERS } from "@/lib/try/catalog";
+import { isCategory } from "@/lib/intent/intentlock";
 import { createTrySandbox, decodeSession, DEFAULT_TRY_BUDGET, DEFAULT_TRY_RULES, encodeSession, TRY_COOKIE, TRY_TTL_SECONDS, tryContext, type TrySession } from "@/lib/try/sandbox";
-import { hireAgent, setBudget, setTaskStatus, updatePolicy } from "@/lib/workspace";
+import { hireAgent, setTaskStatus, updatePolicy } from "@/lib/workspace";
 import { policies, taskAgents, tasks } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 
@@ -112,6 +113,10 @@ export interface RulesForm {
   providers: string[];
   shoppingList: boolean;
   items: string[];
+  /** IntentLock: what the task is for, and the categories that follow from it. */
+  purpose?: string;
+  categories?: string[];
+  ifUncertain?: "hold" | "refuse";
 }
 
 /** Save the visitor's rules as a new policy version (old versions are kept, like the real dashboard). */
@@ -135,16 +140,28 @@ export async function saveRules(f: RulesForm): Promise<TryResult> {
     const [task] = await ctx.db.select().from(tasks).where(and(eq(tasks.id, s.taskId), eq(tasks.orgId, s.orgId)));
     if (!task) return { error: "Your sandbox expired. Start a new one." };
     const [cur] = await ctx.db.select().from(policies).where(and(eq(policies.taskId, task.id), eq(policies.version, task.currentPolicyVersion)));
-    await updatePolicy(
+    const purpose = f.purpose?.trim().slice(0, 300);
+    if (f.purpose != null && (!purpose || purpose.length < 8)) return { error: "Say in a sentence what the task is for." };
+    const categories = (f.categories ?? cur.rules.categories ?? []).filter((c) => isCategory(c));
+    const version = await updatePolicy(
       ctx.db,
       task.id,
-      { ...DEFAULT_TRY_RULES, ...cur.rules, allowedProviders: providers, approvalAbove: approvalAbove.toString(), maxPerPurchase: maxPerPurchase.toString(), allowedItems: items },
+      {
+        ...DEFAULT_TRY_RULES,
+        ...cur.rules,
+        allowedProviders: providers,
+        approvalAbove: approvalAbove.toString(),
+        maxPerPurchase: maxPerPurchase.toString(),
+        allowedItems: items,
+        categories,
+        ifUncertain: f.ifUncertain ?? cur.rules.ifUncertain ?? "hold",
+      },
       "you",
       "Changed in the sandbox",
+      { purpose: purpose || undefined, budget: budget !== task.budget ? budget : undefined },
     );
-    if (budget !== task.budget) await setBudget(ctx.db, task.id, budget || DEFAULT_TRY_BUDGET, "you");
     refresh();
-    return { done: "Rules saved as a new version." };
+    return { done: `Mandate v${version} signed. Every purchase from now on is checked against it.` };
   } catch (e) {
     return { error: e instanceof Error && /USDC amount/.test(e.message) ? "Use plain dollar amounts, like 0.25." : msg(e) };
   }
@@ -213,3 +230,4 @@ export async function toggleLead(): Promise<TryResult> {
     return { error: msg(e) };
   }
 }
+

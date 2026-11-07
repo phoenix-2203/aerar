@@ -4,10 +4,12 @@
 
 AI agents now pay for APIs and data by themselves, a few cents at a time, over x402 in USDC on Base. Wallet tools already cap how much an agent can spend. Aerar answers the questions that come after: *which task was this for, was it allowed, did we already buy it, did we pay what we were quoted, and can we prove it?*
 
+**Budget controls stop agents spending too much. Aerar also stops them buying the wrong thing.** Every task carries a mandate a person signed: its purpose, the kinds of thing it may buy, its budget and limits. **IntentLock** refuses a purchase that is within budget but doesn't serve that purpose, judging the item itself, never the agent's excuse. Details: [docs/intentlock.md](docs/intentlock.md).
+
 Agents never hold a wallet. They ask Aerar to buy a resource for a task. Aerar reads the provider's real price, checks it against the task's rules, serves an identical earlier purchase for $0 instead of paying twice, pays exactly the approved quote, checks the USDC transfer onchain, and writes every step into a tamper-evident ledger. Your agents work the night shift; Aerar is the morning report.
 
 - **Demo video:** *coming before submission*
-- **Try it, no login or wallet:** [your own sandbox](https://aerar.duckdns.org/try) · [attack lab](https://aerar.duckdns.org/scenarios) (29 scenarios, Run all in ~5 s) · [live report](https://aerar.duckdns.org/demo) (real Base Sepolia purchases)
+- **Try it, no login or wallet:** [your own sandbox](https://aerar.duckdns.org/try) · [attack lab](https://aerar.duckdns.org/scenarios) (35 scenarios, Run all in seconds) · [live report](https://aerar.duckdns.org/demo) (real Base Sepolia purchases)
 - **With your wallet:** [open a Vault](https://aerar.duckdns.org/vault) on Base Sepolia, sign its limits, let your agent pay from it
 - **Check a receipt:** [verify](https://aerar.duckdns.org/verify), then try to cheat
 - **Connect an agent:** Claude, ChatGPT, Claude Code, MCP or REST ([builders page](https://aerar.duckdns.org/builders))
@@ -62,10 +64,11 @@ Aerar sits between the agent and the wallet:
 
 In order, for every request:
 
-1. **Access first.** The agent is assigned to the task, the task is active, and the provider is on the task's list. A disallowed provider is never contacted.
-2. **Procurement memory.** If anyone in the organisation bought the identical request (normalised method, URL, query and JSON body) within the task's reuse window, Aerar serves that result for $0.
+0. **The mandate is intact.** The task's rules, purpose and budget must match the mandate a person signed (SHA-256 + Aerar's EIP-191 signature). If anything was changed outside Aerar, nothing is bought for that task until a person signs again.
+1. **Access first.** The agent is assigned to the task, the task is active, the provider is on the task's list and not on its blocked list, and the task hasn't used up its purchase count. A disallowed provider is never contacted.
+2. **Procurement memory.** If anyone in the organisation bought the identical request (normalised method, URL, query and JSON body) within the task's reuse window, and the stored copy still matches the hash taken at delivery, Aerar serves that result for $0.
 3. **The real price.** Aerar reads the provider's x402 `402` quote. The decision uses that quote, never the agent's claim.
-4. **The task's versioned policy.** Budget, per-purchase limit, approval threshold, hourly rate, expiry, and network/token/payee checks. Plain code; no AI decides anything about money.
+4. **IntentLock, then the task's versioned policy.** Does the item (its URL and the provider's own description) serve what the task was signed for? Off-purpose is refused; unplaceable waits for a person. Then budget, per-purchase limit, approval threshold, hourly rate, expiry, and network/token/payee checks. Plain code; no AI decides anything about money.
 5. **Reserve under a row lock**, so parallel agents can't overspend.
 6. **Pay exactly the approved quote**, re-quoting first: if the price or payee changed, nothing is paid.
 7. **Evidence**: response hash, transaction hash, an onchain check that the USDC transfer really happened, and a hash-chained audit log.
@@ -108,6 +111,14 @@ An approved purchase is not a paid purchase, and a paid purchase is not proof th
 
 ## Features
 
+**IntentLock and signed mandates** (new, [docs](docs/intentlock.md))
+- **Purpose-aware purchasing.** A task's mandate names what it may buy (market data, research reports, blockchain analytics…), suggested from the person's own purpose sentence and confirmed before signing. A purchase that passes every budget check but doesn't serve that purpose is refused (`INTENT_MISMATCH`); one Aerar can't place waits for a person (`INTENT_UNCERTAIN`), or is refused if the mandate says so. Deterministic and explainable; no model decides money.
+- **Signed mandates.** Every version of a task's purpose, budget and rules is signed with Aerar's published key. Rules changed outside Aerar stop all buying for the task (`MANDATE_INVALID`) until a person re-signs. Every purchase records the mandate hash it was decided under.
+- **More mandate limits:** blocked providers, a total purchase count (recounted under a row lock), and whether the task may hire other agents. Hired agents inherit the purpose fence and can't widen it.
+- **Evidence package per purchase** (`GET /api/v1/purchases/:id/evidence`, the sandbox's Evidence button, MCP `get_evidence`): mandate, IntentLock decision, reasons, quote, approval, payment, delivery, audit entries and the signed receipt, with every claim labelled *Signed*, *On Base*, *Aerar records* or *Simulated*.
+- **Security panel** in the sandbox: what was stopped or held and why, with signals that state the evidence they rest on.
+- **Memory integrity:** a remembered result whose hash no longer matches what was delivered is never served.
+
 **Control**
 - **Shopping list per task** (new): pin the exact items a task may buy. A tricked agent buying the wrong thing from an *allowed* provider, under every limit, is held for a person with the reason in plain words. Limits alone can't catch this.
 - **Task-level budgets and policies**, versioned: old purchases keep pointing at the policy version they ran under.
@@ -137,7 +148,7 @@ An approved purchase is not a paid purchase, and a paid purchase is not proof th
 - **Plain-language summaries** for every decision, for agents and people.
 
 **Connecting**
-- **REST API** and an **MCP server** that Claude and other agents can use directly. Provider responses come back fenced and labelled as untrusted data.
+- **REST API** and an **MCP server** that Claude and other agents can use directly: `buy_resource`, `get_purchase`, `list_tasks`, `recent_purchases`, `provider_scores`, `hire_agent`, `stop_hired_agent`, and (new) `get_mandate`, `check_intent`, `check_memory`, `compare_providers` (from your own ledger only), `get_evidence`. The helper tools are read-only; `buy_resource` enforces everything server-side whether or not they were called. Provider responses come back fenced and labelled as untrusted data.
 
 **Morning report**
 - **The night in plain words**, built from the numbers only: what was paid and verified, what wasn't spent twice, what was refused and why, what's waiting.
@@ -235,9 +246,9 @@ More screens (every page, phone and desktop, both themes) are in [`docs/screensh
 
 | Check | Where | Result |
 |---|---|---|
-| 112 tests: policy engine, purchase pipeline (concurrent same-key purchases and races included), morning report, agent and operator routes, MCP, rate limits, the scenario sandbox, the plain-English reason copy and step tracker | `npm test` (Vitest) | all pass |
-| 26 real-world scenarios across six problems, each grading itself (66 checks), plus Aerar never paying more than a plain wallet in any of them | `npm run test:scenarios`, `npm run scenarios` | 25/25 |
-| The same scenarios on the live server against real Postgres (sandbox database, never the ledger) | [attack lab](https://aerar.duckdns.org/scenarios) "Run all" | 25/25 |
+| 176 tests: policy engine, IntentLock and signed mandates (tampered rules, budget and purpose; approvals on a tampered mandate; backfill), purchase cap under parallel requests, memory integrity, evidence packages, the MCP procurement tools, purchase pipeline (concurrent same-key purchases and races included), morning report, agent and operator routes, MCP, rate limits, the scenario sandbox, the plain-English reason copy and step tracker | `npm test` (Vitest) | all pass |
+| 35 real-world scenarios across seven problems (new: within budget but off-purpose, an item Aerar can't place, a hired agent off the job, rules edited behind Aerar's back, poisoned memory, a cheap loop stopped by the purchase cap), each grading itself, plus Aerar never paying more than a plain wallet in any of them | `npm run test:scenarios`, `npm run scenarios` | 35/35 |
+| The same scenarios on the live server against real Postgres (sandbox database, never the ledger) | [attack lab](https://aerar.duckdns.org/scenarios) "Run all" | re-run after this deploy |
 | One scripted night: a plain wallet pays $2.05 ($1.90 of it waste); Aerar pays $0.17 and lets $0.02 of waste through under the hourly cap | `npm run night-shift`, `night.test.ts` | pinned |
 | Real payments on Base Sepolia: paid, reused, held then approved, declined; each transfer checked onchain | [Live on testnet](#live-on-testnet) | done |
 | Every UI text colour pair meets WCAG AA in light and dark (lowest 4.93:1); no horizontal scroll at 375 px on any page | contrast computed from the tokens; `npm run screenshots` flags overflow | pass |
@@ -248,7 +259,9 @@ More screens (every page, phone and desktop, both themes) are in [`docs/screensh
 ## Trust model and limits
 
 - **One paying key, held by Aerar.** Agents authenticate with revocable `aer_` keys; they never see the wallet.
-- **No AI decides about money.** Policies are plain code; the AI is the agent asking.
+- **No AI decides about money.** Policies and IntentLock are plain code; the AI is the agent asking.
+- **IntentLock is keyword-based.** It reads the item's URL and the provider's own description. A provider that mislabels its item can fool it; sensitive categories (gift cards, gambling, personal data) veto a match, and allowlists, the shopping list, price memory and approvals still run. Tasks created before IntentLock have no categories and are shown as unchecked.
+- **Mandate signatures detect changes made outside Aerar**, not a compromised server holding the key; new versions are audit events sealed to Base each morning.
 - **Approval can't override a hard limit.**
 
 **Honest limits:**
