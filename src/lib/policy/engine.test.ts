@@ -129,3 +129,29 @@ describe("shopping list", () => {
     expect(onShoppingList("https://reports.acme.dev/reports/q3", ["reports.acme.dev/reports/"])).toBe(true);
   });
 });
+
+import { evaluatePolicy as evalPrice } from "./engine";
+import { describe as d2, expect as e2, it as i2 } from "vitest";
+d2("price memory", () => {
+  const base = {
+    now: new Date(),
+    task: { status: "active" as const, budget: 10_000_000n, reserved: 0n, spent: 0n, deadline: null },
+    policy: { version: 1, rules: { allowedProviders: ["a.dev"], maxPerPurchase: "5000000", approvalAbove: "5000000", maxPurchasesPerHour: 50, reuseWindowSeconds: 0, expiresAt: null } },
+    agent: { revoked: false, assignedToTask: true },
+    host: "a.dev",
+    knownPayTo: null,
+    agentPurchasesLastHour: 0,
+    rails: { network: "eip155:84532", asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", scheme: "exact" },
+    quote: { scheme: "exact", network: "eip155:84532", asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", amount: 100_000n, payTo: "0x1111111111111111111111111111111111111111" },
+  };
+  i2("holds an item that suddenly costs much more than last time", () => {
+    const r = evalPrice({ ...base, lastPaidPrice: 10_000n });
+    e2(r.decision).toBe("needs_approval");
+    e2(r.reasonCodes).toContain("PRICE_JUMPED");
+  });
+  i2("lets a normal price through", () => {
+    const r = evalPrice({ ...base, lastPaidPrice: 90_000n });
+    e2(r.decision).toBe("approve");
+    e2(r.reasonCodes).toContain("PRICE_AS_USUAL");
+  });
+});

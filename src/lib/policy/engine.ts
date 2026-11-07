@@ -2,6 +2,7 @@
 // Everything the agent says (purpose, URL text) is data here; only the provider's real quote and
 // the stored policy decide the outcome.
 import type { PolicyRules, TaskStatus } from "@/db/schema";
+import { fmt$ } from "@/lib/money/usdc";
 
 export type Decision = "approve" | "needs_approval" | "decline";
 
@@ -36,7 +37,12 @@ export interface PolicyInput {
   parents?: ParentTask[];
   /** Already reserved or paid to this provider on this task (for per-provider caps). */
   providerSpent?: bigint;
+  /** What this organisation last paid for the same item (host + path), if ever. Price memory. */
+  lastPaidPrice?: bigint | null;
 }
+
+/** Default: a person decides if an item costs more than 50% above what was last paid for it. */
+export const DEFAULT_PRICE_JUMP_PCT = 50;
 
 export interface ParentTask {
   id: string;
@@ -153,6 +159,13 @@ export function evaluatePolicy(input: PolicyInput): PolicyResult {
   if (rules.allowedItems?.length) {
     if (onShoppingList(input.url, rules.allowedItems)) passes.push("ON_SHOPPING_LIST");
     else needsApproval.push(["NOT_ON_SHOPPING_LIST", "This item isn't on the task's shopping list."]);
+  }
+  // Price memory: the same item suddenly costing a lot more is how a compromised or greedy provider shows up.
+  const jump = rules.priceJumpPct ?? DEFAULT_PRICE_JUMP_PCT;
+  if (input.lastPaidPrice && input.lastPaidPrice > 0n && jump > 0) {
+    if (quote.amount * 100n > input.lastPaidPrice * BigInt(100 + jump))
+      needsApproval.push(["PRICE_JUMPED", `This item cost ${fmt$(input.lastPaidPrice)} last time; now ${fmt$(quote.amount)}.`]);
+    else passes.push("PRICE_AS_USUAL");
   }
   if (quote.amount > BigInt(rules.approvalAbove))
     needsApproval.push(["ABOVE_APPROVAL_THRESHOLD", "Price is above the auto-approve threshold."]);

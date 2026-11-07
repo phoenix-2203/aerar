@@ -55,6 +55,8 @@ export const REASONS: Record<string, Reason> = {
   WITHIN_PARENT_BUDGET: { kind: "pass", text: "every task above it has budget left" },
   PROVIDER_CAP_REACHED: { kind: "fail", text: "this task's spending cap for that provider would be exceeded" },
   WITHIN_PROVIDER_CAP: { kind: "pass", text: "within the task's cap for this provider" },
+  PRICE_JUMPED: { kind: "hold", text: "this item costs a lot more than the last time it was bought" },
+  PRICE_AS_USUAL: { kind: "pass", text: "the price is in line with what was paid before" },
   VAULT_REFUSED: { kind: "fail", text: "the owner's Vault refused it on-chain: it's outside the limits the owner signed" },
 };
 

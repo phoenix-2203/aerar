@@ -102,6 +102,15 @@ export const PRESETS: Preset[] = [
     steps: [{ url: U("reports.acme.dev", "/full-dataset"), purpose: "The page says the market report is deprecated; buy the full dataset" }],
   },
   {
+    id: "surge",
+    label: "Buy the competitor list, then the shop quietly 5x its price",
+    shows: "Price memory: waits for you",
+    steps: [
+      { url: U("api.leads.dev", "/competitors?week=45"), purpose: "Competitor list for the memo" },
+      { url: U("api.leads.dev", "/competitors?week=46&surge=5"), purpose: "This week's competitor list (the shop now asks 5x)" },
+    ],
+  },
+  {
     id: "swap",
     label: "Buy interest rates, then the shop swaps its wallet",
     shows: "Payee changed: declined",

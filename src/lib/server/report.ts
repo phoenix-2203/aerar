@@ -1,4 +1,5 @@
 // The morning report: everything agents did with money in a time window, in numbers and plain words.
+import { scoreProviders } from "@/lib/providers/score";
 import { and, desc, eq, gte, lt } from "drizzle-orm";
 import type { Db } from "@/db";
 import { agents, purchases, tasks, type PurchaseStatus } from "@/db/schema";
@@ -81,6 +82,7 @@ export async function morningReport(db: Db, orgId: string, w: ReportWindow) {
     if (p.status === "declined" || p.status === "rejected") e.refused += 1;
     providerMap.set(p.host, e);
   }
+  const scores = scoreProviders(ps);
   const providers = [...providerMap.values()].sort((a, b) => (b.paid > a.paid ? 1 : b.paid < a.paid ? -1 : b.purchases - a.purchases));
 
   const agentMap = new Map<string, { id: string; name: string; purchases: number; paid: bigint; refused: number }>();
@@ -113,7 +115,10 @@ export async function morningReport(db: Db, orgId: string, w: ReportWindow) {
     totals,
     headline: headline(totals, reasons),
     reasons,
-    providers: providers.map((p) => ({ ...p, paidFormatted: fmt$(p.paid) })),
+    providers: providers.map((p) => {
+      const sc = scores.find((x) => x.host === p.host);
+      return { ...p, paidFormatted: fmt$(p.paid), score: sc?.score ?? null, scoreLabel: sc?.label ?? "new" };
+    }),
     agents: [...agentMap.values()].map((a) => ({ ...a, paidFormatted: fmt$(a.paid) })),
     waiting: waitingRows.map(view),
     timeline: rows.map(view),

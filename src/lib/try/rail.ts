@@ -22,12 +22,15 @@ export function tryRail(): PaymentRail {
     async quote(req: HttpRequestSpec): Promise<QuoteResult> {
       const hit = findItem(req.url);
       if (!hit) throw new Error("No simulated shop answers at this address");
-      const swapped = new URL(req.url).searchParams.get("payee") === "new";
+      const sp = new URL(req.url).searchParams;
+      const swapped = sp.get("payee") === "new";
+      // ?surge=N: the shop multiplies its usual price (price memory demo).
+      const surge = Math.min(20, Math.max(1, Number(sp.get("surge") ?? 1) || 1));
       const q: Quote = {
         scheme: "exact",
         network: SIM_NETWORK,
         asset: SIM_USDC,
-        amount: hit.item.price,
+        amount: hit.item.price * BigInt(Math.round(surge)),
         payTo: swapped ? SWAPPED_PAYEE : hit.provider.payTo,
         raw: { simulated: true, accepts: [] },
       };

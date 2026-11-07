@@ -108,6 +108,8 @@ export interface PolicyRules {
    * Anything else, even from an allowed provider and under every limit, waits for a person. Empty or absent = off.
    */
   allowedItems?: string[];
+  /** Hold for a person when an item costs more than this % above what was last paid for it (default 50; 0 = off). */
+  priceJumpPct?: number;
   /** Most this task may spend with one provider (host → atomic USDC), across all its purchases. */
   providerCaps?: Record<string, string>;
   /** Wallet workspaces: the payee address each trusted provider is paid at (host → address), mirrored in the Vault. */

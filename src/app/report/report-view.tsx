@@ -218,7 +218,7 @@ export function ReportView({ r, w, mode, q }: { r: Report; w: Window; mode: View
             )}
           </Card>
           <Card title="Providers">
-            <Rows rows={r.providers.map((p) => ({ k: p.host, mono: true, v: p.paidFormatted, sub: `${plural(p.purchases, "request")} · ${p.reused} reused · ${p.refused} declined` }))} empty="No providers contacted." />
+            <Rows rows={r.providers.map((p) => ({ k: p.host, mono: true, v: p.paidFormatted, sub: `${p.score == null ? "new provider" : `reliability ${p.score}/100 (${p.scoreLabel})`} · ${plural(p.purchases, "request")} · ${p.reused} reused · ${p.refused} declined` }))} empty="No providers contacted." />
           </Card>
           <Card title="Agents">
             <Rows rows={r.agents.map((a) => ({ k: a.name, v: a.paidFormatted, sub: `${plural(a.purchases, "request")} · ${a.refused} declined` }))} empty="No agent activity." />

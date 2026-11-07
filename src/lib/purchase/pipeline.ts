@@ -119,6 +119,19 @@ async function rollUp(t: Db, taskId: string, set: (tbl: typeof tasks) => Record<
   for (const parent of await parentsOf(t, task ?? { parentTaskId: null }, true)) await t.update(tasks).set(set(tasks)).where(eq(tasks.id, parent.id));
 }
 
+/** What this organisation last paid for the same item (host + path), for price memory. */
+async function lastPaidFor(db: Db, orgId: string, url: string): Promise<bigint | null> {
+  const u = new URL(url);
+  const rows = await db
+    .select({ url: purchases.url, paid: purchases.paidAmount })
+    .from(purchases)
+    .where(and(eq(purchases.orgId, orgId), eq(purchases.host, u.host), eq(purchases.status, "delivered")))
+    .orderBy(desc(purchases.createdAt))
+    .limit(50);
+  const hit = rows.find((r) => new URL(r.url).pathname === u.pathname && r.paid > 0n);
+  return hit?.paid ?? null;
+}
+
 async function provider(db: Db, orgId: string, host: string) {
   const [p] = await db
     .select()
@@ -300,6 +313,7 @@ async function submitNew(
     knownPayTo: prov?.knownPayTo ?? null,
     agentPurchasesLastHour: await agentRateCount(db, agent.id, now),
     providerSpent: await spentWithProvider(db, task.id, url.host),
+    lastPaidPrice: await lastPaidFor(db, agent.orgId, url.toString()),
     rails: { network: rail.network, asset: rail.asset, scheme: rail.scheme },
   };
   const verdict = evaluatePolicy(input);
@@ -548,6 +562,7 @@ export async function approvePurchase(ctx: Ctx, purchaseId: string, approver: st
     agentPurchasesLastHour: 0, // already counted when the request was made
     parents: asParents(await parentsOf(db, task)),
     providerSpent: await spentWithProvider(db, task.id, p.host),
+    lastPaidPrice: await lastPaidFor(db, p.orgId, p.url),
     rails: { network: rail.network, asset: rail.asset, scheme: rail.scheme },
   };
   const r = await reserve(

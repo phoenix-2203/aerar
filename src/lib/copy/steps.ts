@@ -83,11 +83,15 @@ export function purchaseSteps(p: PurchaseLike): Step[] {
     add(
       "policy",
       "held",
-      codes.includes("NOT_ON_SHOPPING_LIST") && !codes.includes("ABOVE_APPROVAL_THRESHOLD")
-        ? "This item isn't on the task's shopping list. Waiting for a person."
-        : `${price} is above the auto-approve limit. Waiting for a person.`,
+      codes.includes("ABOVE_APPROVAL_THRESHOLD")
+        ? `${price} is above the auto-approve limit. Waiting for a person.`
+        : codes.includes("PRICE_JUMPED")
+          ? `${price} is much more than this item cost last time. Waiting for a person.`
+          : codes.includes("NOT_ON_SHOPPING_LIST")
+            ? "This item isn't on the task's shopping list. Waiting for a person."
+            : "Waiting for a person.",
     );
-  else if (codes.includes("APPROVED_BY_HUMAN")) add("policy", "passed", `Above the auto-approve limit; approved by ${p.approvedBy ?? "a person"}.`);
+  else if (codes.includes("APPROVED_BY_HUMAN")) add("policy", "passed", `Held for a person; approved by ${p.approvedBy ?? "a person"}.`);
   else add("policy", "passed", "Within every rule on the task.");
 
   // 5. Reserve

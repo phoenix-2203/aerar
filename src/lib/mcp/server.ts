@@ -10,6 +10,7 @@ import { explain } from "@/lib/copy/reasons";
 import { publicUrl, summarise } from "@/lib/server/http";
 import { fmt$ } from "@/lib/money/usdc";
 import { hireAgent, setTaskStatus } from "@/lib/workspace";
+import { scoreProviders } from "@/lib/providers/score";
 import { TRY_PROVIDERS } from "@/lib/try/catalog";
 import { isTryOrg } from "@/lib/try/sandbox";
 import { demoHost } from "@/lib/wallet/session";
@@ -112,6 +113,22 @@ export function buildMcpServer(ctx: Ctx, agent: Agent): McpServer {
       const paid = rows.reduce((n, p) => n + (p.paidAmount ?? 0n), 0n);
       const lines = rows.map((p) => `- ${p.createdAt.toISOString().slice(0, 16).replace("T", " ")} ${p.status.replace(/_/g, " ")} ${p.quoteAmount != null ? fmt$(p.quoteAmount) : ""} ${p.host}${new URL(p.url).pathname} (${p.id})${p.reasonCodes.length ? ` - ${p.reasonCodes.filter((c) => !/^(TASK_ACTIVE|PROVIDER_ALLOWED|WITHIN_)/.test(c)).map(explain).join("; ")}` : ""}`);
       return text([`${rows.length} purchases, ${fmt$(paid)} paid in total.`, ...lines, "", "Purchases waiting for approval are decided by a person in Aerar, not by you."].join("\n"));
+    },
+  );
+
+  server.registerTool(
+    "provider_scores",
+    {
+      title: "How reliable is each provider?",
+      description: "Reliability of the providers your organisation has used, from its own ledger: deliveries vs failures after payment, price changes and payee swaps. Use it to pick a provider.",
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    async () => {
+      const rows = await ctx.db.select({ host: purchases.host, status: purchases.status, reasonCodes: purchases.reasonCodes }).from(purchases).where(eq(purchases.orgId, agent.orgId)).orderBy(desc(purchases.createdAt)).limit(500);
+      const s = scoreProviders(rows).sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+      if (!s.length) return text("No provider history yet.");
+      return text(s.map((p) => `- ${p.host}: ${p.score == null ? "new (not enough history)" : `${p.score}/100, ${p.label}`} (${p.delivered} delivered, ${p.failed} failed after payment, ${p.priceChanged + p.priceJumped} price surprises, ${p.payeeChanged} payee swaps)`).join("\n"));
     },
   );
 
