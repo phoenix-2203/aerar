@@ -61,7 +61,7 @@ export async function morningReport(db: Db, orgId: string, w: ReportWindow) {
   const delivered = by("delivered");
   const reused = by("reused");
   const refused = ps.filter((p) => p.status === "declined" || p.status === "rejected");
-  const failed = ps.filter((p) => p.status === "payment_failed" || p.status === "unknown" || p.status === "disputed");
+  const failed = ps.filter((p) => p.status === "payment_failed" || p.status === "unknown" || p.status === "disputed" || p.status === "refunded");
 
   const spent = sum(ps.map((p) => p.paidAmount));
   const saved = sum(reused.map((p) => p.quoteAmount ?? 0n));

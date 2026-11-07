@@ -189,4 +189,46 @@ export const mismatch: Scenario[] = [
         },
       ),
   },
+  {
+    id: "paid-for-nothing-refunded",
+    problem: "mismatch",
+    title: "The shop sends nothing, but took payment through an escrow",
+    story:
+      "Same trick, but this shop opted in to an Aerar escrow: its x402 payTo is the escrow contract, so the payment is held for an hour instead of going straight to the shop.",
+    expected:
+      "Aerar's delivery check fails, Aerar tells the escrow to send the money back, and the task's budget gets it back. The shop still goes on hold. A delivered purchase is released to the shop at once.",
+    run: () =>
+      play(
+        { offers: { "/brief": { amount: 40_000n, escrow: true, delivers: "empty" }, "/report": { amount: 30_000n, escrow: true } } },
+        async (s, log, check) => {
+          log('Agent: "Buy /brief"');
+          const a = await s.buy("researcher", "https://data.example.com/brief");
+          log(a);
+          log('Agent: "Buy /report"');
+          const b = await s.buy("researcher", "https://data.example.com/report", { plainWalletPays: true });
+          log(b);
+          check.that(a.status === "refunded" && a.reasonCodes.includes("EMPTY_DELIVERY") && a.reasonCodes.includes("REFUNDED"), "the empty result is caught and refunded");
+          check.that(a.paidAmount === 0n && a.refundedAmount === 40_000n, "the $0.04 came back: nothing kept by the shop");
+          check.that(s.rail.calls.refund.length === 1, "one refund, sent through the escrow");
+          check.that(b.status === "declined" && b.reasonCodes.includes("PROVIDER_ON_HOLD"), "the shop is still on hold");
+          return "$0.00 lost. The escrow sent the payment back, and the shop is on hold.";
+        },
+      ),
+  },
+  {
+    id: "escrow-delivered-released",
+    problem: "mismatch",
+    title: "An escrow shop that delivers gets paid at once",
+    story: "A shop that takes payment through an escrow sends back a proper result.",
+    expected: "Delivered: Aerar confirms it, so the escrow releases the money to the shop immediately instead of after the window. Nothing is refunded.",
+    run: () =>
+      play({ offers: { "/report": { amount: 30_000n, escrow: true } } }, async (s, log, check) => {
+        log('Agent: "Buy /report"');
+        const p = await s.buy("researcher", "https://data.example.com/report");
+        log(p);
+        check.that(p.status === "delivered" && p.paidAmount === 30_000n, "delivered and paid");
+        check.that(s.rail.calls.confirm.length === 1 && s.rail.calls.refund.length === 0, "the escrow is told to pay the shop now");
+        return "$0.03 paid and released to the shop: an honest shop doesn't wait.";
+      }),
+  },
 ];

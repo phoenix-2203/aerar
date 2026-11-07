@@ -1,5 +1,5 @@
 // Fixed status chips: text + icon + colour, never colour alone. Labels come from the shared copy.
-import { Ban, CheckCircle2, CircleDashed, Clock, HelpCircle, Loader2, Repeat2, XCircle } from "lucide-react";
+import { Ban, CheckCircle2, CircleDashed, Clock, HelpCircle, Loader2, Repeat2, Undo2, XCircle } from "lucide-react";
 import { statusCopy, type Tone } from "@/lib/copy/reasons";
 
 export const TONE_CLASS: Record<Tone, string> = {
@@ -21,6 +21,7 @@ const ICON: Record<string, typeof CheckCircle2> = {
   paying: Loader2,
   payment_failed: XCircle,
   disputed: XCircle,
+  refunded: Undo2,
   unknown: HelpCircle,
   expired: CircleDashed,
 };

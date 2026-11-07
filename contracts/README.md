@@ -9,8 +9,17 @@
 - The owner can pause, revoke, change the operator, or withdraw at any time. Unused approvals expire within 15 minutes
   and their budget can be released.
 
+`src/AerarEscrow.sol`: refunds for x402 purchases that weren't delivered, for shops that opt in.
+
+- A shop creates its escrow through `AerarEscrowFactory` (shop and judge fixed, delivery window 5 minutes to 7 days) and
+  names it as its x402 `payTo`. A facilitator settles to the escrow as usual; `record` attributes the payment using the
+  payer's own `TransferWithAuthorization` signature (EOA or ERC-1271, so Vaults work), or settles it itself.
+- The judge (Aerar) `confirm`s a delivery, so the shop is paid at once, or `refund`s within the window with a reason
+  hash. After the window anyone can `release` to the shop. The shop can always refund. Funds can only go back to the
+  payer or on to the shop.
+
 ```
-forge test        # 15 tests against a FiatToken-v2.2-style mock (test/MockUSDC.sol)
+forge test        # 28 tests: Vault 15, Escrow 10, Seal 3 against a FiatToken-v2.2-style mock (test/MockUSDC.sol)
 ```
 
-Not audited. Testnet only.
+Not audited. Testnet only. The escrow is not deployed yet.

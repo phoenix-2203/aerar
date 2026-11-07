@@ -27,6 +27,16 @@ export type QuoteResult =
   | { kind: "payment_required"; quotes: Quote[] }
   | { kind: "free"; response: CapturedResponse };
 
+/** A payment held in a shop's AerarEscrow (contracts/src/AerarEscrow.sol) until delivery is judged. */
+export interface EscrowHold {
+  escrow: string;
+  holdId: string;
+  /** ISO time after which anyone can release it to the shop. */
+  releaseAfter: string;
+}
+
+export type RefundResult = { ok: true; txHash: string } | { ok: false; reason: string };
+
 export type PayResult =
   | {
       kind: "settled";
@@ -34,6 +44,8 @@ export type PayResult =
       txHash: string;
       payer: string | null;
       amount: bigint | null;
+      /** Set when the shop takes payment through an escrow: the money is held, not yet the shop's. */
+      escrow?: EscrowHold;
     }
   /** Provider answered but did not settle (402 again, 4xx/5xx). x402 `withX402` only settles on success. */
   | { kind: "not_settled"; response: CapturedResponse; reason: string }
@@ -60,4 +72,8 @@ export interface PaymentRail {
   /** Pay exactly `quote` (never anything else the provider offers) and fetch the resource. */
   pay(req: HttpRequestSpec, quote: Quote): Promise<PayResult>;
   verifyOnchain(txHash: string, expect: { payTo: string; amount: bigint }): Promise<OnchainCheck>;
+  /** Send an escrowed payment back to the payer (not delivered). `reason` is kept as evidence. */
+  refund?(hold: EscrowHold, reason: string): Promise<RefundResult>;
+  /** Release an escrowed payment to the shop now (delivered). Best effort: otherwise it releases after the window. */
+  confirm?(hold: EscrowHold): Promise<RefundResult>;
 }

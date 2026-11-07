@@ -60,8 +60,10 @@ export function summarise(p: Purchase): string {
     case "reserved":
     case "paying":
       return `${amount} is reserved and payment is in progress.`;
+    case "refunded":
+      return `Paid ${fmt$(p.refundedAmount)} into ${p.host}'s escrow, but it didn't deliver: ${p.error ?? "the result failed Aerar's delivery check"}. The payment was refunded in full; the shop is on hold until a person clears it.`;
     case "disputed":
-      return `Paid ${fmt$(p.paidAmount)} to ${p.host}, but it didn't deliver: ${p.error ?? "the result failed Aerar's delivery check"}. The money can't be recovered (x402 payments settle immediately); the shop is on hold until a person clears it.`;
+      return `Paid ${fmt$(p.paidAmount)} to ${p.host}, but it didn't deliver: ${p.error ?? "the result failed Aerar's delivery check"}. ${p.reasonCodes.includes("REFUND_FAILED") ? "The escrow refund failed" : "The money can't be recovered (this shop doesn't use an escrow, and x402 payments settle immediately)"}; the shop is on hold until a person clears it.`;
     case "payment_failed":
       return `Payment did not go through, nothing was charged and the budget was released: ${why || p.error}.`;
     case "unknown":

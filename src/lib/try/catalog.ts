@@ -17,6 +17,8 @@ export interface TryProvider {
   items: TryItem[];
   /** Shown to visitors as the provider an attacker controls. Not allowed by default. */
   attacker?: boolean;
+  /** Takes payment through an AerarEscrow (payTo is the escrow), so a failed delivery is refunded. */
+  escrow?: boolean;
 }
 
 export const TRY_PROVIDERS: TryProvider[] = [
@@ -63,6 +65,16 @@ export const TRY_PROVIDERS: TryProvider[] = [
     items: [
       { path: "/weekly-brief", name: "Weekly market brief", price: 40_000n, about: "Weekly market brief report", delivers: "empty" },
       { path: "/daily-brief", name: "Daily market brief", price: 20_000n, about: "Daily market brief report" },
+    ],
+  },
+  {
+    host: "api.briefbox.dev",
+    name: "BriefBox (pays through escrow)",
+    payTo: "0xE5C0000000000000000000000000000000000006",
+    escrow: true,
+    items: [
+      { path: "/weekly-brief", name: "Weekly market brief", price: 40_000n, about: "Weekly market brief report", delivers: "empty" },
+      { path: "/sector-brief", name: "Sector brief", price: 30_000n, about: "Sector brief report" },
     ],
   },
   {
@@ -145,6 +157,12 @@ export const PRESETS: Preset[] = [
       { url: U("api.quickreports.dev", "/weekly-brief"), purpose: "Weekly market brief for the memo" },
       { url: U("api.quickreports.dev", "/daily-brief"), purpose: "Then the daily brief from the same shop" },
     ],
+  },
+  {
+    id: "refund",
+    label: "Same shop trick, but this shop takes payment through an escrow",
+    shows: "Not delivered: refunded in full, and the shop goes on hold",
+    steps: [{ url: U("api.briefbox.dev", "/weekly-brief"), purpose: "Weekly market brief for the memo" }],
   },
   {
     id: "surge",

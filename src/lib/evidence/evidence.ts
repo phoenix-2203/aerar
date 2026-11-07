@@ -69,7 +69,7 @@ export async function buildEvidence(db: Db, orgId: string, purchaseId: string, i
   if (receipt)
     checks.push({ claim: "The decision record is signed by Aerar", level: "signed", ok: true, detail: `Receipt sha256 ${receipt.sha256.slice(0, 18)}…; check it at ${issuer}/verify` });
 
-  const paid = (p.status === "delivered" || p.status === "disputed") && !!p.txHash;
+  const paid = (p.status === "delivered" || p.status === "disputed" || p.status === "refunded") && !!p.txHash;
   if (!paid) checks.push({ claim: "Payment", level: "none", ok: null, detail: p.status === "reused" ? "Reused from memory: nothing was paid." : "Nothing was paid." });
   else if (simulated) checks.push({ claim: "Payment", level: "simulated", ok: null, detail: "Sandbox purchase: the shop and the payment are simulated, so there is no chain to check." });
   else
@@ -80,6 +80,13 @@ export async function buildEvidence(db: Db, orgId: string, purchaseId: string, i
       detail: p.onchainVerifiedAt ? `Transaction ${p.txHash}: the Transfer event was read from Base and matched payee and amount.` : `Not confirmed on Base yet (${(p.onchainCheck as { reason?: string } | null)?.reason ?? "no check recorded"}).`,
     });
 
+  if (p.status === "refunded")
+    checks.push({
+      claim: "Not delivered, so the payment was refunded",
+      level: simulated ? "simulated" : "database",
+      ok: true,
+      detail: `${p.error ?? "The result failed the delivery check."} ${fmt$(p.refundedAmount)} went back to the payer from the shop's escrow${p.refundTx ? ` (transaction ${p.refundTx})` : ""}; the shop is on hold.`,
+    });
   if (p.status === "disputed")
     checks.push({ claim: "The shop delivered what was paid for", level: "database", ok: false, detail: `${p.error ?? "The result failed the delivery check."} x402 payments settle immediately, so this can't be refunded; the shop is on hold.` });
   if (p.responseHash && p.responseBody != null)

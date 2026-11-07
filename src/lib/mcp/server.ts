@@ -24,7 +24,7 @@ function catalog(orgId: string): string {
   if (isTryOrg(orgId))
     return [
       "Things you can buy (simulated shops):",
-      ...TRY_PROVIDERS.flatMap((p) => p.items.map((i) => `- https://${p.host}${i.path}: ${i.name}, ${fmt$(i.price)}${p.attacker ? " (an attacker's shop)" : ""}`)),
+      ...TRY_PROVIDERS.flatMap((p) => p.items.map((i) => `- https://${p.host}${i.path}: ${i.name}, ${fmt$(i.price)}${p.attacker ? " (an attacker's shop)" : p.escrow ? " (takes payment through an escrow, so failed deliveries are refunded)" : ""}`)),
     ].join("\n");
   const scheme = process.env.AERAR_ALLOW_INSECURE_HTTP === "1" ? "http" : "https";
   const host = demoHost();

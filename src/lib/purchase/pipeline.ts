@@ -31,7 +31,7 @@ import type { CapturedResponse, PaymentRail, Quote } from "@/lib/x402/rail";
 
 export type Purchase = typeof purchases.$inferSelect;
 export const MAX_STORED_BODY = 256 * 1024;
-const COUNTS_TOWARD_RATE: PurchaseStatus[] = ["awaiting_approval", "reserved", "paying", "delivered", "disputed", "payment_failed", "unknown"];
+const COUNTS_TOWARD_RATE: PurchaseStatus[] = ["awaiting_approval", "reserved", "paying", "delivered", "disputed", "refunded", "payment_failed", "unknown"];
 
 export interface PurchaseRequest {
   taskId: string;
@@ -104,7 +104,7 @@ export async function loadMandate(db: Db, task: typeof tasks.$inferSelect): Prom
   return { policy, check: await verifyMandate(policy, task) };
 }
 
-const COUNTS_TOWARD_CAP: PurchaseStatus[] = ["awaiting_approval", "reserved", "paying", "delivered", "disputed", "unknown"];
+const COUNTS_TOWARD_CAP: PurchaseStatus[] = ["awaiting_approval", "reserved", "paying", "delivered", "disputed", "refunded", "unknown"];
 
 /** Purchases a task has made or has waiting, for the mandate's purchase cap. */
 async function taskPurchaseCount(db: Db, taskId: string, excludeId?: string) {
@@ -557,41 +557,58 @@ export async function execute(ctx: Ctx, purchaseId: string): Promise<Purchase> {
   const paid = result.amount ?? p.reservedAmount;
   // The money has moved either way. Junk doesn't count as delivered: it's never reused and the shop goes on hold.
   const dc = checkDelivery(result.response);
+  // A shop that takes payment through an escrow can be refunded: the money is held until delivery is judged.
+  const refund = !dc.ok && result.escrow && rail.refund ? await rail.refund(result.escrow, `${dc.code}: ${dc.detail}`).catch((e) => ({ ok: false as const, reason: (e as Error).message })) : null;
+  if (dc.ok && result.escrow && rail.confirm) void rail.confirm(result.escrow).catch(() => {}); // else it releases after the window
+  const refunded = refund?.ok ? paid : 0n;
+  const status: PurchaseStatus = dc.ok ? "delivered" : refund?.ok ? "refunded" : "disputed";
   const delivered = await db.transaction(async (tx) => {
     const t = tx as unknown as Db;
     // Lock order everywhere: task row first, then the purchase row. reserve() does the same; the opposite order
     // deadlocks on Postgres when a duplicate request is reserving while this one settles.
     await t.select({ id: tasks.id }).from(tasks).where(eq(tasks.id, p.taskId)).for("update");
+    const failCodes = dc.ok ? [] : ["NOT_DELIVERED", dc.code!, ...(refund?.ok ? ["REFUNDED"] : refund ? ["REFUND_FAILED"] : [])];
     const [row] = await t
       .update(purchases)
       .set({
-        status: dc.ok ? "delivered" : "disputed",
-        ...(dc.ok ? {} : { reasonCodes: [...p.reasonCodes, "NOT_DELIVERED", dc.code!], error: dc.detail }),
-        paidAmount: paid,
+        status,
+        ...(dc.ok ? {} : { reasonCodes: [...p.reasonCodes, ...failCodes], error: refund && !refund.ok ? `${dc.detail} Refund failed: ${refund.reason}` : dc.detail }),
+        paidAmount: paid - refunded,
         txHash: result.txHash,
         payer: result.payer ?? rail.payerAddress,
         paidAt: now,
         deliveredAt: now,
         updatedAt: now,
+        ...(result.escrow ? { escrow: result.escrow.escrow, escrowHoldId: result.escrow.holdId } : {}),
+        ...(refund?.ok ? { refundedAmount: refunded, refundTx: refund.txHash, refundedAt: now } : {}),
         ...evidenceFields(result.response),
       })
       .where(eq(purchases.id, p.id))
       .returning();
+    const net = paid - refunded;
     await t
       .update(tasks)
-      .set({ reserved: sql`${tasks.reserved} - ${p.reservedAmount}`, spent: sql`${tasks.spent} + ${paid}` })
+      .set({ reserved: sql`${tasks.reserved} - ${p.reservedAmount}`, spent: sql`${tasks.spent} + ${net}` })
       .where(eq(tasks.id, p.taskId));
-    await rollUp(t, p.taskId, (x) => ({ reserved: sql`${x.reserved} - ${p.reservedAmount}`, spent: sql`${x.spent} + ${paid}` }));
+    await rollUp(t, p.taskId, (x) => ({ reserved: sql`${x.reserved} - ${p.reservedAmount}`, spent: sql`${x.spent} + ${net}` }));
     const prov = await provider(t, p.orgId, p.host);
-    const hold = dc.ok ? {} : { heldAt: now, heldReason: `${dc.detail} (purchase ${p.id})` };
+    const hold = dc.ok ? {} : { heldAt: now, heldReason: `${dc.detail}${refund?.ok ? " The payment was refunded from its escrow." : ""} (purchase ${p.id})` };
     if (!prov) await t.insert(providers).values({ id: newId("prv"), orgId: p.orgId, host: p.host, knownPayTo: approved.payTo, ...hold });
     else if (!prov.knownPayTo || !dc.ok) await t.update(providers).set({ knownPayTo: prov.knownPayTo ?? approved.payTo, ...hold }).where(eq(providers.id, prov.id));
     await audit(t, {
       orgId: p.orgId,
       actor: "system",
-      kind: dc.ok ? "purchase.delivered" : "purchase.disputed",
+      kind: dc.ok ? "purchase.delivered" : refund?.ok ? "purchase.refunded" : "purchase.disputed",
       subjectId: p.id,
-      data: { txHash: result.txHash, paid, responseHash: row.responseHash, responseStatus: row.responseStatus, ...(dc.ok ? {} : { deliveryCheck: dc.code, providerOnHold: p.host }) },
+      data: {
+        txHash: result.txHash,
+        paid,
+        responseHash: row.responseHash,
+        responseStatus: row.responseStatus,
+        ...(result.escrow ? { escrow: result.escrow.escrow, holdId: result.escrow.holdId } : {}),
+        ...(dc.ok ? {} : { deliveryCheck: dc.code, providerOnHold: p.host }),
+        ...(refund ? (refund.ok ? { refunded, refundTx: refund.txHash } : { refundFailed: refund.reason }) : {}),
+      },
     });
     return row;
   });

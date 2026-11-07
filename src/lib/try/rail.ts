@@ -39,15 +39,24 @@ export function tryRail(): PaymentRail {
     async pay(req: HttpRequestSpec, q: Quote): Promise<PayResult> {
       const hit = findItem(req.url);
       if (!hit) return { kind: "not_settled", reason: "No simulated shop answers at this address", response: { status: 404, contentType: null, body: new Uint8Array() } };
+      // A shop with an escrow: the payment is held there until Aerar judges the delivery.
+      const escrow = hit.provider.escrow ? { escrow: q.payTo, holdId: `0xsim${randomBytes(30).toString("hex")}`, releaseAfter: new Date(Date.now() + 3600_000).toISOString() } : undefined;
       if (hit.item.delivers === "empty")
-        return { kind: "settled", response: { status: 200, contentType: "application/json", body: new Uint8Array() }, txHash: `0xsim${randomBytes(30).toString("hex")}`, payer: rail.payerAddress, amount: q.amount };
+        return { kind: "settled", response: { status: 200, contentType: "application/json", body: new Uint8Array() }, txHash: `0xsim${randomBytes(30).toString("hex")}`, payer: rail.payerAddress, amount: q.amount, ...(escrow ? { escrow } : {}) };
       return {
         kind: "settled",
         response: body({ item: hit.item.name, from: hit.provider.name, simulated: true, deliveredAt: new Date().toISOString() }),
         txHash: `0xsim${randomBytes(30).toString("hex")}`,
         payer: rail.payerAddress,
         amount: q.amount,
+        ...(escrow ? { escrow } : {}),
       };
+    },
+    async refund() {
+      return { ok: true, txHash: `0xsim${randomBytes(30).toString("hex")}` };
+    },
+    async confirm() {
+      return { ok: true, txHash: `0xsim${randomBytes(30).toString("hex")}` };
     },
     async verifyOnchain(): Promise<OnchainCheck> {
       return { ok: true, checkedAt: new Date().toISOString(), reason: "Simulated: the sandbox has no chain to check" };

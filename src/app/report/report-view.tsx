@@ -29,7 +29,7 @@ export const STATUS_FILTERS = [
   { key: "paid", label: "Paid", statuses: ["delivered", "free"] },
   { key: "reused", label: "Reused", statuses: ["reused"] },
   { key: "needs-approval", label: "Needs approval", statuses: ["awaiting_approval"] },
-  { key: "declined", label: "Declined", statuses: ["declined", "rejected", "payment_failed", "disputed", "unknown", "expired"] },
+  { key: "declined", label: "Declined", statuses: ["declined", "rejected", "payment_failed", "disputed", "refunded", "unknown", "expired"] },
 ];
 
 /** Operator mode can approve and open tasks; public mode is read-only and never links to login-only pages. */

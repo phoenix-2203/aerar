@@ -179,8 +179,8 @@ const SCENES = {
       await p.waitForTimeout(500); p.mark('start');
       const t0 = Date.now(); const at = (x) => p.waitForTimeout(Math.max(0, x * 1000 - (Date.now() - t0)));
       const presets = ask.locator('ol li button');
-      await at(0.6); await click(p, presets.nth(8), { fx: 0.3 });
-      await at(5.4); await click(p, presets.nth(9), { fx: 0.3 });
+      await at(0.6); await click(p, presets.nth(9), { fx: 0.3 });
+      await at(5.4); await click(p, presets.nth(10), { fx: 0.3 });
       await at(11.6);
     }, { storage: STATE });
   },

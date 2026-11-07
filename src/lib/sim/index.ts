@@ -31,11 +31,15 @@ export interface FakeOffer {
   scheme?: string;
   /** The provider's own description of the item (x402 `resource.description`), read by IntentLock. */
   description?: string;
+  /** The shop takes payment through an AerarEscrow, so a failed delivery can be refunded. */
+  escrow?: boolean;
+  /** What the shop sends back once paid (default: a small JSON body). */
+  delivers?: "empty";
 }
 
 /** Programmable fake x402 rail: price per URL, counts quotes and payments. */
 export function fakeRail(offers: Record<string, FakeOffer | "free">, opts: { payResult?: (q: Quote) => PayResult } = {}) {
-  const calls = { quote: [] as string[], pay: [] as { url: string; amount: bigint }[] };
+  const calls = { quote: [] as string[], pay: [] as { url: string; amount: bigint }[], refund: [] as { holdId: string; reason: string }[], confirm: [] as string[] };
   let tx = 0;
   const offerFor = (url: string) => {
     const path = new URL(url).pathname;
@@ -68,7 +72,18 @@ export function fakeRail(offers: Record<string, FakeOffer | "free">, opts: { pay
       calls.pay.push({ url: req.url, amount: q.amount });
       if (opts.payResult) return opts.payResult(q);
       tx += 1;
-      return { kind: "settled", response: resp(JSON.stringify({ data: req.url, n: tx })), txHash: `0xtx${tx}`, payer: this.payerAddress, amount: q.amount };
+      const o = offerFor(req.url);
+      const response = o && o !== "free" && o.delivers === "empty" ? resp("") : resp(JSON.stringify({ data: req.url, n: tx }));
+      const escrow = o && o !== "free" && o.escrow ? { escrow: q.payTo, holdId: `0xhold${tx}`, releaseAfter: new Date(Date.now() + 3600_000).toISOString() } : undefined;
+      return { kind: "settled", response, txHash: `0xtx${tx}`, payer: this.payerAddress, amount: q.amount, ...(escrow ? { escrow } : {}) };
+    },
+    async refund(hold, reason) {
+      calls.refund.push({ holdId: hold.holdId, reason });
+      return { ok: true, txHash: `0xrefund${calls.refund.length}` };
+    },
+    async confirm(hold) {
+      calls.confirm.push(hold.holdId);
+      return { ok: true, txHash: `0xrelease${calls.confirm.length}` };
     },
     async verifyOnchain(): Promise<OnchainCheck> {
       return { ok: true, checkedAt: new Date().toISOString(), blockNumber: "1" };

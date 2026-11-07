@@ -194,6 +194,7 @@ export type PurchaseStatus =
   | "paying" // payment signed and sent; outcome not yet known
   | "delivered" // provider settled payment and returned a 2xx response
   | "disputed" // paid (settled on-chain), but what came back failed the delivery check; never reused
+  | "refunded" // paid into a shop's escrow, failed the delivery check, and the money went back to the payer
   | "payment_failed" // provider/facilitator refused; reservation released
   | "unknown" // network error after payment was sent; needs reconciliation, budget stays held
   | "reused" // served from procurement memory, $0
@@ -237,6 +238,12 @@ export const purchases = pgTable(
     payer: text("payer"),
     onchainVerifiedAt: ts("onchain_verified_at"),
     onchainCheck: jsonb("onchain_check"),
+    // Refund (shops that take payment through an AerarEscrow). paidAmount is the net amount after a refund.
+    escrow: text("escrow"),
+    escrowHoldId: text("escrow_hold_id"),
+    refundedAmount: usdc("refunded_amount").notNull().default(sql`0`),
+    refundTx: text("refund_tx"),
+    refundedAt: ts("refunded_at"),
     // Delivery evidence
     responseStatus: integer("response_status"),
     responseContentType: text("response_content_type"),

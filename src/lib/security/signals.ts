@@ -58,12 +58,15 @@ export function securityView(rows: Row[], names: Record<string, string>, now = n
         ? "held"
         : r.status === "declined" || r.status === "payment_failed" || r.status === "rejected"
           ? "stopped"
+          : r.status === "refunded"
+            ? "stopped"
           : r.status === "disputed"
             ? "lost"
           : r.approvedBy
             ? "approved"
             : "noted";
-    events.push({ id: r.id, kind: k.kind, label: k.label, agentId: r.agentId, host: r.host, at: r.createdAt.toISOString(), outcome });
+    const label = r.status === "refunded" ? "Not delivered, refunded" : k.label;
+    events.push({ id: r.id, kind: k.kind, label, agentId: r.agentId, host: r.host, at: r.createdAt.toISOString(), outcome });
   }
 
   const signals: Signal[] = [];
@@ -84,8 +87,14 @@ export function securityView(rows: Row[], names: Record<string, string>, now = n
   }
   if (events.some((e) => e.kind === "mandate"))
     signals.push({ level: "high", text: "A task's rules were changed outside Aerar. Buying for it is stopped until a person signs them again.", basis: "Stored rules no longer match the signed mandate." });
-  for (const host of new Set(events.filter((e) => e.kind === "undelivered").map((e) => e.host)))
-    signals.push({ level: "high", text: `${host} took a payment and sent back nothing usable. It's on hold: nothing more is bought from it until you clear it.`, basis: "The paid result failed Aerar's delivery check (empty, broken, or an error message)." });
+  for (const host of new Set(events.filter((e) => e.kind === "undelivered").map((e) => e.host))) {
+    const allRefunded = events.filter((e) => e.kind === "undelivered" && e.host === host).every((e) => e.label === "Not delivered, refunded");
+    signals.push({
+      level: "high",
+      text: `${host} took a payment and sent back nothing usable.${allRefunded ? " The money came back from its escrow." : ""} It's on hold: nothing more is bought from it until you clear it.`,
+      basis: "The paid result failed Aerar's delivery check (empty, broken, or an error message).",
+    });
+  }
   if (events.some((e) => e.kind === "memory"))
     signals.push({ level: "high", text: "A remembered result was altered after delivery. It was not reused.", basis: "A stored copy's sha256 no longer matches the hash taken at delivery." });
   for (const host of new Set(events.filter((e) => e.kind === "payee_swap").map((e) => e.host)))
