@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 const NUMBERS: [string, string][] = [
   ["160+", "commits in the build week"],
-  ["155", "automated tests (137 app + 18 contract)"],
+  ["158", "automated tests (140 app + 18 contract)"],
   ["29", "attack scenarios run through the real pipeline"],
   ["2", "contracts on Base Sepolia: Vault factory, Morning Seal"],
   ["14k", "lines of TypeScript"],
