@@ -1,5 +1,5 @@
 // A task's rules as sentences a person reads in one pass, with the guarantee that agents can't change them.
-import { Check, Clock3, Globe, Hourglass, Lock, Repeat2, Wallet } from "lucide-react";
+import { Check, Clock3, Globe, Hourglass, ListChecks, Lock, Repeat2, Wallet } from "lucide-react";
 import type { PolicyRules } from "@/db/schema";
 import { fmt$ } from "@/lib/money/usdc";
 
@@ -13,6 +13,9 @@ export function ruleSentences(r: PolicyRules, now = new Date()): { icon: typeof 
     { icon: Hourglass, text: BigInt(r.approvalAbove) < BigInt(r.maxPerPurchase) ? `Ask a person above ${auto}, up to ${max}. Never more than ${max}.` : `Never pay more than ${max} for one purchase.` },
     { icon: Globe, text: hosts.length ? `Only buy from ${hosts.join(", ")}. Every other provider is never contacted.` : "No providers are allowed yet, so nothing can be bought." },
     { icon: Clock3, text: `At most ${r.maxPurchasesPerHour} purchases per agent per hour.` },
+    ...(r.allowedItems?.length
+      ? [{ icon: ListChecks, text: `Shopping list: only ${r.allowedItems.join(", ")}. Anything else waits for a person, even under every limit.` }]
+      : []),
     { icon: Repeat2, text: r.reuseWindowSeconds ? `Reuse an identical purchase for ${duration(r.reuseWindowSeconds)} instead of paying again.` : "Always buy fresh; never reuse earlier purchases." },
     {
       icon: Wallet,

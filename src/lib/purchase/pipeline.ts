@@ -205,6 +205,7 @@ async function submitNew(
     policy: { version: policy.version, rules: policy.rules },
     agent: { revoked: !!agent.revokedAt, assignedToTask: !!assignment },
     host: url.host,
+    url: url.toString(),
   };
 
   // ---- 1. access checks before touching the provider
@@ -497,6 +498,7 @@ export async function approvePurchase(ctx: Ctx, purchaseId: string, approver: st
     policy: { version: policy.version, rules: policy.rules },
     agent: { revoked: !!agent.revokedAt, assignedToTask: !!assignment },
     host: p.host,
+    url: p.url,
     quote,
     knownPayTo: prov?.knownPayTo ?? null,
     agentPurchasesLastHour: 0, // already counted when the request was made

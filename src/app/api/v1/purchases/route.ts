@@ -3,7 +3,8 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { submitPurchase } from "@/lib/purchase/pipeline";
 import { requireAgent } from "@/lib/server/auth";
-import { getContext } from "@/lib/server/context";
+import { getDbOnly } from "@/lib/server/context";
+import { agentContext } from "@/lib/try/sandbox";
 import { json, purchaseView, withErrors } from "@/lib/server/http";
 
 const PurchaseBody = z.object({
@@ -24,8 +25,9 @@ const PurchaseBody = z.object({
 });
 
 export const POST = withErrors(async (req: NextRequest) => {
-  const ctx = await getContext();
-  const agent = await requireAgent(ctx.db, req);
+  const agent = await requireAgent(await getDbOnly(), req);
+  // Sandbox agents (try-it page) pay simulated shops; everyone else the real x402 rail.
+  const ctx = await agentContext(agent.orgId);
   const input = PurchaseBody.parse(await req.json());
   const p = await submitPurchase(ctx, agent.id, input);
   const status = p.status === "awaiting_approval" ? 202 : 200;

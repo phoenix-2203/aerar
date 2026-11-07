@@ -16,6 +16,8 @@ export interface ApprovalItem {
   taskTitle: string;
   purpose: string;
   detailsHref: string;
+  /** Why it is held, in plain words (defaults to the auto-approve limit). */
+  why?: string;
 }
 
 function useResult(state: ActionState) {
@@ -46,7 +48,7 @@ export function ApprovalCard({ item, readOnly = false }: { item: ApprovalItem; r
               <span className="tabular font-semibold text-text">{item.amountFormatted}</span> to <span className="font-mono">{item.host}</span> · {item.agentName} for {item.taskTitle}
             </p>
             <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-              <span className="text-warning">Above this task&apos;s auto-approve limit</span>
+              <span className="text-warning first-letter:uppercase">{item.why ?? "above this task's auto-approve limit"}</span>
               <Link href={item.detailsHref} scroll={false} className="group inline-flex items-center gap-0.5 font-medium text-text-2 hover:text-text">
                 See every step
                 <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />

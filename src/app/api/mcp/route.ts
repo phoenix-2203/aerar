@@ -3,12 +3,14 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import type { NextRequest } from "next/server";
 import { buildMcpServer } from "@/lib/mcp/server";
 import { requireAgent } from "@/lib/server/auth";
-import { getContext } from "@/lib/server/context";
+import { getDbOnly } from "@/lib/server/context";
+import { agentContext } from "@/lib/try/sandbox";
 import { withErrors } from "@/lib/server/http";
 
 async function handle(req: NextRequest): Promise<Response> {
-  const ctx = await getContext();
-  const agent = await requireAgent(ctx.db, req);
+  const agent = await requireAgent(await getDbOnly(), req);
+  // Sandbox agents (try-it page) pay simulated shops; everyone else the real x402 rail.
+  const ctx = await agentContext(agent.orgId);
   // Stateless: a fresh server + transport per request, bound to the authenticated agent.
   const server = buildMcpServer(ctx, agent);
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });

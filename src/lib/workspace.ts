@@ -48,7 +48,10 @@ export function validateRules(r: PolicyRules): PolicyRules {
   for (const h of hosts)
     if (!/^(\*\.)?[a-z0-9.-]+(:\d+)?$/.test(h)) throw new PurchaseError("INVALID_POLICY", `Not a host name: ${h}`);
   if (r.expiresAt && Number.isNaN(Date.parse(r.expiresAt))) throw new PurchaseError("INVALID_POLICY", "expiresAt is not a date");
-  return { ...r, allowedProviders: [...new Set(hosts)] };
+  const items = (r.allowedItems ?? []).map((i) => i.trim().toLowerCase().replace(/^https?:\/\//, "")).filter(Boolean);
+  if (items.length > 100) throw new PurchaseError("INVALID_POLICY", "At most 100 items on a shopping list");
+  for (const i of items) if (!/^[a-z0-9.-]+(:\d+)?(\/[^\s]*)?$/.test(i)) throw new PurchaseError("INVALID_POLICY", `Not a host/path item: ${i}`);
+  return { ...r, allowedProviders: [...new Set(hosts)], allowedItems: [...new Set(items)] };
 }
 
 export async function createTask(

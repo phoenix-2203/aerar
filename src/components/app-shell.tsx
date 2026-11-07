@@ -130,13 +130,16 @@ export function AppShell({ active, children }: { active?: "/report" | "/audit" |
   );
 }
 
-export function PublicShell({ active, children }: { active?: "/scenarios" | "/demo"; children: ReactNode }) {
+export function PublicShell({ active, children }: { active?: "/scenarios" | "/demo" | "/try"; children: ReactNode }) {
   return (
     <Frame
       nav={
         <>
+          <NavLink href="/try" active={active === "/try"}>
+            Try it
+          </NavLink>
           <NavLink href="/scenarios" active={active === "/scenarios"}>
-            Attack lab
+            <Short short="Attacks" long="Attack lab" />
           </NavLink>
           <NavLink href="/demo" active={active === "/demo"}>
             <Short short="Report" long="Live report" />
@@ -169,6 +172,7 @@ export function SiteFooter() {
           <span className="text-text-3">Built for Vibestarter Vibeathon 02 · testnet only</span>
         </div>
         <nav className="flex gap-5" aria-label="Footer">
+          <Link href="/try" className="hover:text-text">Try it</Link>
           <Link href="/scenarios" className="hover:text-text">Attack lab</Link>
           <Link href="/demo" className="hover:text-text">Live report</Link>
           <a href="https://github.com/phoenix-2203/aerar" className="hover:text-text">GitHub</a>

@@ -88,6 +88,10 @@ function makeShared() {
     runAll: createRateLimiter({ max: 3, windowMs: 10 * 60_000 }),
     // Runs share one sandbox and take turns; allow a short queue, refuse beyond it.
     scenarioGate: createGate(4),
+    /** New try-it sandboxes per IP. */
+    trySandboxes: createRateLimiter({ max: 6, windowMs: 60 * 60_000 }),
+    /** Purchases, approvals and rule changes in try-it sandboxes, per IP. */
+    tryActions: createRateLimiter({ max: 120, windowMs: 10 * 60_000 }),
     /** Page views of the public pages. */
     publicPages: createRateLimiter({ max: 60, windowMs: 60_000 }),
   };

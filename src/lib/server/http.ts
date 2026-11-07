@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import type { Purchase } from "@/lib/purchase/pipeline";
 import { PurchaseError } from "@/lib/purchase/pipeline";
-import { blockingReasons, explain } from "@/lib/copy/reasons";
+import { blockingReasons, explain, reasonKind } from "@/lib/copy/reasons";
 import { fmt$ } from "@/lib/money/usdc";
 
 export { explain };
@@ -53,7 +53,7 @@ export function summarise(p: Purchase): string {
     case "declined":
       return `Declined: ${why || p.error || "a rule check failed"}. Nothing was paid.`;
     case "awaiting_approval":
-      return `Needs approval: ${amount} is above the auto-approve limit, so a person decides. Nothing has been paid yet.`;
+      return `Needs approval: ${p.reasonCodes.filter((c) => reasonKind(c) === "hold").map(explain).join("; ") || `${amount} is above the auto-approve limit, so a person decides`}. Nothing has been paid yet.`;
     case "rejected":
       return `Declined by a person. Nothing was paid.`;
     case "reserved":

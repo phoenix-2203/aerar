@@ -7,7 +7,7 @@ AI agents now pay for APIs and data by themselves, a few cents at a time, over x
 Agents never hold a wallet. They ask Aerar to buy a resource for a task. Aerar reads the provider's real price, checks it against the task's rules, serves an identical earlier purchase for $0 instead of paying twice, pays exactly the approved quote, checks the USDC transfer onchain, and writes every step into a tamper-evident ledger. Your agents work the night shift; Aerar is the morning report.
 
 - **Demo video:** *coming before submission*
-- **Try it, no login or wallet:** [aerar.duckdns.org](https://aerar.duckdns.org) · [attack lab](https://aerar.duckdns.org/scenarios) (25 real-world scenarios, Run all in ~5 s) · [last night's report](https://aerar.duckdns.org/demo) (real Base Sepolia purchases, read-only)
+- **Try it yourself, no login or wallet:** [your own sandbox](https://aerar.duckdns.org/try) (set the rules, let a test agent shop, approve what waits for you, or connect your own agent over MCP) · [attack lab](https://aerar.duckdns.org/scenarios) (26 real-world scenarios, Run all in ~5 s) · [last night's report](https://aerar.duckdns.org/demo) (real Base Sepolia purchases, read-only)
 - **Connect an agent:** REST API or MCP server (`buy_resource`, `get_purchase`), [setup below](#connect-an-ai-agent-over-mcp)
 
 Built for [Vibestarter's Vibeathon 02](https://blog.vibestarter.xyz/vibeathon-02), theme *Night shift*.
@@ -136,6 +136,7 @@ An approved purchase is not a paid purchase, and a paid purchase is not proof th
 ## Features
 
 **Control**
+- **Shopping list per task** (new): pin the exact items a task may buy. A tricked agent buying the wrong thing from an *allowed* provider, under every limit, is held for a person with the reason in plain words. Limits alone can't catch this.
 - **Task-level budgets and policies**, versioned: old purchases keep pointing at the policy version they ran under.
 - **Quote-bound payments.** Aerar pays the provider's actual 402 quote, re-quoted just before paying.
 - **Approval queue** for anything above a task's threshold.
@@ -222,7 +223,7 @@ All 36 (every page, 375 and 1440 px, light and dark) are in [`docs/screenshots`]
 
 | | |
 |---|---|
-| **Landing:** an injected purchase stopped at step 1, and the same night paid by a plain wallet vs Aerar (computed by the real pipeline) ![Landing](docs/screenshots/landing-1440-dark.png) | **Attack lab:** 25 scenarios, each graded by its own checks, with what a plain wallet would have paid ![Attack lab](docs/screenshots/scenarios-1440-light.png) |
+| **Landing:** an injected purchase stopped at step 1, and the same night paid by a plain wallet vs Aerar (computed by the real pipeline) ![Landing](docs/screenshots/landing-1440-dark.png) | **Attack lab:** 26 scenarios, each graded by its own checks, with what a plain wallet would have paid ![Attack lab](docs/screenshots/scenarios-1440-light.png) |
 | **Morning report:** one-sentence lead, four tiles, approvals first ![Morning report](docs/screenshots/report-1440-dark.png) | **Purchase drawer:** every step, the rules that decided, and onchain proof ![Drawer](docs/screenshots/demo-drawer-1440-light.png) |
 | **Task:** budget, rules as sentences, history as a diff, kill switches ![Task](docs/screenshots/task-1440-light.png) | **Audit log:** recompute the hash chain on demand ![Audit](docs/screenshots/audit-1440-dark.png) |
 
@@ -233,7 +234,7 @@ On a phone: ![Report on a phone](docs/screenshots/report-375-light.png)
 | Check | Where | Result |
 |---|---|---|
 | 112 tests: policy engine, purchase pipeline (concurrent same-key purchases and races included), morning report, agent and operator routes, MCP, rate limits, the scenario sandbox, the plain-English reason copy and step tracker | `npm test` (Vitest) | all pass |
-| 25 real-world scenarios across six problems, each grading itself (62 checks), plus Aerar never paying more than a plain wallet in any of them | `npm run test:scenarios`, `npm run scenarios` | 25/25 |
+| 26 real-world scenarios across six problems, each grading itself (66 checks), plus Aerar never paying more than a plain wallet in any of them | `npm run test:scenarios`, `npm run scenarios` | 25/25 |
 | The same scenarios on the live server against real Postgres (sandbox database, never the ledger) | [attack lab](https://aerar.duckdns.org/scenarios) "Run all" | 25/25 |
 | One scripted night: a plain wallet pays $2.05 ($1.90 of it waste); Aerar pays $0.17 and lets $0.02 of waste through under the hourly cap | `npm run night-shift`, `night.test.ts` | pinned |
 | Real payments on Base Sepolia: paid, reused, held then approved, declined; each transfer checked onchain | [Live on testnet](#live-on-testnet) | done |
@@ -253,7 +254,8 @@ On a phone: ![Report on a phone](docs/screenshots/report-375-light.png)
 - **Procurement memory matches identical requests only.** It doesn't claim two different requests are "the same research".
 - **x402 `exact` payments settle immediately.** No escrow or refunds yet; the x402 SDK's `auth-capture` scheme is the natural next step.
 - **Demo endpoints return synthetic data**, labelled as such.
-- **Single organisation per deployment; one operator password.**
+- **Single organisation per deployment; one operator password.** The public [try-it sandbox](https://aerar.duckdns.org/try) gives each visitor a private workspace (24 h) that buys from simulated shops only.
+- **Aerar holds the paying key.** If the server were compromised, funds in its wallet are at risk; limits live in Aerar, not on-chain. Roadmap: move task limits into a Base smart account (spend permissions) so they hold even if Aerar doesn't.
 - **Not audited.**
 
 ## Architecture
@@ -306,7 +308,7 @@ npm run typecheck
 npm run lint
 
 # Demos (no money moves: in-memory sandbox, simulated providers)
-npm run scenarios            # narrated: all 25 scenarios (--fast, --problem duplicate, --only parallel-race, --list)
+npm run scenarios            # narrated: all 26 scenarios (--fast, --problem duplicate, --only parallel-race, --list)
 npm run night-shift          # one night, plain wallet vs Aerar, then the morning report
 npm run seed:sim             # local only: fill the dashboard with a simulated night
 npm run screenshots          # every page at 375/1440 px, light/dark, via your installed Chrome

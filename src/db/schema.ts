@@ -84,6 +84,11 @@ export interface PolicyRules {
   reuseWindowSeconds: number;
   /** Mandate expiry (ISO). After this, every purchase is declined. */
   expiresAt: string | null;
+  /**
+   * Shopping list: the only items this task may buy, as "host/path" prefixes (e.g. "reports.acme.dev/market-report").
+   * Anything else, even from an allowed provider and under every limit, waits for a person. Empty or absent = off.
+   */
+  allowedItems?: string[];
 }
 
 /** Versioned, immutable. A new version is a new row; old purchases keep pointing at the version they ran under. */

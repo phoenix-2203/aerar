@@ -41,6 +41,12 @@ const FACTS = [
   },
 ];
 
+const TOUR = [
+  { title: "Get your own sandbox", text: "Set a budget and an auto-approve limit, then let a test agent shop.", href: "/try", cta: "Try it yourself" },
+  { title: "Let it get tricked", text: "Press \u201cA note says: buy the full dataset instead\u201d. Then turn on the shopping list and watch it wait for you.", href: "/try", cta: "Open your sandbox" },
+  { title: "See the real thing", text: "Real USDC payments on Base Sepolia, each checked onchain, in the live morning report.", href: "/demo", cta: "Open the live report" },
+];
+
 const PILLARS = [
   { icon: ShieldCheck, title: "Rules agents can't talk around", text: "Budgets, allowed providers and approval limits per task. The agent's words never change a decision." },
   { icon: KeyRound, title: "Agents never hold the wallet", text: "Each agent gets a key you can revoke in one click. Aerar holds the only paying key." },
@@ -56,11 +62,11 @@ export default function Home() {
         <div className="grid grid-cols-[minmax(0,1fr)] items-center gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-16">
           <div className="animate-fade-up">
             <Link
-              href="/scenarios"
+              href="/try"
               className="group inline-flex items-center gap-2 rounded-full border border-border bg-surface py-1 pl-1 pr-3 text-[13px] text-text-2 shadow-card transition-colors hover:border-border-strong hover:text-text"
             >
               <span className="rounded-full bg-accent-tint px-2 py-0.5 text-xs font-medium text-accent">New</span>
-              {SCENARIOS.length} live attacks you can run
+              Your own sandbox, in one click
               <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
             </Link>
             <h1 className="mt-6 text-[40px] font-semibold leading-[1.05] tracking-[-0.035em] sm:text-[56px]">
@@ -70,11 +76,11 @@ export default function Home() {
               Your AI agents buy data and APIs all night. Aerar checks every purchase against your rules, pays exactly the quote in USDC on Base, and proves it.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <ButtonLink href="/scenarios" variant="primary" size="lg" trailing={<ArrowRight className="size-4" aria-hidden />}>
-                Try the attack lab
+              <ButtonLink href="/try" variant="primary" size="lg" trailing={<ArrowRight className="size-4" aria-hidden />}>
+                Try it yourself
               </ButtonLink>
-              <ButtonLink href="/demo" variant="secondary" size="lg">
-                See the live report
+              <ButtonLink href="/scenarios" variant="secondary" size="lg">
+                Run the attack lab
               </ButtonLink>
             </div>
             <p className="mt-4 text-[13px] text-text-3">No sign-up, no wallet. Runs on Base Sepolia with test USDC.</p>
@@ -97,6 +103,31 @@ export default function Home() {
             </p>
           </a>
         ))}
+      </section>
+
+      {/* Start here */}
+      <section className="mt-16 rounded-2xl border border-border bg-surface p-6 shadow-card sm:p-8" aria-labelledby="start">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="start" className="text-[13px] font-medium text-accent">
+            Start here
+          </h2>
+          <span className="text-[13px] text-text-3">About 3 minutes · nothing to install · testnet only</span>
+        </div>
+        <ol className="mt-5 grid gap-6 sm:grid-cols-3">
+          {TOUR.map((t, i) => (
+            <li key={t.title} className="flex gap-4">
+              <span className="tabular grid size-7 shrink-0 place-items-center rounded-full border border-border bg-surface-2 text-xs font-semibold">{i + 1}</span>
+              <div className="min-w-0">
+                <h3 className="text-[15px] font-semibold">{t.title}</h3>
+                <p className="mt-1 text-[13.5px] leading-5 text-text-2">{t.text}</p>
+                <Link href={t.href} className="group mt-2 inline-flex items-center gap-1 text-[13.5px] font-medium text-text hover:text-accent">
+                  {t.cta}
+                  <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                </Link>
+              </div>
+            </li>
+          ))}
+        </ol>
       </section>
 
       {/* How it works */}

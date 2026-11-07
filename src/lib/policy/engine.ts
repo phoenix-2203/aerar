@@ -17,6 +17,8 @@ export interface PolicyInput {
   policy: { version: number; rules: PolicyRules };
   agent: { revoked: boolean; assignedToTask: boolean };
   host: string;
+  /** The full URL being bought (normalised). Used by the shopping list. */
+  url?: string;
   quote: {
     scheme: string;
     network: string;
@@ -51,6 +53,21 @@ export function hostAllowed(host: string, allowed: string[]): boolean {
 }
 
 export type AccessInput = Pick<PolicyInput, "now" | "task" | "policy" | "agent" | "host">;
+
+/** Is this URL on the task's shopping list? "host/path" prefixes; an empty or absent list means no list. */
+export function onShoppingList(url: string | undefined, items: string[] | undefined): boolean {
+  const list = (items ?? []).map((i) => i.trim().toLowerCase().replace(/^https?:\/\//, "")).filter(Boolean);
+  if (!list.length) return true;
+  if (!url) return false;
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return false;
+  }
+  const target = `${u.host}${u.pathname}`.toLowerCase();
+  return list.some((item) => target === item || target.startsWith(item.endsWith("/") ? item : `${item}/`) || target === item.replace(/\/$/, ""));
+}
 
 /**
  * Checks that don't depend on a price: who is asking, for which task, from which host.
@@ -106,6 +123,10 @@ export function evaluatePolicy(input: PolicyInput): PolicyResult {
     declines.push(["RATE_LIMITED", `Agent already made ${input.agentPurchasesLastHour} purchases this hour.`]);
 
   // Human in the loop
+  if (rules.allowedItems?.length) {
+    if (onShoppingList(input.url, rules.allowedItems)) passes.push("ON_SHOPPING_LIST");
+    else needsApproval.push(["NOT_ON_SHOPPING_LIST", "This item isn't on the task's shopping list."]);
+  }
   if (quote.amount > BigInt(rules.approvalAbove))
     needsApproval.push(["ABOVE_APPROVAL_THRESHOLD", "Price is above the auto-approve threshold."]);
   else passes.push("BELOW_APPROVAL_THRESHOLD");

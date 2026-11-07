@@ -10,6 +10,7 @@ import { Card } from "@/components/card";
 import { EmptyState } from "@/components/empty-state";
 import { StatTile } from "@/components/stat-tile";
 import { PurchaseRow } from "@/components/purchase-row";
+import { explain, reasonKind } from "@/lib/copy/reasons";
 import { dateTime, shortDate, time } from "@/lib/format";
 import { lead, type morningReport, type windowFor } from "@/lib/server/report";
 
@@ -114,7 +115,7 @@ export function ReportView({ r, w, mode, q }: { r: Report; w: Window; mode: View
               <ApprovalCard
                 key={p.id}
                 readOnly={mode.readOnly}
-                item={{ id: p.id, amountFormatted: p.amountFormatted, host: p.host, agentName: p.agentName, taskTitle: p.taskTitle, purpose: p.purpose, detailsHref: reportHref(mode, q, { purchase: p.id }) }}
+                item={{ id: p.id, amountFormatted: p.amountFormatted, host: p.host, agentName: p.agentName, taskTitle: p.taskTitle, purpose: p.purpose, why: holdWhy(p.reasonCodes), detailsHref: reportHref(mode, q, { purchase: p.id }) }}
               />
             ))
           )}
@@ -228,6 +229,8 @@ export function ReportView({ r, w, mode, q }: { r: Report; w: Window; mode: View
     </div>
   );
 }
+
+const holdWhy = (codes: string[]) => codes.filter((c) => reasonKind(c) === "hold").map(explain).join("; ") || undefined;
 
 const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`;
 

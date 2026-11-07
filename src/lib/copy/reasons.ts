@@ -43,6 +43,8 @@ export const REASONS: Record<string, Reason> = {
   RATE_LIMITED: { kind: "fail", text: "the agent hit its hourly purchase limit" },
   BELOW_APPROVAL_THRESHOLD: { kind: "pass", text: "the price is below the auto-approve limit" },
   ABOVE_APPROVAL_THRESHOLD: { kind: "hold", text: "the price is above the auto-approve limit, so a person decides" },
+  ON_SHOPPING_LIST: { kind: "pass", text: "the item is on the task's shopping list" },
+  NOT_ON_SHOPPING_LIST: { kind: "hold", text: "the item isn't on the task's shopping list, so a person decides" },
   APPROVED_BY_HUMAN: { kind: "pass", text: "a person approved it" },
 
   // Payment.

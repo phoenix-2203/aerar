@@ -79,7 +79,14 @@ export function purchaseSteps(p: PurchaseLike): Step[] {
   // 4. Rules (policy, with the human in the loop)
   if (policyFails.length) add("policy", "failed", cap(policyFails.map(explain).join("; ")) + ".");
   else if (p.status === "rejected") add("policy", "failed", "Held for a person, who declined it.");
-  else if (p.status === "awaiting_approval") add("policy", "held", `${price} is above the auto-approve limit. Waiting for a person.`);
+  else if (p.status === "awaiting_approval")
+    add(
+      "policy",
+      "held",
+      codes.includes("NOT_ON_SHOPPING_LIST") && !codes.includes("ABOVE_APPROVAL_THRESHOLD")
+        ? "This item isn't on the task's shopping list. Waiting for a person."
+        : `${price} is above the auto-approve limit. Waiting for a person.`,
+    );
   else if (codes.includes("APPROVED_BY_HUMAN")) add("policy", "passed", `Above the auto-approve limit; approved by ${p.approvedBy ?? "a person"}.`);
   else add("policy", "passed", "Within every rule on the task.");
 

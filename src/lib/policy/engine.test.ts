@@ -118,3 +118,14 @@ describe("evaluatePolicy", () => {
     expect(r.decision).toBe("decline");
   });
 });
+
+describe("shopping list", () => {
+  it("holds an item from an allowed provider that isn't on the list, even under every limit", async () => {
+    const { onShoppingList } = await import("./engine");
+    expect(onShoppingList("https://reports.acme.dev/market-report?topic=fx", ["reports.acme.dev/market-report"])).toBe(true);
+    expect(onShoppingList("https://reports.acme.dev/full-dataset", ["reports.acme.dev/market-report"])).toBe(false);
+    expect(onShoppingList("https://reports.acme.dev/market-report-v2", ["reports.acme.dev/market-report"])).toBe(false);
+    expect(onShoppingList("https://reports.acme.dev/anything", [])).toBe(true);
+    expect(onShoppingList("https://reports.acme.dev/reports/q3", ["reports.acme.dev/reports/"])).toBe(true);
+  });
+});
