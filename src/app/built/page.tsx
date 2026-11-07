@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 const NUMBERS: [string, string][] = [
   ["160+", "commits in the build week"],
   ["155", "automated tests (137 app + 18 contract)"],
-  ["26", "attack scenarios run through the real pipeline"],
+  ["29", "attack scenarios run through the real pipeline"],
   ["2", "contracts on Base Sepolia: Vault factory, Morning Seal"],
   ["14k", "lines of TypeScript"],
   ["0", "AI calls in the money path"],
@@ -20,7 +20,7 @@ const STEPS: [string, string, string][] = [
   ["Research", "Claude", "Read x402, Circle's USDC v2.2 and the x402 facilitator source to find that a contract wallet can pay over x402 (ERC-1271). Wrote a read-only check; it passed on Base Sepolia."],
   ["Design", "Claude + Figma", "Logo explored across 20+ directions to the ledger mark; tokens, both themes and the night-ledger look designed in Figma through Claude, then built in Tailwind."],
   ["Build", "Claude Code + Cowork", "The pipeline, rules engine, memory, receipts, Vault, Morning Seal, approvals in chat, teams and the connector, each landed as a small tested commit."],
-  ["Attack", "Claude", "26 scenarios written from real incidents (prompt injection, swapped payees, loops), run against the real pipeline on every build."],
+  ["Attack", "Claude", "29 scenarios written from real incidents (prompt injection, swapped payees, loops), run against the real pipeline on every build."],
   ["Verify", "Claude", "Every flow tested end to end on a local copy of Base Sepolia (anvil at chain 84532 with a USDC v2.2 stand-in), then in a real browser against the live site."],
   ["You decide", "People", "Product calls (what to build, what to cut, the look) were made by the builder; Claude proposed, built and checked."],
 ];

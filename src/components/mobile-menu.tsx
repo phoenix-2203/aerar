@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 const LINKS: [string, string, string][] = [
   ["/try", "Try it", "your own sandbox, no wallet"],
   ["/vault", "Vault", "your wallet, on-chain limits"],
-  ["/scenarios", "Attack lab", "26 attacks through the real pipeline"],
+  ["/scenarios", "Attack lab", "29 attacks through the real pipeline"],
   ["/demo", "Live report", "real payments on Base Sepolia"],
   ["/verify", "Verify a receipt", "check one in your browser"],
   ["/builders", "For builders", "MCP, REST, pricing"],

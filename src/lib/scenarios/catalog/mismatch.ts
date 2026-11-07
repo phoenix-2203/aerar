@@ -132,4 +132,32 @@ export const mismatch: Scenario[] = [
         },
       ),
   },
+  {
+    id: "price-surge",
+    problem: "mismatch",
+    title: "A provider quietly raises its price",
+    story:
+      "The agent bought this week's report for $0.01 yesterday. Today the same item from the same shop asks $0.05. It's still under every limit, so nothing would look wrong.",
+    expected: "Remember what the item cost. A price far above the last one waits for a person, with both prices in plain words.",
+    run: () =>
+      play(
+        {
+          offers: { "https://data.example.com/weekly?w=45": { amount: 10_000n }, "https://data.example.com/weekly?w=46": { amount: 50_000n } },
+          rules: { approvalAbove: "100000" },
+        },
+        async (s, log, check) => {
+          log('Agent: "Buy this week\'s report" (yesterday, $0.01)');
+          const first = await s.buy("researcher", "https://data.example.com/weekly?w=45");
+          log(first);
+          log('Agent: "Buy this week\'s report" (today the shop asks $0.05)');
+          const second = await s.buy("researcher", "https://data.example.com/weekly?w=46");
+          log(second);
+          check.that(first.status === "delivered", "the usual price is paid");
+          check.that(second.status === "awaiting_approval", "the 5x price waits for a person");
+          check.that(second.reasonCodes.includes("PRICE_JUMPED"), "reason: much more than last time");
+          check.that(s.rail.calls.pay.length === 1, "the surged price isn't paid automatically");
+          return `${usd(10_000n)} paid at the usual price. The ${usd(50_000n)} quote waits for a person instead of being paid silently.`;
+        },
+      ),
+  },
 ];

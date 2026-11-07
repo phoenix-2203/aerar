@@ -16,6 +16,7 @@
     "test:scenarios": "vitest run src/lib/scenarios",
     "night-shift": "node --import tsx scripts/night-shift.ts",
     "screenshots": "node --env-file-if-exists=.env --import tsx scripts/screenshots.ts",
+    "smoke": "node scripts/smoke-live.mjs",
     "seed:sim": "node --env-file-if-exists=.env --import tsx scripts/seed-sim.ts"
   },
   "dependencies": {
