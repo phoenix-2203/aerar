@@ -23,6 +23,11 @@ Written 7 Nov 2026. Two kinds of evidence, kept apart:
 | **Crossmint / Nevermined** (prior knowledge) | Agent wallets and checkout / agent-to-agent payments and metering. | Wallet-level controls / pricing plans. | Their platforms. | Built for paying, not for governing what agents buy. |
 | **ACAN** (our earlier build, read in this project) | Stellar contract that enforces agent spending on-chain. | On-chain limits. | Soroban contract. | No procurement memory, no x402, no approvals in chat. Aerar now has the on-chain part too (the Vault). |
 
+## Added since (7 Nov 2026)
+
+- **Mercury Agent Controls**: virtual cards for AI agents from a business bank account (seen on mercury.com, reported by Fast Company). Card rails, not x402; not examined further.
+- **The gap none of them close: purpose.** Every product above limits *how much*. Aerar's IntentLock checks *what* is bought against the task's signed purpose, signed mandates detect rules changed after authorisation, and delivery checks catch paid-but-undelivered results and put the shop on hold.
+
 ## Big problems most of them leave open
 
 1. **"Did we already buy this?"** Every wallet pays again for the same data. → Aerar's procurement memory, across all agents.
@@ -53,6 +58,5 @@ Written 7 Nov 2026. Two kinds of evidence, kept apart:
 
 - **Morning Seal**: attest each night's ledger root on Base (EAS), so the whole ledger, not just single receipts, is
   provable later.
-- **Outcome checks**: a paid response that is empty or malformed counts against the provider and can trigger a dispute
-  flow once x402 has escrow (`auth-capture`).
+- **Outcome checks**: done (delivery checks, shop on hold). Escrow still needs x402 `auth-capture`.
 - **Mainnet** and audits.

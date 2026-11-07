@@ -22,7 +22,7 @@ Built for [Vibestarter's Vibeathon 02](https://blog.vibestarter.xyz/vibeathon-02
 
 ## Contents
 
-[The problem](#the-problem) · [Why nothing fixes it today](#why-nothing-fixes-it-today) · [What Aerar does](#what-aerar-does) · [A night shift, step by step](#a-night-shift-step-by-step) · [When money moves](#when-money-moves) · [Features](#features) · [Use cases](#use-cases) · [How it compares](#how-it-compares) · [Why Base and x402](#why-base-and-x402) · [The market](#the-market) · [Live on testnet](#live-on-testnet) · [What has been verified](#what-has-been-verified) · [Trust model and limits](#trust-model-and-limits) · [Architecture](#architecture) · [Run it](#run-it) · [APIs](#agent-api) · [Roadmap](#roadmap)
+[The problem](#the-problem) · [Why nothing fixes it today](#why-nothing-fixes-it-today) · [What Aerar does](#what-aerar-does) · [A night shift, step by step](#a-night-shift-step-by-step) · [When money moves](#when-money-moves) · [Features](#features) · [Use cases](#use-cases) · [How it compares](#how-it-compares) · [Why Base and x402](#why-base-and-x402) · [The market](#the-market) · [Live on testnet](#live-on-testnet) · [What has been verified](#what-has-been-verified) · [Trust model and limits](#trust-model-and-limits) · [Architecture](#architecture) · [Run it](#run-it) · [SDK](#typescript-sdk) · [APIs](#agent-api) · [Roadmap](#roadmap)
 
 ---
 
@@ -35,12 +35,13 @@ That is where it goes wrong:
 | What happens | Real example | Source |
 |---|---|---|
 | **An agent is talked into paying.** | On 4 May 2026, an attacker used a Morse-coded prompt to get Grok's reply to instruct Bankrbot, an agent on Base, to send 3 billion DRB tokens, and it did. MetaMask's security team called it the first documented prompt injection against an agent with real financial capabilities (about $204k; the attacker later returned it). | [OECD AI incident monitor](https://oecd.ai/en/incidents/2026-05-04-4a73), [MetaMask, Jun 2026](https://metamask.com/news/crypto-security-report-may-2026) |
+| **An agent buys the wrong thing, within budget.** | The Bankrbot transfer above passed every limit the agent had: a cap answers "can it afford this?", never "is this what it was asked to do?". Every injected purchase that stays under the cap goes through. | (same incidents) |
 | **The same thing is paid for twice.** | Researchers found four classes of x402 flaws in official SDKs and a production deployment, including a **duplicate-settlement race**, with resource leakage up to 100%. | [arXiv 2605.30998, May 2026](https://arxiv.org/abs/2605.30998) |
 | **Payments and services don't line up.** | "Five Attacks on x402", tested on Base Sepolia, live endpoints and three SDKs, shows attacks on payment binding, replay protection and authorisation that end in *paid but denied* outcomes. | [arXiv 2605.11781, May 2026](https://arxiv.org/abs/2605.11781) |
 | **The numbers can't be trusted.** | Artemis estimates **about half of x402 transactions are artificial** (self-dealing and wash trading); real daily volume is closer to $28k than the headline figures. | [Forkast, Jul 2026](https://forkast.news/half-of-x402s-transaction-volume-is-artificial-the-infrastructure-layer-keeps-building-anyway/) |
 | **People don't trust it yet.** | In a survey of 1,007 US consumers, **5%** would trust an AI platform to process an agent's payment and **41%** trust none of the options; 29% are very comfortable with agent purchases under $20, falling to **6%** at $500+. | [Wildfire Systems, Oct 2026](https://www.prnewswire.com/news-releases/survey-agentic-commerce-has-a-payment-trust-problem-302913466.html) |
 
-The question a team asks in the morning isn't "did the agent stay under its limit?" It's "what did it buy, for which job, did we already have it, and did we get what we paid for?" A spending cap can't answer that.
+The question a team asks in the morning isn't "did the agent stay under its limit?" It's "what did it buy, for which job, was that what the job needed, did we already have it, and did we get what we paid for?" A spending cap can't answer any of that.
 
 ## Why nothing fixes it today
 
@@ -50,7 +51,10 @@ The question a team asks in the morning isn't "did the agent stay under its limi
 | **AWS AgentCore Payments** (preview) | Per-session `maxSpendAmount` with expiry ([AWS docs](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/payments-concepts.md)) | Task and merchant scoping and receipts are left to the builder ([analysis](https://dev.to/aicryptosystems/amazon-bedrock-agentcore-payments-the-spending-limit-is-the-product-obh)) |
 | **x402 payment-identifier extension** | Stops a *retry of the same payment* being charged twice ([x402 docs](https://docs.x402.org/extensions/payment-identifier.md)) | Server-side and opt-in, with a short window; it doesn't stop two agents buying the same resource |
 | **Google AP2** | Signed intent and cart mandates: proof a purchase was authorised ([Everest Group](https://www.everestgrp.com/googles-agent-payments-protocol-ap2-a-new-chapter-in-agentic-commerce-blog/)) | Proves permission, not what was delivered or whether it was needed |
+| **Mercury Agent Controls** (new, Nov 2026) | Virtual cards for AI agents from a business bank account ([Fast Company](https://www.fastcompany.com/91574324/mercury-launches-virtual-credit-cards-ai-agents)) | Card rails, not x402; card-level limits. Not checked further, so not compared below |
 | **Budget and receipt tools** (Locus, PayAI, x402-cfo and others) | Budgets, approvals, receipts, dashboards ([Locus](https://www.ycombinator.com/launches/Oj6-locus-payment-infrastructure-for-ai-agents), [PayAI](https://payai-sh.pages.dev/)) | We found no buyer-side reuse of identical purchases, and no onchain check that the transfer matched the approved quote, in their public docs |
+
+**The common gap:** every one of them limits *how much* an agent may spend. None of them checks *what* it is buying against what it was asked to do, proves the rules weren't changed afterwards, or notices when a paid result is junk. That is what Aerar adds.
 
 ## What Aerar does
 
@@ -71,7 +75,8 @@ In order, for every request:
 4. **IntentLock, then the task's versioned policy.** Does the item (its URL and the provider's own description) serve what the task was signed for? Off-purpose is refused; unplaceable waits for a person. Then budget, per-purchase limit, approval threshold, hourly rate, expiry, and network/token/payee checks. Plain code; no AI decides anything about money.
 5. **Reserve under a row lock**, so parallel agents can't overspend.
 6. **Pay exactly the approved quote**, re-quoting first: if the price or payee changed, nothing is paid.
-7. **Evidence**: response hash, transaction hash, an onchain check that the USDC transfer really happened, and a hash-chained audit log.
+7. **Delivered?** The result is checked: empty, broken or an error message counts as *paid, not delivered*. It is never reused, it counts against the shop, and the shop goes on hold until a person clears it.
+8. **Evidence**: response hash, transaction hash, an onchain check that the USDC transfer really happened, a signed receipt, and a hash-chained audit log sealed to Base each morning.
 
 ## A night shift, step by step
 
@@ -92,14 +97,18 @@ Every step has its reasons in plain words, its policy version, and (for payments
 
 <p align="center"><img src="docs/diagrams/purchase-states.png" width="640" alt="Purchase states: declined, reused, free, awaiting approval, reserved, paying, delivered, payment failed, unknown"></p>
 
-An approved purchase is not a paid purchase, and a paid purchase is not proof the data was useful. Aerar records each step separately. `unknown` keeps the budget reserved until it is reconciled, rather than guessing.
+An approved purchase is not a paid purchase, and a paid purchase is not proof the data was useful: a paid result that fails the delivery check is `disputed` (*paid, not delivered*). Aerar records each step separately. `unknown` keeps the budget reserved until it is reconciled, rather than guessing.
 
 ## When money moves
 
 | Situation | What happens |
 |---|---|
 | Agent not on the task, task paused or expired, or provider not allowed | Declined; the provider is never contacted |
-| Identical request within the reuse window | Earlier result served; **$0** |
+| Rules, purpose or budget changed outside Aerar | `MANDATE_INVALID`: nothing is bought for the task until a person signs a new version |
+| Item doesn't serve the task's signed purpose, even within budget | `INTENT_MISMATCH`: declined; a person can't approve it, only widen the mandate |
+| Aerar can't tell what the item is | `INTENT_UNCERTAIN`: held for a person (or refused, if the mandate says so) |
+| Shop is on hold after taking a payment without delivering | Declined; the shop is never contacted |
+| Identical request within the reuse window | Earlier result served; **$0**. Set freshness to "never reuse" to buy every time |
 | Same idempotency key again, even concurrently | The original purchase comes back; never paid twice |
 | Quote above the per-purchase limit, or over the remaining budget | Declined |
 | Quote above the approval threshold | Held for a person; budget not touched |
@@ -108,6 +117,7 @@ An approved purchase is not a paid purchase, and a paid purchase is not proof th
 | Price or payee changed between quote and payment | Nothing paid |
 | Operator approves a held purchase | Hard rules re-checked under the *current* policy, price re-quoted, then paid. Approval can't override a limit |
 | Network failure after payment was sent | `unknown`: budget stays reserved until reconciled |
+| Paid, but the result is empty, broken or an error | `disputed` (*paid, not delivered*): never reused, counts against the shop, shop on hold. x402 can't refund it; Aerar makes sure it can't happen twice |
 
 ## Features
 
@@ -173,6 +183,9 @@ From public pages read on 6–7 Nov 2026 ([notes](docs/competitors.md)). "Not de
 | | **Aerar** | Nevermined | Coinbase CDP wallets | Google AP2 | Payman |
 |---|---|---|---|---|---|
 | Spending limits | ✅ per task and provider | ✅ amount, count, expiry | ✅ wallet policies | Budget in an open mandate | ✅ policy layer |
+| Checks *what* is bought against the task's purpose (not just how much) | ✅ IntentLock | ❌ | ❌ | Intent described in the mandate, not enforced per item | Not described |
+| Detects rules changed after they were authorised | ✅ signed mandates, every purchase bound to one | Not described | Not described | ✅ signed mandates | Not described |
+| Catches "paid but nothing delivered" and stops repeat losses | ✅ delivery checks, shop on hold | Not described | ❌ | ❌ | Not described |
 | Limits enforced on-chain, in a wallet the user owns | ✅ Aerar Vault | ❌ their service | Their signing service | ❌ protocol only | ❌ bank-side |
 | Human approval above a threshold, in chat | ✅ Slack / Discord / Telegram | Not described | Not described | Not described | ✅ one-time code |
 | Never pays twice (memory across agents) | ✅ | Not described | ❌ | ❌ | Not described |
@@ -180,8 +193,9 @@ From public pages read on 6–7 Nov 2026 ([notes](docs/competitors.md)). "Not de
 | Agents hiring agents (budgets roll up) | ✅ | ❌ | ❌ | Agent roles only | ❌ |
 | Receipts anyone can verify | ✅ signed, checked on-chain | Per-purchase record | n/a (it is the wallet) | Signed mandate trail | Audit trail |
 | Works on x402 | ✅ | ✅ | ✅ | Demo | ❌ bank rails |
+| Developer SDK | ✅ `@aerar/sdk` (TypeScript), REST, MCP | ✅ | ✅ | SDK samples | ✅ |
 
-**What we learned from them (not copied):** spend mandates with expiry (Nevermined, AP2), payee allowlists (Coinbase), signed authorisation trails (AP2), a kill switch (Payman). What none of them do, as far as we can find, is treat a purchase as something to *account for*: tied to a task, never paid twice, price-checked, approved where people are, and enforced by a contract the user owns.
+**What we learned from them (not copied):** spend mandates with expiry (Nevermined, AP2), payee allowlists (Coinbase), signed authorisation trails (AP2), a kill switch (Payman). What none of them do, as far as we can find, is treat a purchase as something to *account for*: checked against what the task is for, tied to a mandate nobody can quietly change, never paid twice, price-checked, checked for delivery, approved where people are, and enforced by a contract the user owns.
 
 ## Why Base and x402
 
@@ -419,8 +433,9 @@ Log in with `POST /api/auth/login {"password": "…"}` (sets an httpOnly, SameSi
 ## Roadmap
 
 - **Mainnet** after an audit of the Vault and Seal contracts.
-- **Authorise-then-capture** with x402's `auth-capture` scheme, so a failed delivery isn't charged.
-- **Outcome checks**: an empty or malformed paid response counts against the provider's score and opens a dispute.
+- **Escrow** with x402's `auth-capture` scheme, so a failed delivery isn't charged at all (today it is caught, recorded and stops repeat losses, but can't be refunded).
+- **Smarter IntentLock**: a provider catalogue with declared categories, and optional schema checks per item (e.g. "a report must have a summary").
+- **SDK on npm** and a Python SDK.
 - **"Was it worth it?"**: mark each purchase used or unused when a task closes; useful spend per provider.
 - **Organisations with many operators** beyond wallet teams.
 
