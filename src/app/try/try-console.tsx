@@ -103,6 +103,7 @@ export function TryConsole({
               {state.task.spentFormatted} of {state.task.budgetFormatted} · {state.task.leftFormatted} left
             </span>
           </div>
+          {state.task.forecast && <p className="mt-1.5 font-mono text-[11.5px] text-text-3">{state.task.forecast}</p>}
         </div>
         <form action={resetSandbox}>
           <Button type="submit" variant="ghost" size="sm" icon={<RotateCcw className="size-3.5" aria-hidden />}>

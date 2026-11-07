@@ -200,6 +200,7 @@ export function ReportView({ r, w, mode, q }: { r: Report; w: Window; mode: View
                   </div>
                 </div>
                 <BudgetMeter budget={task.money.budget} spent={task.money.spent} reserved={task.money.reserved} formatted={task.money.formatted} compact />
+                {task.forecast && <p className="mt-2 font-mono text-[11.5px] text-text-3">{task.forecast}</p>}
               </TaskBox>
             ))}
             {r.tasks.length === 0 && <p className="text-sm text-text-2">No tasks yet.</p>}

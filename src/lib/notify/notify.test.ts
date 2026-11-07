@@ -64,3 +64,27 @@ describe("approval links", () => {
     await expect(notifyApproval(w.db, { orgId: w.org.id, id: "pur_x", url: "https://a.b/c", host: "a.b", purpose: "x", reasonCodes: [], quoteAmount: 1n } as never)).resolves.toBeUndefined();
   });
 });
+
+describe("budget warning", () => {
+  it("posts once when a task passes 80% of its budget", async () => {
+    const { notifyBudget } = await import("./notify");
+    const w = await world({ budget: 100_000n, rules: { approvalAbove: "100000", maxPerPurchase: "100000" } });
+    await w.db.update(organisations).set({ notifyUrl: "https://discord.com/api/webhooks/1/abc" }).where(eq(organisations.id, w.org.id));
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
+      if (String(url).startsWith("https://discord.com/")) calls.push(String(init.body));
+      return new Response(null, { status: 204 });
+    });
+    const rail = fakeRail({ "/a": { amount: 50_000n }, "/b": { amount: 35_000n } });
+    const buy = (path: string, k: string) => submitPurchase({ db: w.db, rail }, w.agent.id, { taskId: w.task.id, url: `https://data.example.com${path}`, method: "GET", body: null, purpose: "x", idempotencyKey: k });
+    await buy("/a", "b1");
+    await notifyBudget(w.db, w.task.id);
+    expect(calls.filter((c) => c.includes("of its budget"))).toHaveLength(0); // 50%
+    await buy("/b", "b2");
+    await notifyBudget(w.db, w.task.id);
+    await notifyBudget(w.db, w.task.id);
+    const warned = calls.filter((c) => c.includes("of its budget"));
+    expect(warned.length).toBe(1);
+    expect(warned[0]).toContain("85%");
+  });
+});

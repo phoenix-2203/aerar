@@ -509,6 +509,7 @@ export async function execute(ctx: Ctx, purchaseId: string): Promise<Purchase> {
     return row;
   });
 
+  void import("@/lib/notify/notify").then((n) => n.notifyBudget(db, p.taskId));
   const check = await rail.verifyOnchain(result.txHash, { payTo: approved.payTo, amount: paid });
   const [final] = await db
     .update(purchases)

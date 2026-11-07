@@ -7,6 +7,8 @@ import type { Db } from "@/db";
 import { agents, policies, purchases, taskAgents, tasks, type PolicyRules } from "@/db/schema";
 import { verifyChain } from "@/lib/audit/log";
 import { fmt$ } from "@/lib/money/usdc";
+import { forecastLine } from "@/lib/forecast/burn";
+import { burnOf } from "@/lib/server/queries";
 import { PurchaseError, type Ctx } from "@/lib/purchase/pipeline";
 import { getContext, getDbOnly } from "@/lib/server/context";
 import { createAgent, createOrg, createTask } from "@/lib/workspace";
@@ -119,6 +121,7 @@ export async function loadTryState(db: Db, s: TrySession) {
       spentFormatted: fmt$(task.spent),
       leftFormatted: fmt$(task.budget - task.spent - task.reserved),
       policyVersion: task.currentPolicyVersion,
+      forecast: task.status === "active" ? forecastLine(burnOf(task, rows.filter((p) => p.taskId === task.id)), fmt$, new Date()) : null,
     },
     rules: policy.rules,
     agent: { id: agent.id, name: agent.name, revoked: !!agent.revokedAt, keyPrefix: agent.apiKeyPrefix },

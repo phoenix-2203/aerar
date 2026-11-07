@@ -2,9 +2,12 @@
 // it to the workspace's channel with Approve / Decline links. Each link is signed, names one purchase, and expires;
 // opening it shows the purchase and asks for one more click, so link previews can never approve anything.
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Db } from "@/db";
-import { organisations, purchases } from "@/db/schema";
+import { auditEvents, organisations, purchases, tasks } from "@/db/schema";
+import { audit } from "@/lib/audit/log";
+import { forecastLine } from "@/lib/forecast/burn";
+import { burnOf } from "@/lib/server/queries";
 import { explain, reasonKind } from "@/lib/copy/reasons";
 import { fmt$ } from "@/lib/money/usdc";
 import { publicUrl } from "@/lib/server/http";
@@ -113,4 +116,35 @@ export async function sendTest(url: string): Promise<void> {
   const kind = notifyKind(url);
   if (!kind) throw new Error("Paste a Slack or Discord webhook URL, or a Telegram sendMessage URL with chat_id.");
   await post(kind, url, { title: "Aerar is connected", lines: ["Approval requests for this workspace will appear here, with a link to approve or decline."], link: `${publicUrl()}/verify` });
+}
+
+/**
+ * Budget warning: once a task has used 80% of its budget, tell the channel once, with the burn forecast, before it
+ * runs out in the middle of the night. Never throws.
+ */
+export async function notifyBudget(db: Db, taskId: string): Promise<void> {
+  try {
+    const [t] = await db.select().from(tasks).where(eq(tasks.id, taskId));
+    if (!t || t.budget <= 0n || (t.spent + t.reserved) * 100n < t.budget * 80n) return;
+    const url = await urlFor(db, t.orgId);
+    // Claim the warning under the task's row lock, so two purchases settling together can't both send it.
+    const first = await db.transaction(async (tx) => {
+      const x = tx as unknown as Db;
+      await x.select({ id: tasks.id }).from(tasks).where(eq(tasks.id, t.id)).for("update");
+      const [already] = await x.select({ seq: auditEvents.seq }).from(auditEvents).where(and(eq(auditEvents.subjectId, t.id), eq(auditEvents.kind, "budget.alerted"))).limit(1);
+      if (already) return false;
+      await audit(x, { orgId: t.orgId, actor: "system", kind: "budget.alerted", subjectId: t.id, data: { usedPct: Number(((t.spent + t.reserved) * 100n) / t.budget), notified: !!url } });
+      return true;
+    });
+    if (!first || !url) return;
+    const ps = await db.select().from(purchases).where(eq(purchases.taskId, t.id));
+    const line = forecastLine(burnOf(t, ps), fmt$, new Date());
+    await post(notifyKind(url)!, url, {
+      title: `"${t.title}" has used ${Number(((t.spent + t.reserved) * 100n) / t.budget)}% of its budget`,
+      lines: [`${fmt$(t.spent + t.reserved)} of ${fmt$(t.budget)} used.`, line ?? "", "Raise the budget, pause the task, or let it run out: nothing is paid past the budget either way."].filter(Boolean),
+      link: `${publicUrl()}/report`,
+    });
+  } catch (e) {
+    console.warn(`[notify] budget warning for ${taskId} not delivered: ${(e as Error).message}`);
+  }
 }

@@ -1,4 +1,5 @@
 // Read models for the operator API and dashboard.
+import { forecast, forecastLine } from "@/lib/forecast/burn";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { Db } from "@/db";
 import { agents, policies, purchases, taskAgents, tasks } from "@/db/schema";
@@ -35,8 +36,14 @@ export async function listTasks(db: Db, orgId: string) {
       },
       avoidedByReuse: avoided,
       avoidedByReuseFormatted: fmt$(avoided),
+      forecast: t.status === "active" ? forecastLine(burnOf(t, mine), fmt$, new Date()) : null,
     };
   });
+}
+
+/** Burn forecast for one task from its delivered purchases. */
+export function burnOf(t: { budget: bigint; spent: bigint; reserved: bigint }, ps: { status: string; paidAt: Date | null; paidAmount: bigint }[]) {
+  return forecast(t, ps.filter((p) => p.status === "delivered" && p.paidAt).map((p) => ({ at: p.paidAt!, amount: p.paidAmount })), new Date());
 }
 
 export async function getTaskDetail(db: Db, orgId: string, taskId: string) {
