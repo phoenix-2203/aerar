@@ -14,10 +14,12 @@ type Row = {
   intent?: { outcome: string; itemCategories: string[] } | null;
 };
 
-export type SecurityKind = "off_purpose" | "unplaced" | "untrusted_shop" | "payee_swap" | "quote_changed" | "price_jump" | "mandate" | "memory" | "limits" | "revoked";
+export type SecurityKind = "undelivered" | "on_hold" | "off_purpose" | "unplaced" | "untrusted_shop" | "payee_swap" | "quote_changed" | "price_jump" | "mandate" | "memory" | "limits" | "revoked";
 
 const KINDS: { kind: SecurityKind; codes: string[]; label: string }[] = [
   { kind: "mandate", codes: ["MANDATE_INVALID"], label: "Rules changed outside Aerar" },
+  { kind: "undelivered", codes: ["NOT_DELIVERED"], label: "Paid, not delivered" },
+  { kind: "on_hold", codes: ["PROVIDER_ON_HOLD"], label: "Shop on hold" },
   { kind: "off_purpose", codes: ["INTENT_MISMATCH", "INTENT_UNCERTAIN_REFUSED"], label: "Off-purpose purchase" },
   { kind: "payee_swap", codes: ["PAYEE_CHANGED"], label: "Shop's wallet changed" },
   { kind: "untrusted_shop", codes: ["PROVIDER_NOT_ALLOWED", "PROVIDER_BLOCKED"], label: "Shop not trusted" },
@@ -36,7 +38,7 @@ export interface SecurityEvent {
   agentId: string;
   host: string;
   at: string;
-  outcome: "stopped" | "held" | "approved" | "noted";
+  outcome: "stopped" | "held" | "approved" | "lost" | "noted";
 }
 
 export interface Signal {
@@ -56,6 +58,8 @@ export function securityView(rows: Row[], names: Record<string, string>, now = n
         ? "held"
         : r.status === "declined" || r.status === "payment_failed" || r.status === "rejected"
           ? "stopped"
+          : r.status === "disputed"
+            ? "lost"
           : r.approvedBy
             ? "approved"
             : "noted";
@@ -80,6 +84,8 @@ export function securityView(rows: Row[], names: Record<string, string>, now = n
   }
   if (events.some((e) => e.kind === "mandate"))
     signals.push({ level: "high", text: "A task's rules were changed outside Aerar. Buying for it is stopped until a person signs them again.", basis: "Stored rules no longer match the signed mandate." });
+  for (const host of new Set(events.filter((e) => e.kind === "undelivered").map((e) => e.host)))
+    signals.push({ level: "high", text: `${host} took a payment and sent back nothing usable. It's on hold: nothing more is bought from it until you clear it.`, basis: "The paid result failed Aerar's delivery check (empty, broken, or an error message)." });
   if (events.some((e) => e.kind === "memory"))
     signals.push({ level: "high", text: "A remembered result was altered after delivery. It was not reused.", basis: "A stored copy's sha256 no longer matches the hash taken at delivery." });
   for (const host of new Set(events.filter((e) => e.kind === "payee_swap").map((e) => e.host)))

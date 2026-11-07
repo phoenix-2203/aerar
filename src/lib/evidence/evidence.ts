@@ -69,7 +69,7 @@ export async function buildEvidence(db: Db, orgId: string, purchaseId: string, i
   if (receipt)
     checks.push({ claim: "The decision record is signed by Aerar", level: "signed", ok: true, detail: `Receipt sha256 ${receipt.sha256.slice(0, 18)}…; check it at ${issuer}/verify` });
 
-  const paid = p.status === "delivered" && !!p.txHash;
+  const paid = (p.status === "delivered" || p.status === "disputed") && !!p.txHash;
   if (!paid) checks.push({ claim: "Payment", level: "none", ok: null, detail: p.status === "reused" ? "Reused from memory: nothing was paid." : "Nothing was paid." });
   else if (simulated) checks.push({ claim: "Payment", level: "simulated", ok: null, detail: "Sandbox purchase: the shop and the payment are simulated, so there is no chain to check." });
   else
@@ -80,6 +80,8 @@ export async function buildEvidence(db: Db, orgId: string, purchaseId: string, i
       detail: p.onchainVerifiedAt ? `Transaction ${p.txHash}: the Transfer event was read from Base and matched payee and amount.` : `Not confirmed on Base yet (${(p.onchainCheck as { reason?: string } | null)?.reason ?? "no check recorded"}).`,
     });
 
+  if (p.status === "disputed")
+    checks.push({ claim: "The shop delivered what was paid for", level: "database", ok: false, detail: `${p.error ?? "The result failed the delivery check."} x402 payments settle immediately, so this can't be refunded; the shop is on hold.` });
   if (p.responseHash && p.responseBody != null)
     checks.push({
       claim: "The delivered data is unchanged since delivery",

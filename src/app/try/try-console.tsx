@@ -14,7 +14,7 @@ import { AgentTeam } from "./agent-team";
 import { StatusChip } from "@/components/status-chip";
 import { explain, reasonKind } from "@/lib/copy/reasons";
 import type { TryState } from "@/lib/try/sandbox";
-import { agentBuy, decideTry, resetSandbox, saveRules, startSandbox, type TryResult } from "./actions";
+import { agentBuy, clearHold, decideTry, resetSandbox, saveRules, startSandbox, type TryResult } from "./actions";
 
 interface ProviderView {
   host: string;
@@ -182,7 +182,7 @@ export function TryConsole({
               {state.chain.ok ? `Audit log intact: ${state.chain.count} entries, each sealed to the one before.` : `Audit log broken at entry ${state.chain.brokenAt}.`}
             </div>
           </section>
-          <SecurityPanel state={state} />
+          <SecurityPanel state={state} onDone={(r) => (r?.error ? setToast({ tone: "err", text: r.error }) : r?.done && setToast({ tone: "ok", text: r.done }))} />
         </div>
 
         {/* Side: rules + connect */}
@@ -625,8 +625,9 @@ function MandateCard({ state }: { state: TryState }) {
 }
 
 /** What Aerar stopped or held, and the patterns in it. Every line comes from a real decision in this sandbox. */
-function SecurityPanel({ state }: { state: TryState }) {
+function SecurityPanel({ state, onDone }: { state: TryState; onDone: (r: TryResult) => void }) {
   const s = state.security;
+  const [clearing, startClear] = useTransition();
   if (!s.events.length)
     return (
       <section className="rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-6" aria-labelledby="security">
@@ -646,6 +647,23 @@ function SecurityPanel({ state }: { state: TryState }) {
           {s.stopped} stopped · {s.held} held for you
         </span>
       </div>
+      {state.holds.length > 0 && (
+        <ul className="space-y-2 border-b border-border px-5 py-4 sm:px-6">
+          {state.holds.map((h) => (
+            <li key={h.host} className="flex flex-wrap items-center gap-3 rounded-lg border border-danger/35 bg-danger-tint/40 px-3 py-2">
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13.5px] font-medium">
+                  <span className="font-mono">{h.host}</span> is on hold
+                </span>
+                <span className="block text-[12px] text-text-3">{h.reason}</span>
+              </span>
+              <Button size="sm" variant="secondary" loading={clearing} onClick={() => startClear(async () => onDone(await clearHold(h.host)))}>
+                Clear hold
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
       {s.signals.length > 0 && (
         <ul className="space-y-2 border-b border-border px-5 py-4 sm:px-6">
           {s.signals.map((g, i) => (
@@ -659,11 +677,11 @@ function SecurityPanel({ state }: { state: TryState }) {
       <ul className="divide-y divide-border">
         {s.events.slice(0, 8).map((e) => (
           <li key={e.id} className="flex items-center gap-3 px-5 py-2.5 text-[13px] sm:px-6">
-            <span className={`size-2 shrink-0 rounded-full ${e.outcome === "stopped" ? "bg-danger" : e.outcome === "held" ? "bg-warning" : e.outcome === "approved" ? "bg-success" : "bg-info"}`} aria-hidden />
+            <span className={`size-2 shrink-0 rounded-full ${e.outcome === "stopped" ? "bg-danger" : e.outcome === "held" ? "bg-warning" : e.outcome === "approved" ? "bg-success" : e.outcome === "lost" ? "bg-danger" : "bg-info"}`} aria-hidden />
             <span className="min-w-0 flex-1 truncate">
               {e.label} <span className="font-mono text-[12px] text-text-3">· {e.host}</span>
             </span>
-            <span className="shrink-0 text-[12px] text-text-3">{e.outcome === "approved" ? "approved by you" : e.outcome}</span>
+            <span className="shrink-0 text-[12px] text-text-3">{e.outcome === "approved" ? "approved by you" : e.outcome === "lost" ? "paid, nothing back" : e.outcome}</span>
             <EvidenceButton id={e.id} className="shrink-0 text-[12px] font-medium text-accent hover:underline">
               Evidence
             </EvidenceButton>

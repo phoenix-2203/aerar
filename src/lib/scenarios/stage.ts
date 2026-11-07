@@ -179,6 +179,8 @@ export function describe(p: Purchase): string {
       return `Declined: ${why(p)}. Nothing paid`;
     case "rejected":
       return `Declined by a person. Nothing paid`;
+    case "disputed":
+      return `Paid ${usd(p.paidAmount)} but nothing usable came back: ${why(p)}. The shop is on hold`;
     case "payment_failed":
       return `Not paid: ${why(p)}. Budget released`;
     case "free":

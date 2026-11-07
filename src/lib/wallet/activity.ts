@@ -26,7 +26,7 @@ export async function walletActivity(s: WalletSession) {
         amount: v.amountFormatted,
         paid: v.paidFormatted,
         txHash: v.txHash,
-        error: p.status === "payment_failed" ? (p.error ?? null) : null,
+        error: p.status === "payment_failed" || p.status === "disputed" ? (p.error ?? null) : null,
         reasons: v.reasons.filter((r) => reasonKind(r.code) !== "pass").map((r) => ({ code: r.code, text: explain(r.code) })),
         at: v.createdAt.toISOString(),
       };

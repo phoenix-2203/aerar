@@ -20,6 +20,7 @@ const ICON: Record<string, typeof CheckCircle2> = {
   reserved: Loader2,
   paying: Loader2,
   payment_failed: XCircle,
+  disputed: XCircle,
   unknown: HelpCircle,
   expired: CircleDashed,
 };

@@ -39,6 +39,8 @@ export function tryRail(): PaymentRail {
     async pay(req: HttpRequestSpec, q: Quote): Promise<PayResult> {
       const hit = findItem(req.url);
       if (!hit) return { kind: "not_settled", reason: "No simulated shop answers at this address", response: { status: 404, contentType: null, body: new Uint8Array() } };
+      if (hit.item.delivers === "empty")
+        return { kind: "settled", response: { status: 200, contentType: "application/json", body: new Uint8Array() }, txHash: `0xsim${randomBytes(30).toString("hex")}`, payer: rail.payerAddress, amount: q.amount };
       return {
         kind: "settled",
         response: body({ item: hit.item.name, from: hit.provider.name, simulated: true, deliveredAt: new Date().toISOString() }),

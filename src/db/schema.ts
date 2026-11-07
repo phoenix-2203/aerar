@@ -178,6 +178,9 @@ export const providers = pgTable(
     knownPayTo: text("known_pay_to"),
     label: text("label"),
     isDemo: boolean("is_demo").notNull().default(false),
+    /** Put on hold after taking a payment without delivering. Nothing is bought from it until a person clears it. */
+    heldAt: ts("held_at"),
+    heldReason: text("held_reason"),
     createdAt: ts("created_at").notNull().defaultNow(),
   },
   (t) => [uniqueIndex("providers_org_host").on(t.orgId, t.host)],
@@ -190,6 +193,7 @@ export type PurchaseStatus =
   | "reserved" // budget held, about to pay
   | "paying" // payment signed and sent; outcome not yet known
   | "delivered" // provider settled payment and returned a 2xx response
+  | "disputed" // paid (settled on-chain), but what came back failed the delivery check; never reused
   | "payment_failed" // provider/facilitator refused; reservation released
   | "unknown" // network error after payment was sent; needs reconciliation, budget stays held
   | "reused" // served from procurement memory, $0

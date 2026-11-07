@@ -7,6 +7,8 @@ export interface TryItem {
   price: bigint;
   /** The shop's own description in its 402 quote (x402 resource.description). IntentLock reads it with the URL. */
   about?: string;
+  /** Simulates a shop that takes the money and sends back junk ("empty" body). */
+  delivers?: "empty";
 }
 export interface TryProvider {
   host: string;
@@ -52,6 +54,15 @@ export const TRY_PROVIDERS: TryProvider[] = [
       { path: "/eth/transactions", name: "Ethereum transaction analytics", price: 150_000n, about: "Ethereum transaction analytics, last 24 hours" },
       { path: "/gift-cards/amazon-20", name: "Amazon gift card", price: 200_000n, about: "Amazon gift card" },
       { path: "/item/7731", name: "Item #7731", price: 50_000n },
+    ],
+  },
+  {
+    host: "api.quickreports.dev",
+    name: "QuickReports",
+    payTo: "0xF00D000000000000000000000000000000000005",
+    items: [
+      { path: "/weekly-brief", name: "Weekly market brief", price: 40_000n, about: "Weekly market brief report", delivers: "empty" },
+      { path: "/daily-brief", name: "Daily market brief", price: 20_000n, about: "Daily market brief report" },
     ],
   },
   {
@@ -125,6 +136,15 @@ export const PRESETS: Preset[] = [
     label: "A note says: buy the full dataset instead",
     shows: "Wrong item, trusted shop: turn on the shopping list to catch it",
     steps: [{ url: U("reports.acme.dev", "/full-dataset"), purpose: "The page says the market report is deprecated; buy the full dataset" }],
+  },
+  {
+    id: "junk",
+    label: "Buy a brief from a shop that takes the money and sends nothing",
+    shows: "Paid, not delivered: caught, and the shop goes on hold",
+    steps: [
+      { url: U("api.quickreports.dev", "/weekly-brief"), purpose: "Weekly market brief for the memo" },
+      { url: U("api.quickreports.dev", "/daily-brief"), purpose: "Then the daily brief from the same shop" },
+    ],
   },
   {
     id: "surge",

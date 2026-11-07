@@ -9,7 +9,7 @@ AI agents now pay for APIs and data by themselves, a few cents at a time, over x
 Agents never hold a wallet. They ask Aerar to buy a resource for a task. Aerar reads the provider's real price, checks it against the task's rules, serves an identical earlier purchase for $0 instead of paying twice, pays exactly the approved quote, checks the USDC transfer onchain, and writes every step into a tamper-evident ledger. Your agents work the night shift; Aerar is the morning report.
 
 - **Demo video:** *coming before submission*
-- **Try it, no login or wallet:** [your own sandbox](https://aerar.duckdns.org/try) · [attack lab](https://aerar.duckdns.org/scenarios) (35 scenarios, Run all in seconds) · [live report](https://aerar.duckdns.org/demo) (real Base Sepolia purchases)
+- **Try it, no login or wallet:** [your own sandbox](https://aerar.duckdns.org/try) · [attack lab](https://aerar.duckdns.org/scenarios) (36 scenarios, Run all in seconds) · [live report](https://aerar.duckdns.org/demo) (real Base Sepolia purchases)
 - **With your wallet:** [open a Vault](https://aerar.duckdns.org/vault) on Base Sepolia, sign its limits, let your agent pay from it
 - **Check a receipt:** [verify](https://aerar.duckdns.org/verify), then try to cheat
 - **Connect an agent:** Claude, ChatGPT, Claude Code, MCP or REST ([builders page](https://aerar.duckdns.org/builders))
@@ -118,6 +118,7 @@ An approved purchase is not a paid purchase, and a paid purchase is not proof th
 - **Evidence package per purchase** (`GET /api/v1/purchases/:id/evidence`, the sandbox's Evidence button, MCP `get_evidence`): mandate, IntentLock decision, reasons, quote, approval, payment, delivery, audit entries and the signed receipt, with every claim labelled *Signed*, *On Base*, *Aerar records* or *Simulated*.
 - **Security panel** in the sandbox: what was stopped or held and why, with signals that state the evidence they rest on.
 - **Memory integrity:** a remembered result whose hash no longer matches what was delivered is never served.
+- **Delivery checks** (new): after paying, Aerar checks what came back. Empty, broken or error-shaped results become *paid, not delivered* (`NOT_DELIVERED`), are never reused, count against the shop's reliability, and put the shop on hold (`PROVIDER_ON_HOLD`) until a person clears it.
 
 **Control**
 - **Shopping list per task** (new): pin the exact items a task may buy. A tricked agent buying the wrong thing from an *allowed* provider, under every limit, is held for a person with the reason in plain words. Limits alone can't catch this.
@@ -247,7 +248,7 @@ More screens (every page, phone and desktop, both themes) are in [`docs/screensh
 | Check | Where | Result |
 |---|---|---|
 | 183 tests: policy engine, IntentLock and signed mandates (tampered rules, budget and purpose; approvals on a tampered mandate; backfill), purchase cap under parallel requests, memory integrity, evidence packages, the MCP procurement tools, purchase pipeline (concurrent same-key purchases and races included), morning report, agent and operator routes, MCP, rate limits, the scenario sandbox, the plain-English reason copy and step tracker | `npm test` (Vitest) | all pass |
-| 35 real-world scenarios across seven problems (new: within budget but off-purpose, an item Aerar can't place, a hired agent off the job, rules edited behind Aerar's back, poisoned memory, a cheap loop stopped by the purchase cap), each grading itself, plus Aerar never paying more than a plain wallet in any of them | `npm run test:scenarios`, `npm run scenarios` | 35/35 |
+| 36 real-world scenarios across seven problems (new: a shop that takes the money and sends nothing, within budget but off-purpose, an item Aerar can't place, a hired agent off the job, rules edited behind Aerar's back, poisoned memory, a cheap loop stopped by the purchase cap), each grading itself, plus Aerar never paying more than a plain wallet in any of them | `npm run test:scenarios`, `npm run scenarios` | 36/36 |
 | The same scenarios on the live server against real Postgres (sandbox database, never the ledger) | [attack lab](https://aerar.duckdns.org/scenarios) "Run all" | re-run after this deploy |
 | One scripted night: a plain wallet pays $2.05 ($1.90 of it waste); Aerar pays $0.17 and lets $0.02 of waste through under the hourly cap | `npm run night-shift`, `night.test.ts` | pinned |
 | Real payments on Base Sepolia: paid, reused, held then approved, declined; each transfer checked onchain | [Live on testnet](#live-on-testnet) | done |
@@ -267,7 +268,7 @@ More screens (every page, phone and desktop, both themes) are in [`docs/screensh
 **Honest limits:**
 - **Control only covers purchases that go through Aerar.** An agent with its own unrestricted wallet can bypass it.
 - **Procurement memory matches identical requests only.** It doesn't claim two different requests are "the same research". Want the same item bought again? Set the task's freshness to "never reuse" (sandbox and Vault rules, or `reuseWindowSeconds: 0`); different URLs, queries or bodies are always bought.
-- **x402 `exact` payments settle immediately, so there is no escrow or refund.** Aerar's answer today is to stop bad payments *before* they settle (rules, IntentLock, re-quote, Vault), and the x402 middleware only settles when the provider returns a successful response. A paid response that turns out empty or wrong can't be clawed back; it counts against the provider's reliability score. Escrow needs a settle-later scheme (the x402 SDK's `auth-capture`), which is on the roadmap.
+- **x402 `exact` payments settle immediately, so there is no escrow or refund.** Aerar's answer today is to stop bad payments *before* they settle (rules, IntentLock, re-quote, Vault), and the x402 middleware only settles when the provider returns a successful response. A paid response that turns out empty, broken or an error message can't be clawed back, but Aerar's delivery check catches it: the purchase is marked *paid, not delivered* (never reused), the shop's reliability drops, and the shop goes on hold until a person clears it, so the loss can't repeat. Escrow needs a settle-later scheme (the x402 SDK's `auth-capture`), which is on the roadmap.
 - **Demo endpoints return synthetic data**, labelled as such.
 - **Single organisation per deployment; one operator password.** The public [try-it sandbox](https://aerar.duckdns.org/try) gives each visitor a private workspace (24 h) that buys from simulated shops only.
 - **With a Vault, the limits hold even if Aerar doesn't.** In the operator workspace and the sandbox, Aerar holds the paying key. With an [Aerar Vault](https://aerar.duckdns.org/vault), the money sits in a contract the user owns and the contract enforces payee, per-payment, daily and expiry limits itself. A compromised Aerar can only spend inside those limits.

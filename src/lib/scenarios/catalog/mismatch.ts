@@ -160,4 +160,33 @@ export const mismatch: Scenario[] = [
         },
       ),
   },
+  {
+    id: "paid-for-nothing",
+    problem: "mismatch",
+    title: "The shop takes the money and sends nothing",
+    story:
+      "A trusted shop answers the paid request with an empty response. The payment has already settled on Base, and x402 payments can't be reversed. A plain wallet keeps paying it, night after night.",
+    expected:
+      "Aerar checks what came back. The purchase is marked paid but not delivered (never reused), the shop's reliability drops, and the shop goes on hold, so the next request is refused before it is even contacted.",
+    run: () =>
+      play(
+        {
+          offers: { "/brief": { amount: 40_000n }, "/brief-2": { amount: 40_000n } },
+          payResult: (q) => ({ kind: "settled", response: { status: 200, contentType: "application/json", body: new Uint8Array() }, txHash: "0xpaid", payer: null, amount: q.amount }),
+        },
+        async (s, log, check) => {
+          log('Agent: "Buy /brief"');
+          const a = await s.buy("researcher", "https://data.example.com/brief");
+          log(a);
+          const quotesBefore = s.rail.calls.quote.length;
+          log('Agent: "Buy /brief-2 from the same shop"');
+          const b = await s.buy("researcher", "https://data.example.com/brief-2");
+          log(b);
+          check.that(a.status === "disputed" && a.reasonCodes.includes("EMPTY_DELIVERY"), "the empty result is caught: paid, not delivered");
+          check.that(b.status === "declined" && b.reasonCodes.includes("PROVIDER_ON_HOLD"), "the shop is on hold: the next purchase is refused");
+          check.that(s.rail.calls.quote.length === quotesBefore && s.rail.calls.pay.length === 1, "the shop isn't contacted again");
+          return "$0.04 lost once, caught and proven. A plain wallet would keep paying for nothing.";
+        },
+      ),
+  },
 ];

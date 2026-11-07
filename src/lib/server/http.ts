@@ -60,6 +60,8 @@ export function summarise(p: Purchase): string {
     case "reserved":
     case "paying":
       return `${amount} is reserved and payment is in progress.`;
+    case "disputed":
+      return `Paid ${fmt$(p.paidAmount)} to ${p.host}, but it didn't deliver: ${p.error ?? "the result failed Aerar's delivery check"}. The money can't be recovered (x402 payments settle immediately); the shop is on hold until a person clears it.`;
     case "payment_failed":
       return `Payment did not go through, nothing was charged and the budget was released: ${why || p.error}.`;
     case "unknown":

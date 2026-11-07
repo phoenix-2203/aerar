@@ -11,7 +11,7 @@ import { PRESETS, TRY_PROVIDERS } from "@/lib/try/catalog";
 import { isCategory } from "@/lib/intent/intentlock";
 import { isFreshness } from "@/lib/memory/freshness";
 import { createTrySandbox, decodeSession, DEFAULT_TRY_BUDGET, DEFAULT_TRY_RULES, encodeSession, TRY_COOKIE, TRY_TTL_SECONDS, tryContext, type TrySession } from "@/lib/try/sandbox";
-import { hireAgent, setTaskStatus, updatePolicy } from "@/lib/workspace";
+import { clearProviderHold, hireAgent, setTaskStatus, updatePolicy } from "@/lib/workspace";
 import { policies, taskAgents, tasks } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 
@@ -235,3 +235,17 @@ export async function toggleLead(): Promise<TryResult> {
   }
 }
 
+
+/** A person clears a shop that was put on hold for taking a payment without delivering. */
+export async function clearHold(host: string): Promise<TryResult> {
+  const s = await session();
+  if (!s) return { error: "Your sandbox expired. Start a new one." };
+  try {
+    const ctx = await tryContext();
+    await clearProviderHold(ctx.db, s.orgId, String(host).slice(0, 255), "you");
+    refresh();
+    return { done: `${host} is cleared. Your agent can buy from it again.` };
+  } catch (e) {
+    return { error: msg(e) };
+  }
+}

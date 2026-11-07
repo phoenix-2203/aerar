@@ -26,11 +26,12 @@ import { accessChecks, evaluatePolicy, type PolicyInput, type PolicyResult } fro
 import { quoteDescription } from "@/lib/intent/intentlock";
 import { buildMandate, signMandate, verifyMandate, type MandateCheck } from "@/lib/mandate/mandate";
 import type { IntentRecord } from "@/db/schema";
+import { checkDelivery } from "./delivery";
 import type { CapturedResponse, PaymentRail, Quote } from "@/lib/x402/rail";
 
 export type Purchase = typeof purchases.$inferSelect;
 export const MAX_STORED_BODY = 256 * 1024;
-const COUNTS_TOWARD_RATE: PurchaseStatus[] = ["awaiting_approval", "reserved", "paying", "delivered", "payment_failed", "unknown"];
+const COUNTS_TOWARD_RATE: PurchaseStatus[] = ["awaiting_approval", "reserved", "paying", "delivered", "disputed", "payment_failed", "unknown"];
 
 export interface PurchaseRequest {
   taskId: string;
@@ -103,7 +104,7 @@ export async function loadMandate(db: Db, task: typeof tasks.$inferSelect): Prom
   return { policy, check: await verifyMandate(policy, task) };
 }
 
-const COUNTS_TOWARD_CAP: PurchaseStatus[] = ["awaiting_approval", "reserved", "paying", "delivered", "unknown"];
+const COUNTS_TOWARD_CAP: PurchaseStatus[] = ["awaiting_approval", "reserved", "paying", "delivered", "disputed", "unknown"];
 
 /** Purchases a task has made or has waiting, for the mandate's purchase cap. */
 async function taskPurchaseCount(db: Db, taskId: string, excludeId?: string) {
@@ -150,7 +151,7 @@ async function spentWithProvider(db: Db, taskId: string, host: string): Promise<
   const [r] = await db
     .select({ n: sql<string>`coalesce(sum(coalesce(${purchases.paidAmount}, ${purchases.reservedAmount}, 0)), 0)` })
     .from(purchases)
-    .where(and(eq(purchases.taskId, taskId), eq(purchases.host, host), inArray(purchases.status, ["reserved", "paying", "delivered", "unknown"])));
+    .where(and(eq(purchases.taskId, taskId), eq(purchases.host, host), inArray(purchases.status, ["reserved", "paying", "delivered", "disputed", "unknown"])));
   return BigInt(r?.n ?? 0);
 }
 
@@ -171,6 +172,12 @@ async function lastPaidFor(db: Db, orgId: string, url: string): Promise<bigint |
     .limit(50);
   const hit = rows.find((r) => new URL(r.url).pathname === u.pathname && r.paid > 0n);
   return hit?.paid ?? null;
+}
+
+/** Why a provider is on hold (it took a payment without delivering), or null. */
+async function heldReason(db: Db, orgId: string, host: string): Promise<string | null> {
+  const p = await provider(db, orgId, host);
+  return p?.heldAt ? (p.heldReason ?? "it took a payment without delivering") : null;
 }
 
 async function provider(db: Db, orgId: string, host: string) {
@@ -304,6 +311,7 @@ async function submitNew(
     host: url.host,
     url: url.toString(),
     taskPurchaseCount: await taskPurchaseCount(db, task.id),
+    providerHeld: await heldReason(db, agent.orgId, url.host),
   };
 
   // ---- 1. access checks before touching the provider
@@ -547,6 +555,8 @@ export async function execute(ctx: Ctx, purchaseId: string): Promise<Purchase> {
   }
 
   const paid = result.amount ?? p.reservedAmount;
+  // The money has moved either way. Junk doesn't count as delivered: it's never reused and the shop goes on hold.
+  const dc = checkDelivery(result.response);
   const delivered = await db.transaction(async (tx) => {
     const t = tx as unknown as Db;
     // Lock order everywhere: task row first, then the purchase row. reserve() does the same; the opposite order
@@ -555,7 +565,8 @@ export async function execute(ctx: Ctx, purchaseId: string): Promise<Purchase> {
     const [row] = await t
       .update(purchases)
       .set({
-        status: "delivered",
+        status: dc.ok ? "delivered" : "disputed",
+        ...(dc.ok ? {} : { reasonCodes: [...p.reasonCodes, "NOT_DELIVERED", dc.code!], error: dc.detail }),
         paidAmount: paid,
         txHash: result.txHash,
         payer: result.payer ?? rail.payerAddress,
@@ -572,14 +583,15 @@ export async function execute(ctx: Ctx, purchaseId: string): Promise<Purchase> {
       .where(eq(tasks.id, p.taskId));
     await rollUp(t, p.taskId, (x) => ({ reserved: sql`${x.reserved} - ${p.reservedAmount}`, spent: sql`${x.spent} + ${paid}` }));
     const prov = await provider(t, p.orgId, p.host);
-    if (!prov) await t.insert(providers).values({ id: newId("prv"), orgId: p.orgId, host: p.host, knownPayTo: approved.payTo });
-    else if (!prov.knownPayTo) await t.update(providers).set({ knownPayTo: approved.payTo }).where(eq(providers.id, prov.id));
+    const hold = dc.ok ? {} : { heldAt: now, heldReason: `${dc.detail} (purchase ${p.id})` };
+    if (!prov) await t.insert(providers).values({ id: newId("prv"), orgId: p.orgId, host: p.host, knownPayTo: approved.payTo, ...hold });
+    else if (!prov.knownPayTo || !dc.ok) await t.update(providers).set({ knownPayTo: prov.knownPayTo ?? approved.payTo, ...hold }).where(eq(providers.id, prov.id));
     await audit(t, {
       orgId: p.orgId,
       actor: "system",
-      kind: "purchase.delivered",
+      kind: dc.ok ? "purchase.delivered" : "purchase.disputed",
       subjectId: p.id,
-      data: { txHash: result.txHash, paid, responseHash: row.responseHash, responseStatus: row.responseStatus },
+      data: { txHash: result.txHash, paid, responseHash: row.responseHash, responseStatus: row.responseStatus, ...(dc.ok ? {} : { deliveryCheck: dc.code, providerOnHold: p.host }) },
     });
     return row;
   });
@@ -650,6 +662,7 @@ export async function approvePurchase(ctx: Ctx, purchaseId: string, approver: st
     lastPaidPrice: await lastPaidFor(db, p.orgId, p.url),
     providerDescription: quoteDescription(p.quoteRaw),
     taskPurchaseCount: await taskPurchaseCount(db, task.id, p.id),
+    providerHeld: await heldReason(db, p.orgId, p.host),
     rails: { network: rail.network, asset: rail.asset, scheme: rail.scheme },
   };
   const r = await reserve(

@@ -25,9 +25,10 @@ export const STEP_INFO: Record<StepId, { title: string; does: string }> = {
 
 export const STEP_ORDER: StepId[] = ["access", "memory", "quote", "policy", "reserve", "pay", "onchain"];
 
-const ACCESS = new Set(["TASK_NOT_ACTIVE", "PARENT_TASK_NOT_ACTIVE", "TASK_DEADLINE_PASSED", "MANDATE_EXPIRED", "AGENT_REVOKED", "AGENT_NOT_ASSIGNED", "PROVIDER_NOT_ALLOWED"]);
+const ACCESS = new Set(["TASK_NOT_ACTIVE", "PARENT_TASK_NOT_ACTIVE", "TASK_DEADLINE_PASSED", "MANDATE_EXPIRED", "AGENT_REVOKED", "AGENT_NOT_ASSIGNED", "PROVIDER_NOT_ALLOWED", "PROVIDER_BLOCKED", "PROVIDER_ON_HOLD", "MANDATE_INVALID", "PURCHASE_LIMIT_REACHED"]);
 const QUOTE = new Set(["PROVIDER_UNREACHABLE", "NO_USABLE_QUOTE"]);
 const PAYMENT = new Set(["QUOTE_CHANGED", "PAYMENT_NOT_SETTLED", "VAULT_REFUSED"]);
+const DELIVERY = new Set(["NOT_DELIVERED", "EMPTY_DELIVERY", "MALFORMED_DELIVERY", "ERROR_DELIVERED"]);
 
 export interface PurchaseLike {
   status: string;
@@ -44,7 +45,7 @@ export interface PurchaseLike {
 export function purchaseSteps(p: PurchaseLike): Step[] {
   const codes = p.reasonCodes;
   const fails = (set: Set<string>) => codes.filter((c) => set.has(c));
-  const policyFails = codes.filter((c) => reasonKind(c) === "fail" && !ACCESS.has(c) && !QUOTE.has(c) && !PAYMENT.has(c));
+  const policyFails = codes.filter((c) => reasonKind(c) === "fail" && !ACCESS.has(c) && !QUOTE.has(c) && !PAYMENT.has(c) && !DELIVERY.has(c));
   const steps: Step[] = [];
   let stopped = false;
   const add = (id: StepId, state: StepState, detail: string) => {
@@ -106,7 +107,9 @@ export function purchaseSteps(p: PurchaseLike): Step[] {
 
   // 7. Prove
   const check = p.onchainCheck as { ok?: boolean; reason?: string } | null | undefined;
-  if (p.status !== "delivered") add("onchain", "skipped", "Nothing to prove.");
+  if (p.status === "disputed")
+    add("onchain", "failed", `Paid, but ${codes.filter((c) => DELIVERY.has(c) && c !== "NOT_DELIVERED").map(explain).join("; ") || "the result failed the delivery check"}. Can't be refunded; the shop is on hold.`);
+  else if (p.status !== "delivered") add("onchain", "skipped", "Nothing to prove.");
   else if (p.txHash?.startsWith("0xsim")) add("onchain", "passed", "Simulated transfer in the sandbox: nothing on a chain to check.");
   else if (p.onchainVerifiedAt) add("onchain", "passed", "Transfer found on Base and matches the quote.");
   else if (check && check.ok === false) add("onchain", "failed", `Transfer doesn't match: ${check.reason ?? "check failed"}.`);

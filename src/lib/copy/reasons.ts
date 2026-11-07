@@ -68,6 +68,11 @@ export const REASONS: Record<string, Reason> = {
   WITHIN_PROVIDER_CAP: { kind: "pass", text: "within the task's cap for this provider" },
   PRICE_JUMPED: { kind: "hold", text: "this item costs a lot more than the last time it was bought" },
   PRICE_AS_USUAL: { kind: "pass", text: "the price is in line with what was paid before" },
+  NOT_DELIVERED: { kind: "fail", text: "the shop was paid but didn't deliver a usable result" },
+  EMPTY_DELIVERY: { kind: "fail", text: "the shop sent back nothing for the payment" },
+  MALFORMED_DELIVERY: { kind: "fail", text: "the shop's paid result was broken (not valid JSON)" },
+  ERROR_DELIVERED: { kind: "fail", text: "the shop returned an error message as the paid result" },
+  PROVIDER_ON_HOLD: { kind: "fail", text: "this shop is on hold after taking a payment without delivering; a person has to clear it first" },
   VAULT_REFUSED: { kind: "fail", text: "the owner's Vault refused it on-chain: it's outside the limits the owner signed" },
 };
 
@@ -111,6 +116,7 @@ export const STATUS: Record<string, StatusCopy> = {
   rejected: { label: "Declined", tone: "danger", meaning: "Declined by a person; nothing paid" },
   reserved: { label: "Paying", tone: "neutral", meaning: "Budget reserved; payment in progress" },
   paying: { label: "Paying", tone: "neutral", meaning: "Payment in progress" },
+  disputed: { label: "Paid, not delivered", tone: "danger", meaning: "Paid on-chain, but the result failed the delivery check; the shop is on hold" },
   payment_failed: { label: "Not paid", tone: "danger", meaning: "Payment didn't go through; budget released" },
   unknown: { label: "Unconfirmed", tone: "warning", meaning: "Payment outcome unknown; budget held until reconciled" },
   expired: { label: "Expired", tone: "neutral", meaning: "The approval window passed; nothing paid" },

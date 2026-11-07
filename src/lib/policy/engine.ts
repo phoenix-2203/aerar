@@ -44,6 +44,8 @@ export interface PolicyInput {
   providerDescription?: string | null;
   /** Purchases this task has already made or has waiting (not declined ones), for the mandate's purchase cap. */
   taskPurchaseCount?: number;
+  /** Set when this provider took a payment without delivering; nothing is bought from it until a person clears it. */
+  providerHeld?: string | null;
 }
 
 /** Default: a person decides if an item costs more than 50% above what was last paid for it. */
@@ -78,7 +80,7 @@ export function hostAllowed(host: string, allowed: string[]): boolean {
   });
 }
 
-export type AccessInput = Pick<PolicyInput, "now" | "task" | "policy" | "agent" | "host" | "parents" | "taskPurchaseCount">;
+export type AccessInput = Pick<PolicyInput, "now" | "task" | "policy" | "agent" | "host" | "parents" | "taskPurchaseCount" | "providerHeld">;
 
 /** Is this URL on the task's shopping list? "host/path" prefixes; an empty or absent list means no list. */
 export function onShoppingList(url: string | undefined, items: string[] | undefined): boolean {
@@ -119,6 +121,7 @@ export function accessChecks(input: AccessInput): { declines: [string, string][]
   else if (!hostAllowed(input.host, rules.allowedProviders))
     declines.push(["PROVIDER_NOT_ALLOWED", `${input.host} is not on this task's provider list.`]);
   else passes.push("PROVIDER_ALLOWED");
+  if (input.providerHeld) declines.push(["PROVIDER_ON_HOLD", `${input.host} is on hold: ${input.providerHeld}`]);
   if (rules.maxPurchases != null && (input.taskPurchaseCount ?? 0) >= rules.maxPurchases)
     declines.push(["PURCHASE_LIMIT_REACHED", `This task may make ${rules.maxPurchases} purchases and has made ${input.taskPurchaseCount}.`]);
   return { declines, passes };

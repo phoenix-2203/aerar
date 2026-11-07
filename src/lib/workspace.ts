@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
 import type { Db } from "@/db";
-import { agents, organisations, policies, taskAgents, tasks, type PolicyRules } from "@/db/schema";
+import { agents, organisations, policies, providers, taskAgents, tasks, type PolicyRules } from "@/db/schema";
 import { audit } from "@/lib/audit/log";
 import { sha256 } from "@/lib/memory/reuse-key";
 import { isCategory } from "@/lib/intent/intentlock";
@@ -116,6 +116,18 @@ export async function createTask(
     });
     return task;
   });
+}
+
+/** A person clears a provider that was put on hold for taking a payment without delivering. */
+export async function clearProviderHold(db: Db, orgId: string, host: string, by: string) {
+  const [p] = await db
+    .update(providers)
+    .set({ heldAt: null, heldReason: null })
+    .where(and(eq(providers.orgId, orgId), eq(providers.host, host.toLowerCase())))
+    .returning();
+  if (!p) throw new PurchaseError("NOT_FOUND", "No such provider", 404);
+  await audit(db, { orgId, actor: `user:${by}`, kind: "provider.hold_cleared", subjectId: p.id, data: { host: p.host } });
+  return p;
 }
 
 /**

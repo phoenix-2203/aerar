@@ -22,7 +22,7 @@ export function scoreProviders(rows: Row[]): ProviderScore[] {
   return [...by].map(([host, rs]) => {
     const has = (c: string) => rs.filter((r) => r.reasonCodes.includes(c)).length;
     const delivered = rs.filter((r) => r.status === "delivered").length;
-    const failed = rs.filter((r) => r.status === "payment_failed" || r.status === "unknown").length - has("VAULT_REFUSED");
+    const failed = rs.filter((r) => r.status === "payment_failed" || r.status === "unknown" || r.status === "disputed").length - has("VAULT_REFUSED");
     const priceChanged = has("QUOTE_CHANGED");
     const payeeChanged = has("PAYEE_CHANGED");
     const priceJumped = has("PRICE_JUMPED");

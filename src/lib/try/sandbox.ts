@@ -4,7 +4,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { and, desc, eq } from "drizzle-orm";
 import type { Db } from "@/db";
-import { agents, policies, purchases, taskAgents, tasks, type PolicyRules } from "@/db/schema";
+import { agents, policies, providers, purchases, taskAgents, tasks, type PolicyRules } from "@/db/schema";
 import { verifyChain } from "@/lib/audit/log";
 import { fmt$ } from "@/lib/money/usdc";
 import { forecastLine } from "@/lib/forecast/burn";
@@ -136,13 +136,16 @@ export async function loadTryState(db: Db, s: TrySession) {
       ifUncertain: policy.rules.ifUncertain ?? "hold",
     },
     security: securityView(rows, names),
+    holds: (await db.select().from(providers).where(eq(providers.orgId, s.orgId)))
+      .filter((p) => p.heldAt)
+      .map((p) => ({ host: p.host, reason: p.heldReason ?? "", at: p.heldAt!.toISOString() })),
     agent: { id: agent.id, name: agent.name, revoked: !!agent.revokedAt, keyPrefix: agent.apiKeyPrefix },
     totals: {
       paid: fmt$(task.spent),
       paidCount: sum(["delivered"]).length,
       saved: fmt$(saved),
       reusedCount: sum(["reused"]).length,
-      declined: sum(["declined", "rejected", "payment_failed"]).length,
+      declined: sum(["declined", "rejected", "payment_failed", "disputed"]).length,
       waiting: sum(["awaiting_approval"]).length,
     },
     chain,
