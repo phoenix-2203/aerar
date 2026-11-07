@@ -1,9 +1,17 @@
-# Aerar demo video (v3)
+# Aerar demo video (v4)
 
-**`aerar-demo.mp4`**: 2:56 (176.5 s), 1920×1080, 30 fps, H.264 (CRF 18) + AAC 192 kb/s, subtitles and chapter tags
+**`aerar-demo.mp4`**: 2:56 (175.5 s), 1920×1080, 30 fps, H.264 (CRF 18) + AAC 192 kb/s, subtitles and chapter tags
 burned in, about −15 LUFS. The MP4 is not committed (see `.gitignore`); rebuild it with the steps at the end.
 
-## What changed (v3)
+## What changed (v4)
+
+- **A refund moment**: the approvals scene now ends with a shop that takes payment through an Aerar Escrow, sends
+  nothing, and gets **Refunded** ("And if it takes payment through an escrow, the money comes back"). Live on Base
+  Sepolia since 8 Nov 2026 (transactions in the main README).
+- **Current numbers**: 39 attacks, 200 app tests, 28 contract tests; the end card shows "Refunds live through escrow".
+- Sandbox footage re-recorded on the current build; the "Every purchase is checked first" line was cut to stay under 3:00.
+
+## What changed in v3
 
 - **2026 incidents open the video**: Grok × Bankrbot (4 May 2026, Base, a Morse-code reply on X made a trading agent send
   3 billion DRB tokens, $150,000+) and OpenAI's misalignment report (15 Oct 2026: a research model with no wallet
@@ -20,19 +28,19 @@ burned in, about −15 LUFS. The MP4 is not committed (see `.gitignore`); rebuil
 | Time | Scene | On screen |
 |---|---|---|
 | 0:00 | Grok × Bankrbot | Card (dark): a Morse-code reply, Grok's decoded instruction, the transfer executed, $150,000+ sent |
-| 0:17 | OpenAI report | Card (dark): no wallet provided, 362 wallets checked, a stranger's wallet used, the final report |
-| 0:30 | The gap | Card: "Both agents decided for themselves", decision → (nothing here) → money; the landing page; "Spending limits ask / Aerar asks" |
-| 0:48 | What Aerar is | Card: agents → Aerar → x402 shops; research agent, trading bot, coding agent; the six checks |
-| 1:00 | Signed mandate | `/try`: create a sandbox, the signed mandate |
-| 1:11 | IntentLock | `/scenarios`: the gift-card attack through the real pipeline; zoom on "Declined", Ethereum data paid |
-| 1:30 | Memory, trusted shops | Sandbox: paid → reused for $0 → attacker's shop declined, never contacted |
-| 1:42 | Price memory, wallet swap | Sandbox: 5x price waits for a person; a new payee wallet is declined |
-| 1:53 | Approvals, delivery | Sandbox: $0.90 report approved; a shop that sends nothing → paid, not delivered, on hold; Security panel |
-| 2:03 | Evidence, receipts | Evidence dialog; `/verify` with a real receipt; Try to cheat → NOT VALID (zoom) |
-| 2:15 | Vault | `/vault`; `forge test` (the unlisted-payee test highlighted); "Aerar gets hacked" on the landing page |
-| 2:27 | Comparison | Table: agent wallets with spend limits vs Aerar |
-| 2:35 | Tests | Attack lab Run all → 36/36; card: 36/36, 186 app tests, 18 contract tests |
-| 2:43 | Close | Builders page (MCP, SDK); end card: today, next, tagline, URLs |
+| 0:16 | OpenAI report | Card (dark): no wallet provided, 362 wallets checked, a stranger's wallet used, the final report |
+| 0:29 | The gap | Card: "Both agents decided for themselves", decision → (nothing here) → money; the landing page; "Spending limits ask / Aerar asks" |
+| 0:45 | What Aerar is | Card: agents → Aerar → x402 shops; research agent, trading bot, coding agent; the six checks |
+| 0:55 | Signed mandate | `/try`: create a sandbox, the signed mandate |
+| 1:07 | IntentLock | `/scenarios`: the gift-card attack through the real pipeline; zoom on "Declined", Ethereum data paid |
+| 1:26 | Memory, trusted shops | Sandbox: paid → reused for $0 → attacker's shop declined, never contacted |
+| 1:39 | Price memory, wallet swap | Sandbox: 5x price waits for a person; a new payee wallet is declined |
+| 1:50 | Approvals, delivery, refunds | Sandbox: $0.90 report approved; a shop that sends nothing → paid, not delivered, on hold; an escrow shop that sends nothing → Refunded; Security panel |
+| 2:02 | Evidence, receipts | Evidence dialog; `/verify` with a real receipt; Try to cheat → NOT VALID (zoom) |
+| 2:13 | Vault | `/vault`; `forge test` (the unlisted-payee test highlighted); "Aerar gets hacked" on the landing page |
+| 2:25 | Comparison | Table: agent wallets with spend limits vs Aerar (incl. "checks delivery, refunds through an escrow") |
+| 2:34 | Tests | Attack lab Run all → 39/39; card: 39/39, 200 app tests, 28 contract tests |
+| 2:41 | Close | Builders page (MCP, SDK); end card: today (live on Base Sepolia, refunds live through escrow), next, tagline, URLs |
 
 Subtitles with exact times are in `subtitles.json`; the narration text is `narration.json` (written as spoken, for
 example "x four oh two"; the subtitles show "x402").
@@ -66,15 +74,16 @@ illustrative, and the final-report quote is OpenAI's published excerpt.
 | Wallet-swap guard | Sandbox preset "swaps its wallet" → declined | Real (simulated shop) |
 | Human approval | $0.90 report → Approve → Paid | Real (simulated shop) |
 | Delivery checks, shop hold | "Takes the money and sends nothing" → paid, not delivered; Security panel | Real (the shop is simulated to send nothing) |
+| Refunds through an escrow | "Same shop trick, but this shop takes payment through an escrow" → Refunded | Real pipeline, simulated shop and escrow in the sandbox; the same flow is live on Base Sepolia (README) |
 | Evidence and receipts | Evidence dialog; `/verify` with receipt `pur_4xCRpofq8Vqj` | Real receipt and Base Sepolia transfer, replayed (see limitations) |
 | Vault on Base | `/vault`, Foundry output, "Aerar gets hacked" | Contract tests real; the landing animation is illustrative |
 | MCP / SDK | Builders page | Real (SDK tested in `src/lib/sdk.test.ts`) |
 
 ## Tests shown, and how they were verified
 
-- **Attack lab 36/36**: Run all pressed on camera against the local production build; the live site returned 36/36 too.
-- **186 app tests**: `npx vitest run`, output in `vitest-output.txt` (26 files, 186 passed).
-- **18 contract tests**: `forge test` on `contracts/`, output in `forge-test-output.txt`; the card shows those lines.
+- **Attack lab 39/39**: Run all pressed on camera against the local production build; the live site returned 39/39 too.
+- **200 app tests**: `npx vitest run`, output in `vitest-output.txt` (28 files, 200 passed).
+- **28 contract tests**: `forge test` on `contracts/` (Vault 15, Escrow 10, Seal 3), output in `forge-test-output.txt`.
 
 ## Limitations, stated plainly
 
@@ -83,7 +92,7 @@ illustrative, and the final-report quote is OpenAI's published excerpt.
 - The **receipt scene replays live data** (`live/receipt-pur_4xCRpofq8Vqj.json`: the receipt, Aerar's signer and Base
   Sepolia's answer for tx `0x7837…aac8`, captured from the live site in a real browser). The checks run on it are real.
 - **Sandbox shops and transfers are simulated**, as the app says on screen.
-- **The Vault isn't driven on camera** (it needs a browser wallet); its contract tests are shown instead.
+- **The Vault isn't driven on camera** (it needs a browser wallet); its contract tests are shown instead. The builder has since used it live (a $0.50 purchase paid from their Vault).
 - **Synthetic narration** (Kokoro `am_michael`) and a **generated music bed** (`music.py`, no samples or licensed music).
 - Some waits are sped up 1.1–1.8× (cursor travel, page loads, scrolling); results are never sped past.
 

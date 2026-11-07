@@ -1,10 +1,8 @@
-
  RUN  v5.1.0 /home/claude/aerar
 
 
- Test Files  26 passed (26)
-      Tests  186 passed (186)
-   Start at  16:14:10
-   Duration  194.85s (tests 95%, import 5%)
+ Test Files  28 passed (28)
+      Tests  200 passed (200)
+   Start at  23:06:30
+   Duration  188.24s (tests 95%, import 5%)
 
-EXIT 0

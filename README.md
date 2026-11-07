@@ -8,7 +8,7 @@ AI agents now pay for APIs and data by themselves, a few cents at a time, over x
 
 Agents never hold a wallet. They ask Aerar to buy a resource for a task. Aerar reads the provider's real price, checks it against the task's rules, serves an identical earlier purchase for $0 instead of paying twice, pays exactly the approved quote, checks the USDC transfer onchain, and writes every step into a tamper-evident ledger. Your agents work the night shift; Aerar is the morning report.
 
-- **Demo video:** *coming before submission*
+- **Demo video (2:56):** YouTube link added at submission · script, storyboard and sources in [demo/video](demo/video/README.md)
 - **Try it, no login or wallet:** [your own sandbox](https://aerar.duckdns.org/try) · [attack lab](https://aerar.duckdns.org/scenarios) (39 scenarios, Run all in seconds) · [live report](https://aerar.duckdns.org/demo) (real Base Sepolia purchases)
 - **With your wallet:** [open a Vault](https://aerar.duckdns.org/vault) on Base Sepolia, sign its limits, let your agent pay from it
 - **Check a receipt:** [verify](https://aerar.duckdns.org/verify), then try to cheat
@@ -145,9 +145,10 @@ An approved purchase is not a paid purchase, and a paid purchase is not proof th
 **Aerar Vault: your wallet, on-chain limits** (new)
 - **Connect your own wallet** at `/vault`, open a Vault (a contract you own on Base Sepolia), fund it with test USDC and **sign its limits**: who can be paid, how much per payment, per day, until when.
 - **Your agent pays from your Vault over normal x402.** Aerar asks the Vault to approve one exact EIP-3009 transfer; the Vault checks its mandate, books the spend and answers the facilitator's ERC-1271 check for that transfer only. USDC v2.2 on Base Sepolia settles it (checked with `scripts/check-usdc-1271.py`).
-- **Pause, revoke or withdraw** from your wallet at any time; pending approvals die with them. Aerar can't change limits, withdraw or pay anyone else.
+- **Pause, revoke, change limits or withdraw** from your wallet at any time; pending approvals die with a pause or revoke. Aerar can't change limits, withdraw or pay anyone else.
+- **Every Vault purchase has a signed receipt** the owner can open and check against Base on `/verify`.
 - **"Pretend Aerar got hacked"**: ask the Vault for a bad payment with Aerar's real key and watch the contract refuse (dry run, nothing sent).
-- Contract and 15 Foundry tests in [`contracts/`](contracts/).
+- Contract and 15 Foundry tests in [`contracts/`](contracts/) (28 with the Escrow and Morning Seal).
 
 **Refunds through an escrow** (new, [contract](contracts/src/AerarEscrow.sol))
 - A shop opts in by creating an `AerarEscrow` (shop and judge fixed for life, window 5 minutes to 7 days) and naming it as its x402 `payTo`. Standard x402 settlement still works: the facilitator pays the escrow, and anyone attributes the payment with the payer's own authorization (the escrow re-checks the signature, ERC-1271 Vaults included).
