@@ -561,7 +561,9 @@ export async function execute(ctx: Ctx, purchaseId: string): Promise<Purchase> {
   const dc = checkDelivery(result.response);
   // A shop that takes payment through an escrow can be refunded: the money is held until delivery is judged.
   const refund = !dc.ok && result.escrow && rail.refund ? await rail.refund(result.escrow, `${dc.code}: ${dc.detail}`).catch((e) => ({ ok: false as const, reason: (e as Error).message })) : null;
-  if (dc.ok && result.escrow && rail.confirm) void rail.confirm(result.escrow).catch(() => {}); // else it releases after the window
+  // Delivered: release it to the shop now. Awaited, so the next payment from the same key can't race this transaction
+  // for a nonce; if it fails, the escrow still releases to the shop after its window.
+  if (dc.ok && result.escrow && rail.confirm) await rail.confirm(result.escrow).catch(() => null);
   const refunded = refund?.ok ? paid : 0n;
   const status: PurchaseStatus = dc.ok ? "delivered" : refund?.ok ? "refunded" : "disputed";
   const delivered = await db.transaction(async (tx) => {
