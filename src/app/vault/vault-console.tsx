@@ -135,6 +135,7 @@ export function VaultConsole(props: {
   const [view, setView] = useState<VaultView | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [editLimits, setEditLimits] = useState(false);
   const [note, setNote] = useState<{ tone: "ok" | "bad"; text: string; tx?: string } | null>(null);
 
   const reload = useCallback(async () => {
@@ -234,7 +235,8 @@ export function VaultConsole(props: {
 
               <hr className="receipt-rule my-5" />
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-3">Mandate · your research task</p>
-              {mandateLive && m ? (
+              {mandateLive && m && !editLimits ? (
+                <>
                 <dl className="mt-3 space-y-1.5 font-mono text-[12.5px]">
                   <Line k="Per payment" v={`≤ ${$(m.maxPerPayment)}`} />
                   <Line k="Per day" v={`≤ ${$(m.periodLimit)} · ${$(m.leftInPeriod)} left`} />
@@ -242,21 +244,30 @@ export function VaultConsole(props: {
                   <Line k="Expires" v={new Date(m.expiresAt * 1000).toUTCString().slice(5, 22)} />
                   <Line k="Operator" v={v.operatorIsAerar ? `Aerar ${short(v.operator)}` : `⚠ ${short(v.operator)}`} />
                 </dl>
+                {isOwner && (
+                  <button type="button" onClick={() => setEditLimits(true)} className="mt-3 text-[12.5px] font-medium text-info underline-offset-2 hover:underline">
+                    Change limits
+                  </button>
+                )}
+                </>
               ) : !isOwner ? (
                 <p className="mt-3 text-[13px] text-text-2">No active limits: the Vault pays nothing until the owner signs some.</p>
               ) : (
                 <SignMandate
                   busy={busy}
-                  revoked={!!m && m.maxPerPayment !== "0"}
+                  revoked={!mandateLive && !!m && m.maxPerPayment !== "0"}
+                  editing={mandateLive}
+                  current={mandateLive && m ? { per: toUsd(m.maxPerPayment), day: toUsd(m.periodLimit) } : undefined}
+                  onCancel={() => setEditLimits(false)}
                   onSign={(per, day, days) =>
-                    tx("Limits signed", (w) =>
+                    void tx("Limits signed", (w) =>
                       w.client.writeContract({
                         address: v.address,
                         abi: vaultAbi,
                         functionName: "setMandate",
                         args: [props.mandateId, view!.providers.map((p) => p.payTo), parseUnits(per, 6), parseUnits(day, 6), 86_400n, BigInt(Math.floor(Date.now() / 1000) + Number(days) * 86_400)],
                       }),
-                    )
+                    ).then(() => setEditLimits(false))
                   }
                 />
               )}
@@ -404,9 +415,25 @@ function Fund({ busy, onFund }: { busy: string | null; onFund: (amount: string) 
   );
 }
 
-function SignMandate({ busy, revoked, onSign }: { busy: string | null; revoked: boolean; onSign: (per: string, day: string, days: string) => void }) {
-  const [per, setPer] = useState("0.50");
-  const [day, setDay] = useState("1.00");
+const toUsd = (atomic: string) => (Number(atomic) / 1e6).toFixed(2);
+
+function SignMandate({
+  busy,
+  revoked,
+  editing,
+  current,
+  onCancel,
+  onSign,
+}: {
+  busy: string | null;
+  revoked: boolean;
+  editing?: boolean;
+  current?: { per: string; day: string };
+  onCancel?: () => void;
+  onSign: (per: string, day: string, days: string) => void;
+}) {
+  const [per, setPer] = useState(current?.per ?? "0.50");
+  const [day, setDay] = useState(current?.day ?? "1.00");
   const [days, setDays] = useState("7");
   const field = (id: string, label: string, val: string, set: (v: string) => void, unit: string) => (
     <label htmlFor={id} className="flex items-center justify-between gap-3">
@@ -427,7 +454,11 @@ function SignMandate({ busy, revoked, onSign }: { busy: string | null; revoked: 
       }}
     >
       <p className="font-sans text-[13px] text-text-2">
-        {revoked ? "You revoked the limits, so the Vault pays nothing. Sign new ones to let your agent buy again." : "Sign the limits your Vault will enforce. Aerar can't change them."}
+        {editing
+          ? "New limits replace the current ones on-chain. What was spent today still counts."
+          : revoked
+            ? "You revoked the limits, so the Vault pays nothing. Sign new ones to let your agent buy again."
+            : "Sign the limits your Vault will enforce. Aerar can't change them."}
       </p>
       <div className="flex justify-between gap-4 pt-1">
         <span className="text-text-3">Pays only</span>
@@ -440,6 +471,11 @@ function SignMandate({ busy, revoked, onSign }: { busy: string | null; revoked: 
         {busy === "Limits signed" && <Loader2 className="size-4 animate-spin" aria-hidden />}
         Sign these limits
       </button>
+      {editing && onCancel && (
+        <button type="button" onClick={onCancel} className="w-full text-center font-sans text-[12.5px] text-text-3 hover:text-text">
+          Keep the current limits
+        </button>
+      )}
     </form>
   );
 }
