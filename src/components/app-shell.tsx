@@ -9,7 +9,7 @@ import { purchases } from "@/db/schema";
 import { getDbOnly, operatorOrgId } from "@/lib/server/context";
 import { isOperator } from "@/lib/server/session";
 import { Logo, LogoMark } from "./logo";
-import { AccentToggle, ThemeToggle } from "./theme-toggle";
+import { ThemeToggle } from "./theme-toggle";
 import { ToastProvider } from "./toast";
 
 function NetworkPill() {
@@ -116,7 +116,6 @@ export function AppShell({ active, children }: { active?: "/report" | "/audit" |
       right={
         <>
           <NetworkPill />
-          <AccentToggle />
           <ThemeToggle />
           <form action={logout}>
             <button className="grid size-8 place-items-center rounded-lg text-text-2 hover:bg-surface-2 hover:text-text" aria-label="Sign out">
@@ -163,7 +162,6 @@ export function PublicShell({ active, children }: { active?: "/scenarios" | "/de
       right={
         <>
           <NetworkPill />
-          <AccentToggle />
           <ThemeToggle />
           <Link href="/login" className="ml-1 hidden h-8 items-center rounded-lg border border-border bg-surface px-3 text-[13px] font-medium text-text transition-colors hover:border-border-strong lg:inline-flex">
             Sign in

@@ -13,7 +13,7 @@ export default function OpengraphImage() {
           <svg width="72" height="72" viewBox="0 0 24 24">
             <rect x="2.3" y="16" width="13.2" height="4.4" rx="2.2" fill="#edeef0" />
             <rect x="5.4" y="9.8" width="13.2" height="4.4" rx="2.2" fill="#edeef0" />
-            <rect x="8.5" y="3.6" width="13.2" height="4.4" rx="2.2" fill="#d8aa55" />
+            <rect x="8.5" y="3.6" width="13.2" height="4.4" rx="2.2" fill="#4d8bff" />
           </svg>
           <div style={{ fontSize: 48, fontWeight: 600, letterSpacing: -1 }}>Aerar</div>
         </div>

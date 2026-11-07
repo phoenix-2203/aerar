@@ -27,9 +27,9 @@ const TOOLS: [string, string][] = [
 ];
 
 const PLANS = [
-  { name: "Builder", price: "Free", for: "Solo builders and side projects", items: ["Up to $50/month of agent spend", "Rules, memory, price memory", "Signed receipts, Morning Seal"] },
-  { name: "Team", price: "$29/month", for: "Teams running agents for clients", items: ["Approvals in Slack, Discord, Telegram", "Owners, approvers, viewers", "Agents hiring agents, provider scores"] },
-  { name: "Platform", price: "0.5% of routed spend", for: "Apps where users run agents", items: ["A Vault per end user (non-custodial)", "White-label receipts and verify page", "Volume pricing"] },
+  { name: "Builder", price: "Free", for: "Solo builders and side projects", items: ["Rules, memory, price memory", "Signed receipts, Morning Seal", "Claude / ChatGPT connector"] },
+  { name: "Team", price: "Monthly plan", for: "Teams running agents for clients", items: ["Approvals in Slack, Discord, Telegram", "Owners, approvers, viewers", "Agents hiring agents, provider scores"] },
+  { name: "Platform", price: "Share of spend", for: "Apps where users run agents", items: ["A Vault per end user (non-custodial)", "White-label receipts and verify page", "Volume pricing"] },
 ];
 
 export default function BuildersPage() {
@@ -121,11 +121,13 @@ setPaused(bool) · revoke(task) · withdraw(to, value)              // owner`}</
       </section>
 
       <section className="mt-16" aria-labelledby="pricing">
-        <p className="eyebrow">Pricing · planned</p>
+        <p className="eyebrow">Pricing</p>
         <h2 id="pricing" className="mt-2 text-[26px] font-semibold tracking-[-0.03em]">
           Free while it&apos;s on testnet.
         </h2>
-        <p className="mt-2 max-w-2xl text-[14.5px] text-text-2">How we plan to charge once Aerar is on Base mainnet and audited. Everything is free today.</p>
+        <p className="mt-2 max-w-2xl text-[14.5px] text-text-2">
+          Everything is free on testnet. Prices are set at mainnet, after an audit. These are the three ways we plan to charge.
+        </p>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           {PLANS.map((p) => (
             <div key={p.name} className="vault-slip p-6">
@@ -139,6 +141,15 @@ setPaused(bool) · revoke(task) · withdraw(to, value)              // owner`}</
               </ul>
             </div>
           ))}
+        </div>
+        <div className="mt-6 rounded-2xl border border-dashed border-border-strong p-5">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-3">For reference: what others charge (published pages, Nov 2026)</p>
+          <ul className="mt-3 grid gap-x-8 gap-y-1.5 text-[13px] text-text-2 sm:grid-cols-2">
+            <li>· Nevermined: free, then $50 / $250 / $500 a month, plus 1–2% of settled spend</li>
+            <li>· Privy (agent and user wallets): $299–$499 a month by active users</li>
+            <li>· Turnkey (wallet signing): $99 a month plus $0.05 a signature</li>
+            <li>· Coinbase x402 facilitator: $0.001 per on-chain payment after 1,000 free a month</li>
+          </ul>
         </div>
       </section>
     </PublicShell>

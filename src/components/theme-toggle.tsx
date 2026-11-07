@@ -30,24 +30,3 @@ export function ThemeToggle() {
     </button>
   );
 }
-
-/** Brand preview: switch the accent between brass and Base Blue. Remove once the final colour is chosen. */
-export function AccentToggle() {
-  function toggle() {
-    const d = document.documentElement;
-    const next = d.dataset.accent === "blue" ? "brass" : "blue";
-    d.dataset.accent = next;
-    remember("aerar-accent", next);
-  }
-  return (
-    <button
-      type="button"
-      onClick={toggle}
-      title="Brand colour: brass or Base Blue"
-      aria-label="Switch brand colour between brass and Base Blue"
-      className="group grid size-8 place-items-center rounded-lg transition-colors hover:bg-surface-2"
-    >
-      <span className="relative block size-3.5 rounded-full bg-accent ring-2 ring-surface-3 transition-transform duration-300 group-hover:scale-110" aria-hidden />
-    </button>
-  );
-}

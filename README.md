@@ -58,12 +58,7 @@ Aerar sits between the agent and the wallet:
 - **The operator** sets each task's budget and rules, approves what's above a threshold, and reads in the morning what was bought, reused, refused and proven.
 - **The provider** gets paid exactly what it quoted, from the user's own Vault or a wallet only Aerar controls.
 
-| The agent asks to buy… | Aerar's answer |
-|---|---|
-| from a shop not on the task's list | **Declined**; the shop is never contacted |
-| something already bought | **Reused** for $0 |
-| something big, or much pricier than last time | **Waits for a person** (in Slack, Discord or Telegram) |
-| within every rule | **Paid** from the Vault or Aerar's wallet, transfer checked on Base, signed receipt |
+<p align="center"><img src="docs/diagrams/what-aerar-does.png" width="640" alt="Agent asks Aerar; declined, reused, waits for a person, or paid and checked on-chain; everything into the ledger"></p>
 
 In order, for every request:
 
@@ -92,7 +87,7 @@ Every step has its reasons in plain words, its policy version, and (for payments
 
 ### The life of a purchase
 
-`declined` · `reused` · `free` · `awaiting_approval` → (`reserved` | `rejected` | `expired`) · `reserved` → `paying` → (`delivered` | `payment_failed` | `unknown`)
+<p align="center"><img src="docs/diagrams/purchase-states.png" width="640" alt="Purchase states: declined, reused, free, awaiting approval, reserved, paying, delivered, payment failed, unknown"></p>
 
 An approved purchase is not a paid purchase, and a paid purchase is not proof the data was useful. Aerar records each step separately. `unknown` keeps the budget reserved until it is reconciled, rather than guessing.
 
@@ -266,6 +261,8 @@ More screens (every page, phone and desktop, both themes) are in [`docs/screensh
 - **Not audited.**
 
 ## Architecture
+
+<p align="center"><img src="docs/diagrams/architecture.png" width="640" alt="Agent to Aerar pipeline, person approvals, Vault on-chain limits, x402 shop, ledger and Morning Seal"></p>
 
 **Agent** (Claude, ChatGPT, any MCP or REST client) → **Aerar** (access → memory → quote → rules → reserve → pay → prove) → **Vault** on Base (the user's limits, enforced on-chain) → **x402 shop** (USDC on Base Sepolia). Every step goes into a hash-chained audit log; each morning its head is sealed on Base.
 

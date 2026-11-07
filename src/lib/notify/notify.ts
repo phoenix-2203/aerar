@@ -82,7 +82,7 @@ async function post(kind: NotifyKind, url: string, m: { title: string; lines: st
       ],
     };
   else if (kind === "discord")
-    body = { username: "Aerar", embeds: [{ title: m.title, description: `${m.lines.join("\n")}\n\n**[Review and decide →](${m.link})**`, color: 0xd8aa55 }] };
+    body = { username: "Aerar", embeds: [{ title: m.title, description: `${m.lines.join("\n")}\n\n**[Review and decide →](${m.link})**`, color: 0x0052ff }] };
   else {
     const u = new URL(url);
     const chatId = u.searchParams.get("chat_id");

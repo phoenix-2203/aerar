@@ -114,6 +114,7 @@ export function TryConsole({
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
         <div className="min-w-0 space-y-6">
+          <Guide state={state} running={running} onRun={(id) => run(id, { preset: id })} />
           {/* 2. Ask your agent */}
           <section className="rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-6" aria-labelledby="ask">
             <StepHead n={1} id="ask" title="Ask your agent to buy something" sub="Each button is one thing that really happens to agents. Watch how your rules answer." />
@@ -181,7 +182,7 @@ export function TryConsole({
         </div>
 
         {/* Side: rules + connect */}
-        <aside className="min-w-0 space-y-6 lg:sticky lg:top-20">
+        <aside className="min-w-0 space-y-6">
           <Rules state={state} providers={providers} onDone={(r) => (r?.error ? setToast({ tone: "err", text: r.error }) : r?.done && setToast({ tone: "ok", text: r.done }))} />
           <AgentTeam
             team={state.team}
@@ -190,11 +191,19 @@ export function TryConsole({
             leadBudget={state.task.budgetFormatted}
             onResult={(r) => (r?.error ? setToast({ tone: "err", text: r.error }) : r?.done && setToast({ tone: "ok", text: r.done }))}
           />
-          <ConnectAi
-            url={`${site}/api/mcp/k/${apiKey}`}
-            examples={["What are my task's rules?", "Buy the FX rates from api.marketdata.dev", "What did you buy so far, and what was refused?"]}
-          />
-          <NotifyCard where="try" />
+          <details className="group rounded-2xl border border-border bg-surface shadow-card">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 text-[15px] font-semibold marker:hidden">
+              Connect Claude, ChatGPT, Slack or Discord
+              <ChevronDown className="size-4 text-text-3 transition-transform group-open:rotate-180" aria-hidden />
+            </summary>
+            <div className="space-y-4 border-t border-border p-3">
+              <ConnectAi
+                url={`${site}/api/mcp/k/${apiKey}`}
+                examples={["What are my task's rules?", "Buy the FX rates from api.marketdata.dev", "What did you buy so far, and what was refused?"]}
+              />
+              <NotifyCard where="try" />
+            </div>
+          </details>
         </aside>
       </div>
 
@@ -440,3 +449,54 @@ function Money({ id, label, value, onChange }: { id: string; label: string; valu
   );
 }
 
+
+/** "Your first three minutes": three things to press, ticked off from what actually happened in the sandbox. */
+function Guide({ state, running, onRun }: { state: TryState; running: string | null; onRun: (id: string) => void }) {
+  const ps = state.purchases;
+  const steps = [
+    { id: "buy", label: "Buy something normal", hint: "It's within your rules, so it's paid.", done: ps.some((p) => p.status === "delivered") },
+    { id: "attacker", label: "Let a web page trick your agent", hint: "The shop isn't on your list, so it's refused.", done: ps.some((p) => p.reasonCodes.includes("PROVIDER_NOT_ALLOWED")) },
+    { id: "expensive", label: "Ask for something big, then approve it", hint: "Over $0.25 waits for you. Approve it below.", done: ps.some((p) => !!p.approvedBy) },
+  ];
+  const next = steps.find((x) => !x.done);
+  const doneCount = steps.filter((x) => x.done).length;
+  return (
+    <section className="rounded-2xl border border-accent/30 bg-accent-tint/40 p-5 sm:p-6" aria-labelledby="guide">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="guide" className="text-[17px] font-semibold">
+          {next ? "Your first three minutes" : "You've seen how it works"}
+        </h2>
+        <span className="font-mono text-[12px] text-text-3">{doneCount}/3 done</span>
+      </div>
+      {next ? (
+        <ol className="mt-4 grid gap-2 sm:grid-cols-3">
+          {steps.map((x, i) => {
+            const isNext = x === next;
+            return (
+              <li key={x.id}>
+                <button
+                  onClick={() => onRun(x.id)}
+                  disabled={!!running || x.done}
+                  className={`flex h-full w-full flex-col items-start gap-1 rounded-xl border p-3 text-left transition-all duration-200 disabled:cursor-default ${
+                    x.done ? "border-success/30 bg-surface/70" : isNext ? "border-accent bg-surface shadow-card hover:-translate-y-px" : "border-border bg-surface/60 hover:border-border-strong"
+                  }`}
+                >
+                  <span className={`grid size-6 place-items-center rounded-full font-mono text-[11px] ${x.done ? "bg-success text-white" : isNext ? "bg-accent text-on-accent" : "bg-surface-2 text-text-3"}`}>
+                    {x.done ? <Check className="size-3.5" aria-hidden /> : running === x.id ? <span className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent" /> : i + 1}
+                  </span>
+                  <span className={`text-[13.5px] font-medium ${x.done ? "text-text-2 line-through decoration-text-3/50" : ""}`}>{x.label}</span>
+                  <span className="text-[12px] leading-4 text-text-3">{x.hint}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      ) : (
+        <p className="mt-2 text-[13.5px] leading-6 text-text-2">
+          Now make it yours: change the rules on the right, let your agent hire a scout, or connect Claude below. Everything you do lands in the report under the
+          list.
+        </p>
+      )}
+    </section>
+  );
+}

@@ -2,5 +2,5 @@
   <style>.ink{fill:#111215}@media (prefers-color-scheme: dark){.ink{fill:#edeef0}}</style>
   <rect class="ink" x="2.30" y="16.00" width="13.2" height="4.4" rx="2.2"/>
   <rect class="ink" x="5.40" y="9.80" width="13.2" height="4.4" rx="2.2"/>
-  <rect fill="#c9962f" x="8.50" y="3.60" width="13.2" height="4.4" rx="2.2"/>
+  <rect fill="#0052ff" x="8.50" y="3.60" width="13.2" height="4.4" rx="2.2"/>
 </svg>

@@ -28,6 +28,8 @@ const NIGHT: Line[] = [
   { at: 431, agent: "analyst", item: "Sector summary · acme", amount: 0.12, stamp: "PAID", note: "within the task's rules" },
 ];
 const END = 480; // 06:00
+const ROW = 61; // px per ledger line
+const VISIBLE = 5;
 
 const STAMP: Record<Stamp, string> = {
   PAID: "text-success border-success",
@@ -48,6 +50,7 @@ export function NightLedger() {
   const [reduced, setReduced] = useState(false);
   const raf = useRef<number | null>(null);
   const last = useRef<number | null>(null);
+  const acc = useRef(0);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -68,8 +71,14 @@ export function NightLedger() {
     const step = (now: number) => {
       const dt = last.current == null ? 0 : now - last.current;
       last.current = now;
-      // ~24s for the whole night, then a short pause at dawn and start again.
-      setT((x) => (x >= END + 40 ? 0 : x + dt / 50));
+      // ~24s for the whole night, then a pause at dawn and start again. State moves in whole minutes, so React
+      // re-renders ~20 times a second, not every frame.
+      acc.current += dt / 50;
+      if (acc.current >= 1) {
+        const whole = Math.floor(acc.current);
+        acc.current -= whole;
+        setT((x) => (x >= END + 60 ? 0 : x + whole));
+      }
       raf.current = requestAnimationFrame(step);
     };
     raf.current = requestAnimationFrame(step);
@@ -104,7 +113,7 @@ export function NightLedger() {
           <span key={i} className="star absolute rounded-full bg-white" style={{ left: `${x}%`, top: `${y}%`, width: s, height: s, opacity: 0.8 * (1 - Math.min(1, light)), animationDelay: `${i * 0.37}s` }} />
         ))}
         <span
-          className="absolute size-7 rounded-full bg-[#f4ecd8] shadow-[0_0_24px_6px_rgba(244,236,216,0.25)] transition-[left,top] duration-200"
+          className="absolute size-7 rounded-full bg-[#f4ecd8] shadow-[0_0_24px_6px_rgba(244,236,216,0.25)] will-change-[left,top]"
           style={{ left: `calc(${(now / END) * 86 + 4}% - 14px)`, top: `${62 - Math.sin((now / END) * Math.PI) * 44}%`, opacity: 1 - Math.min(1, light) * 0.7 }}
         />
         <div className="absolute inset-x-4 bottom-2 flex items-end justify-between font-mono text-[11px] text-white/70">
@@ -139,13 +148,21 @@ export function NightLedger() {
       </div>
 
       {/* ledger lines */}
-      <ol className="h-[308px] space-y-0 overflow-hidden px-4 pb-2 pt-2 font-mono text-[12px]" aria-live="off">
-        {shown.length === 0 && <li className="py-10 text-center text-text-3">Your agents start their shift…</li>}
-        {shown
-          .slice(-5)
-          .reverse()
-          .map((l) => (
-            <li key={l.at} className="ledger-line flex items-center gap-3 border-b border-dashed border-border py-2.5 last:border-0">
+      <div className="relative h-[305px] overflow-hidden px-4 font-mono text-[12px]" aria-live="off">
+        {shown.length === 0 && <p className="absolute inset-x-0 top-24 text-center text-text-3">Your agents start their shift…</p>}
+        {/* A paper roll: every line has a fixed slot; the roll slides up as new lines print, so nothing jumps. */}
+        <ol
+          className="pt-1 transition-transform duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+          style={{ transform: `translateY(-${Math.max(0, shown.length - VISIBLE) * ROW}px)` }}
+        >
+          {NIGHT.map((l) => {
+            const printed = l.at <= now;
+            return (
+            <li
+              key={l.at}
+              style={{ height: ROW }}
+              className={`flex items-center gap-3 border-b border-dashed border-border transition-opacity duration-300 ${printed ? "ledger-in opacity-100" : "opacity-0"}`}
+            >
               <span className="w-10 shrink-0 text-text-3">{clock(l.at)}</span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-text">{l.item}</span>
@@ -154,10 +171,12 @@ export function NightLedger() {
                 </span>
               </span>
               <span className="w-12 shrink-0 text-right tabular-nums text-text-2">{usd(l.amount)}</span>
-              <span className={`stamp-mini shrink-0 ${STAMP[l.stamp]}`}>{l.stamp}</span>
+              <span className={`stamp-mini shrink-0 ${STAMP[l.stamp]} ${printed ? "stamp-land" : "invisible"}`}>{l.stamp}</span>
             </li>
-          ))}
-      </ol>
+            );
+          })}
+        </ol>
+      </div>
 
       {/* totals */}
       <div className="grid grid-cols-4 border-t border-border bg-surface-2/40 font-mono text-[11px]">

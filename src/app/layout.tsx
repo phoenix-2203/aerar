@@ -3,17 +3,25 @@ import localFont from "next/font/local";
 import "./globals.css";
 
 // Self-hosted (Fontsource files), so builds never depend on Google Fonts.
-const inter = localFont({
-  src: "../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2",
+// Geist for text, Bricolage Grotesque for headings, Geist Mono for numbers, ids and ledger lines.
+const sans = localFont({
+  src: "../../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2",
   variable: "--font-inter",
   weight: "100 900",
   display: "swap",
 });
 
-const jetbrains = localFont({
-  src: "../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2",
+const display = localFont({
+  src: "../../node_modules/@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2",
+  variable: "--font-bricolage",
+  weight: "200 800",
+  display: "swap",
+});
+
+const mono = localFont({
+  src: "../../node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2",
   variable: "--font-jetbrains",
-  weight: "100 800",
+  weight: "100 900",
   display: "swap",
 });
 
@@ -36,13 +44,12 @@ export const viewport: Viewport = {
   ],
 };
 
-// Runs before first paint: theme = saved choice, else system, else dark. Accent = ?accent= in the URL (remembered),
-// else the saved choice, else brass. The accent switch is a brand preview until the final colour is chosen.
-const THEME_SCRIPT = `(function(){var d=document.documentElement;try{var t=localStorage.getItem("aerar-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}d.dataset.theme=t;var q=new URLSearchParams(location.search).get("accent");if(q==="blue"||q==="brass")localStorage.setItem("aerar-accent",q);var a=localStorage.getItem("aerar-accent");d.dataset.accent=a==="blue"?"blue":"brass"}catch(e){d.dataset.theme="dark";d.dataset.accent="brass"}})();`;
+// Runs before first paint: theme = saved choice, else system, else dark.
+const THEME_SCRIPT = `(function(){var d=document.documentElement;try{var t=localStorage.getItem("aerar-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}d.dataset.theme=t}catch(e){d.dataset.theme="dark"}})();`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrains.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="en" className={`${sans.variable} ${display.variable} ${mono.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
