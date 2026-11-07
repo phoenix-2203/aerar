@@ -53,7 +53,7 @@ describe("morning report", () => {
   });
 
   it("says so when nothing happened", () => {
-    const zero = { purchases: 0, delivered: 0, reused: 0, refused: 0, failed: 0, waiting: 0, spent: 0n, saved: 0n, blocked: 0n, verified: 0, formatted: { spent: "$0.00", saved: "$0.00", blocked: "$0.00" } };
+    const zero = { purchases: 0, delivered: 0, reused: 0, refused: 0, failed: 0, refundedCount: 0, waiting: 0, spent: 0n, saved: 0n, blocked: 0n, refunded: 0n, verified: 0, formatted: { spent: "$0.00", saved: "$0.00", blocked: "$0.00", refunded: "$0.00" } };
     expect(headline(zero, [])[0]).toMatch(/quiet shift/);
     expect(lead(zero)).toBe("Overnight your agents didn't try to buy anything.");
     expect(lead({ ...zero, purchases: 3, spent: 300_000n, formatted: { ...zero.formatted, spent: "$0.30" } }, "This week")).toBe("This week your agents paid $0.30, and nothing needs you.");

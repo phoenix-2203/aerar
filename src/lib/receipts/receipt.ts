@@ -30,6 +30,8 @@ export interface ReceiptBody {
     intent?: { outcome: string; item: string[]; task: string[] } | null;
     quote: { amount: string | null; payTo: string | null; asset: string | null; network: string | null; scheme: string | null };
     paid: { amount: string | null; txHash: string | null; payer: string | null; onchainVerified: boolean };
+    /** Present when the payment went into a shop's escrow and came back (not delivered). */
+    refund?: { amount: string; txHash: string | null; escrow: string | null };
     delivery: { status: number | null; sha256: string | null; bytes: number | null };
     reusedFrom: string | null;
     approvedBy: string | null;
@@ -158,7 +160,9 @@ export async function receiptFor(db: Db, orgId: string, purchaseId: string, issu
         network: p.quoteNetwork ?? null,
         scheme: p.quoteScheme ?? null,
       },
-      paid: { amount: p.paidAmount?.toString() ?? null, txHash: p.txHash ?? null, payer: p.payer ?? null, onchainVerified: !!p.onchainVerifiedAt },
+      // What moved in the payment transaction (a refund comes back in a separate one, below).
+      paid: { amount: ((p.paidAmount ?? 0n) + (p.refundedAmount ?? 0n)).toString(), txHash: p.txHash ?? null, payer: p.payer ?? null, onchainVerified: !!p.onchainVerifiedAt },
+      ...(p.status === "refunded" ? { refund: { amount: (p.refundedAmount ?? 0n).toString(), txHash: p.refundTx ?? null, escrow: p.escrow ?? null } } : {}),
       delivery: { status: p.responseStatus ?? null, sha256: p.responseHash ? `0x${p.responseHash}` : null, bytes: p.responseBytes ?? null },
       reusedFrom: p.reusedFromId ?? null,
       approvedBy: p.approvedBy ?? null,

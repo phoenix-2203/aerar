@@ -133,6 +133,12 @@ export function ReceiptPaper({
           View on BaseScan <ExternalLink className="size-3" aria-hidden />
         </a>
       )}
+      {p.refund && line("Refunded", `${usd(p.refund.amount)} from escrow`)}
+      {p.refund && isRealTx(p.refund.txHash) && (
+        <a href={`https://sepolia.basescan.org/tx/${p.refund.txHash}`} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-info hover:underline">
+          Refund on BaseScan <ExternalLink className="size-3" aria-hidden />
+        </a>
+      )}
       <hr className="receipt-rule" />
       {line("Audit entry", r.body.audit.lastEventSeq != null ? `#${r.body.audit.lastEventSeq} · ${r.body.audit.lastEventHash?.slice(0, 10)}…` : "—")}
       {line("Receipt hash", `${r.sha256.slice(0, 12)}…`)}

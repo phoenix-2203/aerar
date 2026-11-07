@@ -29,12 +29,15 @@ export interface Totals {
   reused: number;
   refused: number;
   failed: number;
+  /** Purchases paid into a shop's escrow, not delivered, and refunded. */
+  refundedCount: number;
   waiting: number;
   spent: bigint;
+  refunded: bigint;
   saved: bigint;
   blocked: bigint;
   verified: number;
-  formatted: { spent: string; saved: string; blocked: string };
+  formatted: { spent: string; saved: string; blocked: string; refunded: string };
 }
 
 const sum = (xs: bigint[]) => xs.reduce((a, b) => a + b, 0n);
@@ -61,7 +64,9 @@ export async function morningReport(db: Db, orgId: string, w: ReportWindow) {
   const delivered = by("delivered");
   const reused = by("reused");
   const refused = ps.filter((p) => p.status === "declined" || p.status === "rejected");
-  const failed = ps.filter((p) => p.status === "payment_failed" || p.status === "unknown" || p.status === "disputed" || p.status === "refunded");
+  const failed = ps.filter((p) => p.status === "payment_failed" || p.status === "unknown" || p.status === "disputed");
+  const refundedRows = by("refunded");
+  const refunded = sum(refundedRows.map((p) => p.refundedAmount ?? 0n));
 
   const spent = sum(ps.map((p) => p.paidAmount));
   const saved = sum(reused.map((p) => p.quoteAmount ?? 0n));
@@ -69,7 +74,7 @@ export async function morningReport(db: Db, orgId: string, w: ReportWindow) {
   const verified = delivered.filter((p) => p.onchainVerifiedAt).length;
 
   const reasonCounts = new Map<string, number>();
-  for (const p of [...refused, ...failed])
+  for (const p of [...refused, ...failed, ...refundedRows])
     for (const c of p.reasonCodes.length ? p.reasonCodes : [p.status.toUpperCase()]) reasonCounts.set(c, (reasonCounts.get(c) ?? 0) + 1);
   const reasons = [...reasonCounts].sort((a, b) => b[1] - a[1]).map(([code, count]) => ({ code, count, explanation: explain(code) }));
 
@@ -102,12 +107,14 @@ export async function morningReport(db: Db, orgId: string, w: ReportWindow) {
     reused: reused.length,
     refused: refused.length,
     failed: failed.length,
+    refundedCount: refundedRows.length,
     waiting: waitingRows.length,
     spent,
+    refunded,
     saved,
     blocked,
     verified,
-    formatted: { spent: fmt$(spent), saved: fmt$(saved), blocked: fmt$(blocked) },
+    formatted: { spent: fmt$(spent), saved: fmt$(saved), blocked: fmt$(blocked), refunded: fmt$(refunded) },
   };
 
   return {
@@ -137,6 +144,7 @@ export function lead(t: Totals, when = "Overnight"): string {
   const parts = [`paid ${t.formatted.spent}`];
   if (t.saved > 0n) parts.push(`reused ${t.formatted.saved}`);
   if (t.refused > 0) parts.push(`declined ${plural(t.refused, "purchase")}`);
+  if (t.refunded > 0n) parts.push(`got ${t.formatted.refunded} back in refunds`);
   const needs = t.waiting > 0 ? `${plural(t.waiting, "purchase")} ${t.waiting === 1 ? "needs" : "need"} you` : "nothing needs you";
   return `${when} your agents ${parts.join(", ")}, and ${needs}.`;
 }
@@ -156,6 +164,8 @@ export function headline(t: Totals, reasons: { code: string; count: number; expl
     const top = reasons[0];
     out.push(`${plural(t.refused, "purchase")} ${t.refused === 1 ? "was" : "were"} declined${t.blocked > 0n ? ` (${t.formatted.blocked} in quotes)` : ""}${top ? `; most often because ${top.explanation}` : ""}.`);
   }
+  if (t.refundedCount > 0)
+    out.push(`${plural(t.refundedCount, "purchase")} ${t.refundedCount === 1 ? "wasn't" : "weren't"} delivered, so ${t.formatted.refunded} came back from the shop's escrow and the shop went on hold.`);
   if (t.failed > 0) out.push(`${plural(t.failed, "payment")} didn't go through and ${t.failed === 1 ? "needs" : "need"} a look.`);
   if (t.waiting > 0) out.push(`${plural(t.waiting, "purchase")} ${t.waiting === 1 ? "needs" : "need"} your approval.`);
   return out;

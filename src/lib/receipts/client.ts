@@ -22,6 +22,7 @@ export type Receipt = {
       rules: { version: number; sha256: string | null };
       quote: { amount: string | null; payTo: string | null; network: string | null };
       paid: { amount: string | null; txHash: string | null; payer: string | null; onchainVerified: boolean };
+      refund?: { amount: string; txHash: string | null; escrow: string | null };
       delivery: { sha256: string | null; bytes: number | null };
       decidedAt: string | null;
       approvedBy: string | null;
@@ -103,8 +104,11 @@ export async function checkChain(r: Receipt): Promise<Check> {
       if (log.address.toLowerCase() !== USDC) continue;
       try {
         const ev = decodeEventLog({ abi: transferAbi, data: log.data, topics: log.topics });
-        if (ev.args.to.toLowerCase() === payTo && ev.args.value === amount)
-          return { key: "chain", label, state: "ok", detail: `${usd(amount.toString())} USDC went to ${shortAddr(payTo)} on Base, as the receipt says.` };
+        if (ev.args.to.toLowerCase() === payTo && ev.args.value === amount) {
+          const refund = r.body.purchase.refund;
+          if (!refund) return { key: "chain", label, state: "ok", detail: `${usd(amount.toString())} USDC went to ${shortAddr(payTo)} on Base, as the receipt says.` };
+          return checkRefund(r, refund, payTo, amount);
+        }
       } catch {
         /* not a Transfer */
       }
@@ -113,6 +117,32 @@ export async function checkChain(r: Receipt): Promise<Check> {
   } catch {
     return { key: "chain", label, state: "skip", detail: "Couldn't reach Base from this browser. Use the BaseScan link instead." };
   }
+}
+
+/** A refunded purchase: the money also has to have come back from the escrow to the payer, in the refund transaction. */
+async function checkRefund(r: Receipt, refund: { amount: string; txHash: string | null }, escrow: string, paid: bigint): Promise<Check> {
+  const label = "The money really moved";
+  const payer = (r.body.purchase.paid.payer ?? "").toLowerCase();
+  if (!refund.txHash || !isRealTx(refund.txHash)) return { key: "chain", label, state: "skip", detail: `${usd(paid.toString())} went into the shop's escrow; the refund is simulated.` };
+  const res = await fetch(RPC, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getTransactionReceipt", params: [refund.txHash] }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const rec = (await res.json()).result as { status: string; logs: { address: string; data: Hex; topics: [Hex, ...Hex[]] }[] } | null;
+  if (!rec || rec.status !== "0x1") return { key: "chain", label, state: "bad", detail: "The refund transaction isn't on Base Sepolia, or it reverted." };
+  for (const log of rec.logs) {
+    if (log.address.toLowerCase() !== USDC) continue;
+    try {
+      const ev = decodeEventLog({ abi: transferAbi, data: log.data, topics: log.topics });
+      if (ev.args.from.toLowerCase() === escrow && ev.args.to.toLowerCase() === payer && ev.args.value === BigInt(refund.amount))
+        return { key: "chain", label, state: "ok", detail: `${usd(paid.toString())} USDC went into the shop's escrow ${shortAddr(escrow)}, and ${usd(refund.amount)} came back to the payer when nothing was delivered.` };
+    } catch {
+      /* not a Transfer */
+    }
+  }
+  return { key: "chain", label, state: "bad", detail: "The refund transaction doesn't send this receipt's amount back to the payer." };
 }
 
 export type Verdict = "ok" | "bad" | "wait";
