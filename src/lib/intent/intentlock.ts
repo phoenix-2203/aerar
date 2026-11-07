@@ -11,9 +11,16 @@
 //   item can't be classified                -> INTENT_UNCERTAIN (held for a person, or declined if the mandate says so)
 //   task has no categories                  -> IntentLock is off for that task (older mandates)
 //
+// Disguises: before classifying, Reveal (./reveal.ts) undoes Morse, base64, hex, percent-encoding, look-alike letters,
+// leetspeak and spaced letters. Words that only appear once decoded mean the item was hidden on purpose: if they point
+// outside the mandate the purchase is refused, otherwise it waits for a person. And when the URL and the shop's own
+// description name different things, the purchase waits for a person too.
+//
 // Limits, stated plainly: classification is keyword based. A provider that mislabels its own item can fool it, which
 // is why allowlists, the shopping list, price memory and approvals still run alongside it, and why the mandate can
 // say "refuse anything uncertain".
+
+import { reveal } from "./reveal";
 
 export interface Category {
   id: string;
@@ -141,6 +148,8 @@ export interface IntentResult {
   evidence: Record<string, string[]>;
   /** Where the item's description came from. */
   described: "provider" | "url-only";
+  /** Ways the item was disguised (Morse, base64, look-alike letters...), empty when it wasn't. */
+  disguises: string[];
   /** One sentence a person can act on. */
   explanation: string;
 }
@@ -154,10 +163,20 @@ export interface IntentInput {
 
 export function evaluateIntent(input: IntentInput): IntentResult {
   const taskCategories = (input.taskCategories ?? []).filter(isCategory);
-  const { categories: itemCategories, matched } = classify(itemText(input.url, input.providerDescription));
+  const text = itemText(input.url, input.providerDescription);
+  const plain = classify(text);
+  // What the item says once its disguises are undone. Categories that only appear there were hidden on purpose.
+  const rv = reveal(text);
+  const hidden = rv.texts.length ? classify(rv.texts.join(" \n ")) : { categories: [], matched: {} as Record<string, string[]> };
+  const hiddenOnly = hidden.categories.filter((c) => !plain.categories.includes(c));
+  const disguises = hiddenOnly.length ? rv.disguises : [];
+  const itemCategories = [...new Set([...plain.categories, ...hidden.categories])];
+  const matched: Record<string, string[]> = { ...plain.matched };
+  for (const [c, t] of Object.entries(hidden.matched)) matched[c] = [...new Set([...(matched[c] ?? []), ...t.map((x) => (plain.matched[c]?.includes(x) ? x : `${x} (hidden)`))])];
   const described = input.providerDescription ? "provider" : "url-only";
-  const base = { taskCategories, itemCategories, evidence: matched, described } as const;
+  const base = { taskCategories, itemCategories, evidence: matched, described, disguises } as const;
   const list = (ids: string[]) => ids.map(categoryLabel).join(", ");
+  const how = disguises.join(", ");
   if (!taskCategories.length)
     return { ...base, outcome: "off", code: null, explanation: "This task's mandate names no categories, so IntentLock doesn't check purpose." };
   if (!itemCategories.length)
@@ -169,6 +188,14 @@ export function evaluateIntent(input: IntentInput): IntentResult {
     };
   // A sensitive category the mandate didn't name vetoes the match, so "gift card market report" can't sneak through.
   const vetoed = itemCategories.filter((c) => EXPLICIT_ONLY.has(c) && !taskCategories.includes(c));
+  const overlap = itemCategories.filter((c) => taskCategories.includes(c));
+  if (disguises.length && (vetoed.length || !overlap.length))
+    return {
+      ...base,
+      outcome: "mismatch",
+      code: "INTENT_MISMATCH",
+      explanation: `The item is disguised (${how}); decoded, it's ${list(vetoed.length ? vetoed : hiddenOnly)}, which this task's mandate doesn't allow; only ${list(taskCategories)}.`,
+    };
   if (vetoed.length)
     return {
       ...base,
@@ -176,7 +203,25 @@ export function evaluateIntent(input: IntentInput): IntentResult {
       code: "INTENT_MISMATCH",
       explanation: `The item looks like ${list(vetoed)}, which this task's mandate doesn't allow; only ${list(taskCategories)}.`,
     };
-  const overlap = itemCategories.filter((c) => taskCategories.includes(c));
+  if (disguises.length)
+    return {
+      ...base,
+      outcome: "uncertain",
+      code: "INTENT_UNCERTAIN",
+      explanation: `Part of the item is disguised (${how}) and decodes to ${list(hiddenOnly)}. Honest shops don't hide what they sell, so a person decides.`,
+    };
+  // The address and the shop's own description should agree on what the item is.
+  if (input.providerDescription) {
+    const fromUrl = classify(itemText(input.url)).categories;
+    const fromShop = classify(input.providerDescription).categories;
+    if (fromUrl.length && fromShop.length && !fromUrl.some((c) => fromShop.includes(c)))
+      return {
+        ...base,
+        outcome: "uncertain",
+        code: "INTENT_UNCERTAIN",
+        explanation: `The address says ${list(fromUrl)} but the shop describes it as ${list(fromShop)}. Aerar can't tell which is true, so a person decides.`,
+      };
+  }
   if (overlap.length)
     return { ...base, outcome: "match", code: "INTENT_MATCH", explanation: `The item is ${list(overlap)}, which this task is for.` };
   return {

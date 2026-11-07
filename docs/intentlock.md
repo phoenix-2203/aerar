@@ -73,6 +73,15 @@ Mandates created before this feature are signed once on first use and that is re
 Every purchase stores what IntentLock concluded (`purchases.intent`): outcome, item categories, task categories, the
 words that matched, and whether a provider description was available.
 
+**Disguised items** (new, 7 Nov 2026). Before judging an item, IntentLock undoes the ways it can be hidden: Morse
+code, base64, hex, percent-encoding, look-alike letters from other scripts, leetspeak and spaced-out letters
+(`src/lib/intent/reveal.ts`). Categories that only appear once decoded mean the item was hidden on purpose: if they fall
+outside the mandate the purchase is refused with the disguise named in the reason; if the item is otherwise on purpose
+it waits for a person ("honest shops don't hide what they sell"). And when the URL and the shop's own description name
+different things, the purchase waits for a person. The attack lab's *A gift card written in Morse code* runs this
+against the real pipeline; it is modelled on the Grok × Bankrbot drain of 4 May 2026, where a Morse-coded instruction
+got past a filter that read plain words.
+
 **Known limits.** Classification is keyword based and English-only. A provider that mislabels its own item can fool it
 (a gift card described as a market report). That's why the sensitive-category veto exists, why the shopping list,
 allowlists, price memory and approvals still run, and why a mandate can say "refuse anything uncertain". It doesn't read

@@ -9,7 +9,7 @@ AI agents now pay for APIs and data by themselves, a few cents at a time, over x
 Agents never hold a wallet. They ask Aerar to buy a resource for a task. Aerar reads the provider's real price, checks it against the task's rules, serves an identical earlier purchase for $0 instead of paying twice, pays exactly the approved quote, checks the USDC transfer onchain, and writes every step into a tamper-evident ledger. Your agents work the night shift; Aerar is the morning report.
 
 - **Demo video:** *coming before submission*
-- **Try it, no login or wallet:** [your own sandbox](https://aerar.duckdns.org/try) · [attack lab](https://aerar.duckdns.org/scenarios) (36 scenarios, Run all in seconds) · [live report](https://aerar.duckdns.org/demo) (real Base Sepolia purchases)
+- **Try it, no login or wallet:** [your own sandbox](https://aerar.duckdns.org/try) · [attack lab](https://aerar.duckdns.org/scenarios) (37 scenarios, Run all in seconds) · [live report](https://aerar.duckdns.org/demo) (real Base Sepolia purchases)
 - **With your wallet:** [open a Vault](https://aerar.duckdns.org/vault) on Base Sepolia, sign its limits, let your agent pay from it
 - **Check a receipt:** [verify](https://aerar.duckdns.org/verify), then try to cheat
 - **Connect an agent:** Claude, ChatGPT, Claude Code, MCP or REST ([builders page](https://aerar.duckdns.org/builders))
@@ -72,7 +72,7 @@ In order, for every request:
 1. **Access first.** The agent is assigned to the task, the task is active, the provider is on the task's list and not on its blocked list, and the task hasn't used up its purchase count. A disallowed provider is never contacted.
 2. **Procurement memory.** If anyone in the organisation bought the identical request (normalised method, URL, query and JSON body) within the task's reuse window, and the stored copy still matches the hash taken at delivery, Aerar serves that result for $0.
 3. **The real price.** Aerar reads the provider's x402 `402` quote. The decision uses that quote, never the agent's claim.
-4. **IntentLock, then the task's versioned policy.** Does the item (its URL and the provider's own description) serve what the task was signed for? Off-purpose is refused; unplaceable waits for a person. Then budget, per-purchase limit, approval threshold, hourly rate, expiry, and network/token/payee checks. Plain code; no AI decides anything about money.
+4. **IntentLock, then the task's versioned policy.** Does the item (its URL and the provider's own description) serve what the task was signed for? Off-purpose is refused; unplaceable, disguised or self-contradicting items wait for a person (disguised off-purpose items are refused). Then budget, per-purchase limit, approval threshold, hourly rate, expiry, and network/token/payee checks. Plain code; no AI decides anything about money.
 5. **Reserve under a row lock**, so parallel agents can't overspend.
 6. **Pay exactly the approved quote**, re-quoting first: if the price or payee changed, nothing is paid.
 7. **Delivered?** The result is checked: empty, broken or an error message counts as *paid, not delivered*. It is never reused, it counts against the shop, and the shop goes on hold until a person clears it.
@@ -262,7 +262,7 @@ More screens (every page, phone and desktop, both themes) are in [`docs/screensh
 | Check | Where | Result |
 |---|---|---|
 | 183 tests: policy engine, IntentLock and signed mandates (tampered rules, budget and purpose; approvals on a tampered mandate; backfill), purchase cap under parallel requests, memory integrity, evidence packages, the MCP procurement tools, purchase pipeline (concurrent same-key purchases and races included), morning report, agent and operator routes, MCP, rate limits, the scenario sandbox, the plain-English reason copy and step tracker | `npm test` (Vitest) | all pass |
-| 36 real-world scenarios across seven problems (new: a shop that takes the money and sends nothing, within budget but off-purpose, an item Aerar can't place, a hired agent off the job, rules edited behind Aerar's back, poisoned memory, a cheap loop stopped by the purchase cap), each grading itself, plus Aerar never paying more than a plain wallet in any of them | `npm run test:scenarios`, `npm run scenarios` | 36/36 |
+| 37 real-world scenarios across seven problems (new: a gift card disguised in Morse code and leetspeak, a shop that takes the money and sends nothing, within budget but off-purpose, an item Aerar can't place, a hired agent off the job, rules edited behind Aerar's back, poisoned memory, a cheap loop stopped by the purchase cap), each grading itself, plus Aerar never paying more than a plain wallet in any of them | `npm run test:scenarios`, `npm run scenarios` | 37/37 |
 | The same scenarios on the live server against real Postgres (sandbox database, never the ledger) | [attack lab](https://aerar.duckdns.org/scenarios) "Run all" | re-run after this deploy |
 | One scripted night: a plain wallet pays $2.05 ($1.90 of it waste); Aerar pays $0.17 and lets $0.02 of waste through under the hourly cap | `npm run night-shift`, `night.test.ts` | pinned |
 | Real payments on Base Sepolia: paid, reused, held then approved, declined; each transfer checked onchain | [Live on testnet](#live-on-testnet) | done |
@@ -275,9 +275,23 @@ More screens (every page, phone and desktop, both themes) are in [`docs/screensh
 
 - **One paying key, held by Aerar.** Agents authenticate with revocable `aer_` keys; they never see the wallet.
 - **No AI decides about money.** Policies and IntentLock are plain code; the AI is the agent asking.
-- **IntentLock is keyword-based.** It reads the item's URL and the provider's own description. A provider that mislabels its item can fool it; sensitive categories (gift cards, gambling, personal data) veto a match, and allowlists, the shopping list, price memory and approvals still run. Tasks created before IntentLock have no categories and are shown as unchecked.
+- **IntentLock is keyword-based.** It reads the item's URL and the provider's own description, after undoing disguises (Morse, base64, hex, percent-encoding, look-alike letters, leetspeak, spaced letters; a disguised off-purpose item is refused, a disguised on-purpose one waits for a person), and holds items whose URL and description disagree. A provider that plainly mislabels its item can still fool it; sensitive categories (gift cards, gambling, personal data) veto a match, and allowlists, the shopping list, price memory and approvals still run. Tasks created before IntentLock have no categories and are shown as unchecked.
 - **Mandate signatures detect changes made outside Aerar**, not a compromised server holding the key; new versions are audit events sealed to Base each morning.
 - **Approval can't override a hard limit.**
+
+### If Aerar itself is hacked or goes down
+
+Aerar is one server, so it's fair to ask what happens when that server is the problem. Each answer below can be checked:
+
+| If… | What happens | Check it |
+|---|---|---|
+| Aerar is down | Nothing pays. Agents hold `aer_` keys, never a wallet, so there is no way around Aerar to the money (fails closed). With a Vault, an approval Aerar gave expires in 15 minutes and its budget can be released by anyone. | `test_approvalWindowIsShort`, `test_unusedApprovalCanBeReleased` (Foundry) |
+| Someone edits Aerar's database to raise a budget or widen a task | The stored rules no longer match the signed mandate: `MANDATE_INVALID`, buying for that task stops until a person signs again. | Attack lab: *Someone edits the rules behind Aerar's back* |
+| Someone edits the history to hide a purchase | The hash chain breaks, and the chain's head was sealed on Base that morning, so the edit shows. | Attack lab: *Someone edits the history to hide a purchase*; report → "Check against Base"; `AerarSeal` tests |
+| Someone forges a receipt | Without Aerar's receipt key the signature check fails; even with it, the third check compares the receipt with the USDC transfer on Base. | `/verify` → "Try to cheat" |
+| An attacker takes over Aerar completely, keys included | **Without a Vault, they can spend Aerar's operator wallet** (sandbox: simulated money only). **With a Vault**, they can only pay shops the owner approved, within per-payment and daily limits, until expiry; they can't change the limits, withdraw, or pay anyone else, and the owner can pause, revoke or replace Aerar at once. | `test_aerarCantPayAnUnlistedPayee`, `test_aerarCantChangeLimitsOrWithdraw`, `test_perPaymentAndPeriodLimits`, `test_pauseStopsEverything`, `test_revokeKillsPendingApprovals`; landing page → "Aerar gets hacked" |
+
+Not solved yet: a compromised Aerar can still make *bad choices inside* the Vault's limits, and the operator workspace uses one key. Next: more than one signer for big payments, and a public status page that shows when Aerar has stopped paying.
 
 **Honest limits:**
 - **Control only covers purchases that go through Aerar.** An agent with its own unrestricted wallet can bypass it.
