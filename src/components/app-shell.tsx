@@ -81,6 +81,11 @@ function Frame({ nav, right, children, footer }: { nav: ReactNode; right: ReactN
           <div className="flex shrink-0 items-center gap-1.5">{right}</div>
         </div>
       </header>
+      {/* A soft colour field at the top of every page, so no page is flat grey. */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[560px] overflow-hidden">
+        <div className="wash right-[-8%] top-[-300px] h-[560px] w-[820px] opacity-[calc(var(--wash-opacity)*0.6)]" />
+        <div className="wash left-[-14%] top-[-340px] h-[460px] w-[560px] opacity-[calc(var(--wash-opacity)*0.35)]" />
+      </div>
       <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
         {children}
       </main>

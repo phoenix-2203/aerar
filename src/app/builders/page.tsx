@@ -43,7 +43,7 @@ export default function BuildersPage() {
       <section className="max-w-3xl animate-fade-up">
         <p className="eyebrow">For builders</p>
         <h1 className="mt-3 text-[36px] font-semibold leading-[1.06] tracking-[-0.035em] sm:text-[48px]">
-          Give your agent a budget, <span className="text-text-2">not a wallet.</span>
+          Give your agent a budget, <span className="text-wash">not a wallet.</span>
         </h1>
         <p className="mt-4 text-[16px] leading-7 text-text-2">
           Your agent asks Aerar to buy; Aerar checks the task, pays the x402 quote in USDC on Base, and hands back the data plus a signed receipt. One key per

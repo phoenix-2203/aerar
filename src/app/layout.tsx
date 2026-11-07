@@ -39,8 +39,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#08090c" },
-    { media: "(prefers-color-scheme: light)", color: "#fafaf9" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0d18" },
+    { media: "(prefers-color-scheme: light)", color: "#f5f6fa" },
   ],
 };
 
@@ -53,7 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="relative isolate flex min-h-full flex-col overflow-x-clip">{children}</body>
     </html>
   );
 }

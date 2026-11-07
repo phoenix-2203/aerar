@@ -3,6 +3,10 @@
 import { ArrowDown, ArrowRight, ArrowUpRight } from "lucide-react";
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
+import { connection } from "next/server";
+import { Suspense } from "react";
+import { getDbOnly } from "@/lib/server/context";
+import { liveStats } from "@/lib/server/stats";
 import Link from "next/link";
 import { PublicShell } from "@/components/app-shell";
 import { ButtonLink } from "@/components/button";
@@ -56,8 +60,11 @@ const INTENT_ROWS: [string, string, "pass" | "fail"][] = [
 
 function IntentLockStrip() {
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)] lg:items-center">
-      <ol className="overflow-hidden rounded-2xl border border-border bg-surface font-mono text-[13px] shadow-card">
+    <div className="relative grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)] lg:items-center">
+      <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[520px] w-screen -translate-x-1/2 -translate-y-1/2 overflow-hidden" aria-hidden>
+        <div className="wash left-[8%] top-[60px] h-[420px] w-[620px] opacity-[calc(var(--wash-opacity)*0.7)]" />
+      </div>
+      <ol className="glass overflow-hidden rounded-2xl font-mono text-[13px] shadow-lift">
         {INTENT_ROWS.map(([k, v, r]) => (
           <li key={k} className="flex items-center gap-3 border-b border-dashed border-border px-4 py-3 last:border-0">
             <span className="w-36 shrink-0 text-text-3">{k}</span>
@@ -88,12 +95,39 @@ function IntentLockStrip() {
   );
 }
 
+/** Live numbers from this deployment's database (Ramp-style ticker). Hidden if the database can't be reached. */
+async function HeroCounters() {
+  await connection();
+  const s = await liveStats(await getDbOnly()).catch(() => null);
+  if (!s || !s.decided) return null;
+  const items: [string, string][] = [
+    [s.decided.toLocaleString("en-US"), "decided"],
+    [s.stopped, "stopped"],
+    [s.onchain.toLocaleString("en-US"), "proven on Base"],
+  ];
+  return (
+    <div className="mt-7 flex flex-wrap items-center gap-2 font-mono text-[12px] text-text-2">
+      <span className="inline-flex items-center gap-1.5 text-text-3">
+        <span className="size-1.5 animate-pulse-dot rounded-full bg-success text-success" aria-hidden /> Live
+      </span>
+      {items.map(([v, k]) => (
+        <span key={k} className="glass rounded-lg px-2.5 py-1.5 shadow-card">
+          <b className="tabular font-semibold text-text">{v}</b> {k}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function Home() {
   return (
     <PublicShell>
       {/* Hero */}
-      <section className="relative -mx-4 -mt-6 overflow-hidden px-4 pb-16 pt-10 sm:-mx-6 sm:-mt-10 sm:px-6 sm:pt-16 lg:pb-24">
+      <section className="relative -mx-4 -mt-6 px-4 pb-16 pt-10 sm:-mx-6 sm:-mt-10 sm:px-6 sm:pt-16 lg:pb-24">
         <div className="hero-night pointer-events-none absolute inset-0 -z-10" aria-hidden />
+        <div className="pointer-events-none absolute left-1/2 top-[-120px] -z-10 h-[1000px] w-screen -translate-x-1/2 overflow-hidden" aria-hidden>
+          <div className="wash right-[-6%] top-[40px] h-[640px] w-[760px]" />
+        </div>
         <div className="grid grid-cols-[minmax(0,1fr)] items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14">
           <div className="animate-fade-up">
             <p className="inline-flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.18em] text-text-3">
@@ -101,7 +135,7 @@ export default function Home() {
               Night shift for AI agents
             </p>
             <h1 className="mt-5 text-[40px] font-semibold leading-[1.04] tracking-[-0.035em] sm:text-[58px]">
-              Your agents work the night shift. <span className="text-text-2">Aerar keeps the books.</span>
+              Your agents work the night shift. <span className="text-wash">Aerar keeps the books.</span>
             </h1>
             <p className="mt-5 max-w-[540px] text-[17px] leading-7 text-text-2">
               Budget limits stop agents spending too much. Aerar also stops them buying the wrong thing: every purchase is checked against the purpose you signed,
@@ -115,7 +149,10 @@ export default function Home() {
                 Open your Vault
               </ButtonLink>
             </div>
-            <a href="#one-purchase" className="group mt-6 inline-flex items-center gap-1.5 text-[13.5px] text-text-2 hover:text-text">
+            <Suspense fallback={<div className="mt-7 h-8" />}>
+              <HeroCounters />
+            </Suspense>
+            <a href="#one-purchase" className="group mt-5 inline-flex items-center gap-1.5 text-[13.5px] text-text-2 hover:text-text">
               Watch one purchase <ArrowDown className="size-3.5 transition-transform group-hover:translate-y-0.5" aria-hidden />
             </a>
           </div>

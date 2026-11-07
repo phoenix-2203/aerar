@@ -65,7 +65,7 @@ function Intro() {
       <div className="animate-fade-up">
         <p className="eyebrow">Your sandbox · no sign-up · no wallet</p>
         <h1 className="mt-4 text-[38px] font-semibold leading-[1.06] tracking-[-0.035em] sm:text-[52px]">
-          Run a night shift <span className="text-text-2">in three minutes.</span>
+          Run a night shift <span className="text-wash">in three minutes.</span>
         </h1>
         <p className="mt-5 max-w-[520px] text-[17px] leading-7 text-text-2">
           A private workspace with your own task, rules and test agent. It shops at simulated providers, so nothing real is spent. Try to trick it. It&apos;s

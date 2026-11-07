@@ -46,7 +46,7 @@ const clock = (m: number) => {
 const usd = (n: number) => `$${n.toFixed(2)}`;
 
 export function NightLedger() {
-  const [t, setT] = useState(0);
+  const [t, setT] = useState(170); // open mid-shift, so the first view already shows a few lines
   const [held, setHeld] = useState(false); // paused by hover or drag
   const [reduced, setReduced] = useState(false);
   const raf = useRef<number | null>(null);
@@ -101,7 +101,7 @@ export function NightLedger() {
 
   return (
     <div
-      className="ledger-card relative overflow-hidden rounded-2xl border border-border bg-surface shadow-lift"
+      className="ledger-card glass relative overflow-hidden rounded-2xl shadow-lift"
       onMouseEnter={() => setHeld(true)}
       onMouseLeave={() => setHeld(false)}
       aria-label="An example night: agent purchases through the night, each stamped by Aerar"
@@ -180,7 +180,7 @@ export function NightLedger() {
       </div>
 
       {/* totals */}
-      <div className="grid grid-cols-4 border-t border-border bg-surface-2/40 font-mono text-[11px]">
+      <div className="grid grid-cols-4 border-t border-border bg-surface-2/50 font-mono text-[11px]">
         {[
           ["Paid", usd(paid), "text-text"],
           ["Saved", usd(saved), "text-info"],

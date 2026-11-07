@@ -80,7 +80,7 @@ function Intro() {
       <div className="animate-fade-up">
         <p className="eyebrow">Aerar Vault · your wallet</p>
         <h1 className="mt-4 text-[36px] font-semibold leading-[1.08] tracking-[-0.035em] sm:text-[48px]">
-          Let your agent spend. <span className="text-text-2">From a vault only you control.</span>
+          Let your agent spend. <span className="text-wash">From a vault only you control.</span>
         </h1>
         <p className="mt-4 max-w-[520px] text-[16px] leading-7 text-text-2">
           Connect a wallet, open your Aerar Vault, sign its limits, and watch your agent pay a real x402 shop with test USDC. Then try to make it misbehave.

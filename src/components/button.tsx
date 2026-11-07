@@ -7,7 +7,7 @@ export type Variant = "primary" | "secondary" | "ghost" | "danger" | "accent";
 type Size = "sm" | "md" | "lg";
 
 const VARIANT: Record<Variant, string> = {
-  primary: "bg-primary text-on-primary hover:bg-primary-hover shadow-sm",
+  primary: "bg-primary text-on-primary hover:bg-primary-hover btn-depth",
   accent: "bg-accent text-on-accent hover:brightness-110 shadow-sm",
   secondary: "border border-border bg-surface text-text hover:border-border-strong hover:bg-surface-2",
   ghost: "text-text-2 hover:bg-surface-2 hover:text-text",

@@ -1,72 +1,84 @@
 @import "tailwindcss";
 
-/* Theme follows data-theme on <html>, set before first paint by the script in layout.tsx. Accent: Base Blue. */
+/* Theme follows data-theme on <html>, set before first paint by the script in layout.tsx. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /*
- * Neutral ink surfaces (Linear/Vercel-like), one accent. The primary action is ink-on-paper (inverted text colour);
- * the accent is for the logo's newest record, highlights and focus. Status colours only for statuses.
- * Every text pair meets WCAG AA in both themes.
+ * Fintech palette, softened: a cool paper (light) or deep navy ink (dark), Base-family blue as the action colour, and a
+ * blue -> violet -> rose -> amber "wash" for atmosphere. Status colours only for statuses. Every text pair meets WCAG AA
+ * in both themes.
  */
 :root,
 :root[data-theme="light"] {
-  --bg: #fafaf9;
+  --bg: #f5f6fa;
   --surface: #ffffff;
-  --surface-2: #f3f3f1;
-  --surface-3: #ebebe8;
-  --border: #e7e7e4;
-  --border-strong: #d4d4cf;
-  --text: #111215;
-  --text-2: #5b616e;
-  --text-3: #6b7180;
-  --primary: #111215;
-  --primary-hover: #2a2c31;
+  --surface-2: #eef0f6;
+  --surface-3: #e4e7f0;
+  --border: #e1e4ee;
+  --border-strong: #cbd0de;
+  --text: #0d1222;
+  --text-2: #4a5169;
+  --text-3: #5d6580;
+  --primary: #2d5be3;
+  --primary-hover: #2350d4;
   --on-primary: #ffffff;
-  --accent: #0052ff;
-  --accent-tint: #e8eeff;
+  --accent: #2d5be3;
+  --accent-tint: #e9eefc;
   --on-accent: #ffffff;
-  --success: #15734a;
-  --success-tint: #e6f4ec;
-  --warning: #9a5800;
+  --violet: #7a5ad8;
+  --rose: #d9668f;
+  --amber: #e0953a;
+  --success: #12764d;
+  --success-tint: #e3f4ec;
+  --warning: #965a06;
   --warning-tint: #fbf0dc;
-  --danger: #b8322a;
+  --danger: #b4322b;
   --danger-tint: #fbe8e6;
-  --info: #1f5fae;
-  --info-tint: #e7effa;
-  --shadow: 0 1px 2px rgb(17 18 21 / 0.05), 0 2px 8px rgb(17 18 21 / 0.04);
-  --shadow-lg: 0 1px 2px rgb(17 18 21 / 0.06), 0 12px 40px -8px rgb(17 18 21 / 0.14);
-  --grid-line: rgb(17 18 21 / 0.05);
+  --info: #2a5fb0;
+  --info-tint: #e8effb;
+  --shadow: 0 1px 2px rgb(22 32 80 / 0.06), 0 2px 10px rgb(22 32 80 / 0.05);
+  --shadow-lg: 0 1px 2px rgb(22 32 80 / 0.06), 0 22px 50px -18px rgb(30 45 120 / 0.28);
+  --grid-line: rgb(22 32 80 / 0.05);
+  --wash-opacity: 0.32;
+  --glass: rgb(255 255 255 / 0.78);
+  --glass-border: rgb(255 255 255 / 0.9);
   color-scheme: light;
 }
 
 :root[data-theme="dark"],
 :root:not([data-theme]) {
-  --bg: #08090c;
-  --surface: #0f1115;
-  --surface-2: #16181d;
-  --surface-3: #1d2027;
-  --border: #22252c;
-  --border-strong: #30343d;
-  --text: #edeef0;
-  --text-2: #9ba1ad;
-  --text-3: #858b98;
-  --primary: #edeef0;
-  --primary-hover: #ffffff;
-  --on-primary: #08090c;
-  --accent: #4d8bff;
-  --accent-tint: #0f1d36;
-  --on-accent: #08090c;
-  --success: #4cc08a;
-  --success-tint: #0f2219;
-  --warning: #edb14b;
-  --warning-tint: #2a2010;
-  --danger: #f2796e;
-  --danger-tint: #2d1514;
-  --info: #6aa6f2;
-  --info-tint: #111f33;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.5);
-  --shadow-lg: 0 1px 2px rgb(0 0 0 / 0.5), 0 16px 48px -12px rgb(0 0 0 / 0.7);
+  --bg: #0a0d18;
+  --surface: #10152a;
+  --surface-2: #161c34;
+  --surface-3: #1d2440;
+  --border: #222a46;
+  --border-strong: #303a5c;
+  --text: #e9ecf6;
+  --text-2: #a4abc4;
+  --text-3: #8d95b0;
+  --primary: #4166e8;
+  --primary-hover: #4d71ef;
+  --on-primary: #ffffff;
+  --accent: #7c98ff;
+  --accent-tint: #172347;
+  --on-accent: #0a0d18;
+  --violet: #a18cff;
+  --rose: #ec8bb0;
+  --amber: #f0b867;
+  --success: #52c995;
+  --success-tint: #0f2620;
+  --warning: #eeb553;
+  --warning-tint: #2b2212;
+  --danger: #f47f76;
+  --danger-tint: #2e1720;
+  --info: #79aef6;
+  --info-tint: #13223d;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.45);
+  --shadow-lg: 0 1px 2px rgb(0 0 0 / 0.45), 0 24px 60px -20px rgb(0 0 0 / 0.75), 0 0 0 1px rgb(124 152 255 / 0.05);
   --grid-line: rgb(255 255 255 / 0.04);
+  --wash-opacity: 0.22;
+  --glass: rgb(16 21 42 / 0.78);
+  --glass-border: rgb(124 152 255 / 0.16);
   color-scheme: dark;
 }
 
@@ -86,6 +98,9 @@
   --color-accent: var(--accent);
   --color-accent-tint: var(--accent-tint);
   --color-on-accent: var(--on-accent);
+  --color-violet: var(--violet);
+  --color-rose: var(--rose);
+  --color-amber: var(--amber);
   /* older names, kept so every page follows the accent switch */
   --color-brand: var(--accent);
   --color-brand-hover: var(--accent);
@@ -316,12 +331,40 @@ body {
 .icon-spin { animation: icon-spin 2.4s cubic-bezier(0.6, 0, 0.4, 1) infinite; }
 @keyframes icon-spin { 0% { transform: rotate(0); } 40%, 100% { transform: rotate(360deg); } }
 
-/* Hero backdrop: a faint night sky glow behind the ledger. */
+/* The wash: a soft blue -> violet -> rose -> amber field behind heroes and feature panels. Toned down on purpose. */
+.wash {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  background: conic-gradient(from 210deg at 55% 50%, var(--accent), var(--violet), var(--rose), var(--amber), var(--accent));
+  filter: blur(72px);
+  opacity: var(--wash-opacity);
+}
 .hero-night {
-  mask-image: radial-gradient(ellipse 80% 90% at 50% 30%, #000 40%, transparent 85%);
+  mask-image: radial-gradient(ellipse 85% 95% at 50% 30%, #000 45%, transparent 88%);
   background:
-    radial-gradient(ellipse 60% 50% at 78% 20%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%),
-    radial-gradient(ellipse 50% 40% at 10% 0%, color-mix(in srgb, var(--info) 8%, transparent), transparent 70%);
+    radial-gradient(ellipse 55% 55% at 82% 28%, color-mix(in srgb, var(--violet) 22%, transparent), transparent 70%),
+    radial-gradient(ellipse 50% 50% at 62% 8%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
+    radial-gradient(ellipse 40% 40% at 95% 70%, color-mix(in srgb, var(--amber) 16%, transparent), transparent 70%),
+    radial-gradient(ellipse 35% 35% at 75% 75%, color-mix(in srgb, var(--rose) 14%, transparent), transparent 70%);
+}
+/* Headline words in the wash colours. */
+.text-wash {
+  background: linear-gradient(95deg, var(--accent) 0%, var(--violet) 55%, var(--rose) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* Glass card: sits on the wash. */
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid var(--glass-border);
+}
+/* Primary buttons get a little depth. */
+.btn-depth {
+  box-shadow: 0 8px 22px -10px color-mix(in srgb, var(--primary) 85%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.18);
 }
 
 /* Receipt dialog */

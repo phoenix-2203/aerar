@@ -31,7 +31,7 @@ export default function BuiltPage() {
       <section className="max-w-3xl animate-fade-up">
         <p className="eyebrow">How it was built</p>
         <h1 className="mt-3 text-[36px] font-semibold leading-[1.06] tracking-[-0.035em] sm:text-[48px]">
-          One build week, <span className="text-text-2">built with Claude.</span>
+          One build week, <span className="text-wash">built with Claude.</span>
         </h1>
         <p className="mt-4 text-[16px] leading-7 text-text-2">
           Aerar was vibecoded for Vibestarter Vibeathon 02. Claude did the research, design, code, contracts and testing; the builder set the direction and made
