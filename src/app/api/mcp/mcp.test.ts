@@ -34,7 +34,7 @@ describe("MCP endpoint", () => {
     expect((await POST(rpc("tools/list", {}, "aer_wrong"))).status).toBe(401);
   });
 
-  it("initializes and lists the two tools", async () => {
+  it("initializes and lists the tools", async () => {
     const w = await world();
     setTestContext({ db: w.db, rail: fakeRail({}) });
     const init = await call(w.apiKey, "initialize", {
@@ -44,7 +44,7 @@ describe("MCP endpoint", () => {
     });
     expect(init.result).toBeTruthy();
     const tools = await call(w.apiKey, "tools/list", {});
-    expect(tools.result.tools!.map((t) => t.name).sort()).toEqual(["buy_resource", "get_purchase"]);
+    expect(tools.result.tools!.map((t) => t.name).sort()).toEqual(["buy_resource", "get_purchase", "list_tasks", "recent_purchases"]);
   });
 
   it("buy_resource pays, explains in plain words, and fences the provider data; get_purchase reads it back", async () => {
