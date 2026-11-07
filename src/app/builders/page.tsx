@@ -70,7 +70,11 @@ export default function BuildersPage() {
         </h2>
         <p className="mt-2 max-w-2xl text-[14.5px] text-text-2">
           Create a sandbox to get a key that pays simulated shops, or a Vault workspace for real test USDC. Keep the key in an environment variable, never in a
-          chat or a repo.
+          chat or a repo. The SDK has no dependencies, holds no wallet, and checks receipts offline with{" "}
+          <a className="text-accent hover:underline" href="https://github.com/phoenix-2203/aerar/tree/main/sdk">
+            @aerar/sdk/verify
+          </a>
+          .
         </p>
         <div className="mt-6">
           <CodeTabs site={SITE} />
@@ -91,8 +95,10 @@ export default function BuildersPage() {
           ))}
         </dl>
         <p className="mt-3 text-[13px] text-text-3">
-          REST: <span className="font-mono">POST /api/v1/purchases</span>, <span className="font-mono">GET /api/v1/purchases/:id</span> and{" "}
-          <span className="font-mono">GET /api/v1/purchases/:id/evidence</span>, same rules, same receipts. Provider responses come back fenced as untrusted data.
+          Same tools over REST and the TypeScript SDK (<span className="font-mono">@aerar/sdk</span>):{" "}
+          <span className="font-mono">POST /api/v1/purchases</span>, <span className="font-mono">GET /api/v1/purchases/:id[/evidence]</span>,{" "}
+          <span className="font-mono">GET /api/v1/tasks</span>, <span className="font-mono">POST /api/v1/intent</span>, <span className="font-mono">POST /api/v1/memory</span>,{" "}
+          <span className="font-mono">GET /api/v1/providers</span>. Same rules, same receipts. Provider responses come back fenced as untrusted data.
         </p>
       </section>
 

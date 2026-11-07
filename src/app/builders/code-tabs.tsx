@@ -5,6 +5,24 @@ import { useState } from "react";
 export function CodeTabs({ site }: { site: string }) {
   const TABS: { id: string; name: string; code: string }[] = [
     {
+      id: "sdk",
+      name: "SDK",
+      code: `npm install ${site}/sdk/aerar-sdk-0.1.0.tgz
+
+import { Aerar, isPaid, needsApproval, dataOf } from "@aerar/sdk";
+
+const aerar = new Aerar({ apiKey: process.env.AERAR_KEY! }); // from /try or /vault, never commit it
+
+const m = await aerar.mandate();          // purpose, IntentLock categories, limits, budget left
+const p = await aerar.buy({ url: "https://api.marketdata.dev/fx-rates", purpose: "FX rates for the memo" });
+
+if (isPaid(p)) use(dataOf(p));            // paid, or reused from memory for $0
+else if (needsApproval(p)) await aerar.waitForDecision(p.id);
+else console.log(p.summary);              // refused, with the reason in plain words
+
+const proof = await aerar.evidence(p.id); // each claim labelled: signed, on Base, Aerar records, simulated`,
+    },
+    {
       id: "chat",
       name: "Claude / ChatGPT",
       code: `# In Claude: Settings → Connectors → Add custom connector
@@ -38,7 +56,7 @@ claude mcp add --transport http aerar ${site}/api/mcp \\
     },
     {
       id: "ts",
-      name: "TypeScript",
+      name: "fetch",
       code: `const res = await fetch("${site}/api/v1/purchases", {
   method: "POST",
   headers: { authorization: \`Bearer \${process.env.AERAR_KEY}\`, "content-type": "application/json" },
@@ -49,7 +67,7 @@ const p = await res.json();
 // p.summary: one plain sentence · p.receipt.verifyUrl: the signed receipt`,
     },
   ];
-  const [on, setOn] = useState("chat");
+  const [on, setOn] = useState("sdk");
   const [copied, setCopied] = useState(false);
   const t = TABS.find((x) => x.id === on)!;
   return (

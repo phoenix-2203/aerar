@@ -265,6 +265,6 @@ export function buildMcpServer(ctx: Ctx, agent: Agent): McpServer {
     },
   );
 
-  registerProcurementTools(server, ctx, agent, myTasks);
+  registerProcurementTools(server, ctx, agent);
   return server;
 }

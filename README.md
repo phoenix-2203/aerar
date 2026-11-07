@@ -246,7 +246,7 @@ More screens (every page, phone and desktop, both themes) are in [`docs/screensh
 
 | Check | Where | Result |
 |---|---|---|
-| 176 tests: policy engine, IntentLock and signed mandates (tampered rules, budget and purpose; approvals on a tampered mandate; backfill), purchase cap under parallel requests, memory integrity, evidence packages, the MCP procurement tools, purchase pipeline (concurrent same-key purchases and races included), morning report, agent and operator routes, MCP, rate limits, the scenario sandbox, the plain-English reason copy and step tracker | `npm test` (Vitest) | all pass |
+| 183 tests: policy engine, IntentLock and signed mandates (tampered rules, budget and purpose; approvals on a tampered mandate; backfill), purchase cap under parallel requests, memory integrity, evidence packages, the MCP procurement tools, purchase pipeline (concurrent same-key purchases and races included), morning report, agent and operator routes, MCP, rate limits, the scenario sandbox, the plain-English reason copy and step tracker | `npm test` (Vitest) | all pass |
 | 35 real-world scenarios across seven problems (new: within budget but off-purpose, an item Aerar can't place, a hired agent off the job, rules edited behind Aerar's back, poisoned memory, a cheap loop stopped by the purchase cap), each grading itself, plus Aerar never paying more than a plain wallet in any of them | `npm run test:scenarios`, `npm run scenarios` | 35/35 |
 | The same scenarios on the live server against real Postgres (sandbox database, never the ledger) | [attack lab](https://aerar.duckdns.org/scenarios) "Run all" | re-run after this deploy |
 | One scripted night: a plain wallet pays $2.05 ($1.90 of it waste); Aerar pays $0.17 and lets $0.02 of waste through under the hourly cap | `npm run night-shift`, `night.test.ts` | pinned |
@@ -355,6 +355,26 @@ Never commit `.env`, and never paste keys into chats or issues.
 | `GET /api/demo/premium?topic=…` | 0.50 USDC | Above the seeded 0.25 USDC threshold, so it waits for a person |
 
 Payment settles only after a successful response, so bad requests are never charged.
+
+## TypeScript SDK
+
+[`sdk/`](sdk) is `@aerar/sdk`: a zero-dependency client for the agent API, plus `@aerar/sdk/verify` to check receipts,
+mandates and the USDC transfer on Base offline (with `viem`). It holds no wallet and no private key.
+
+```bash
+npm install https://aerar.duckdns.org/sdk/aerar-sdk-0.1.0.tgz
+```
+
+```ts
+const aerar = new Aerar({ apiKey: process.env.AERAR_KEY! });
+const p = await aerar.buy({ url: "https://api.marketdata.dev/fx-rates", purpose: "FX rates for the memo" });
+// isPaid(p) · needsApproval(p) → aerar.waitForDecision(p.id) · isOffPurpose(p) · p.summary · aerar.evidence(p.id)
+```
+
+`mandate()`, `checkIntent()`, `checkMemory()` and `compareProviders()` answer before buying; `buy()` enforces everything
+server-side either way. Retries reuse the idempotency key, so they never pay twice. Tested end to end against the real
+route handlers and pipeline (`src/lib/sdk.test.ts`). Docs: [sdk/README.md](sdk/README.md). Rebuild the tarball with
+`cd sdk && npm run pack:site`.
 
 ## Agent API
 

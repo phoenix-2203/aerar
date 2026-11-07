@@ -1,0 +1,25 @@
+{
+  "name": "@aerar/sdk",
+  "version": "0.1.0",
+  "description": "Give your AI agent a budget, not a wallet. Buy x402 resources through Aerar: signed mandates, IntentLock, procurement memory, approvals and verifiable receipts.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./verify": { "types": "./dist/verify.d.ts", "import": "./dist/verify.js" }
+  },
+  "files": ["dist", "README.md"],
+  "engines": { "node": ">=18" },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "pack:site": "npm run build && npm pack --pack-destination ../public/sdk"
+  },
+  "peerDependencies": { "viem": "^2.0.0" },
+  "peerDependenciesMeta": { "viem": { "optional": true } },
+  "keywords": ["x402", "ai-agents", "base", "usdc", "mcp", "agent-payments", "spend-controls"],
+  "repository": { "type": "git", "url": "https://github.com/phoenix-2203/aerar", "directory": "sdk" },
+  "homepage": "https://aerar.duckdns.org/builders"
+}
