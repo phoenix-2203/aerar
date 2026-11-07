@@ -266,8 +266,8 @@ More screens (every page, phone and desktop, both themes) are in [`docs/screensh
 
 **Honest limits:**
 - **Control only covers purchases that go through Aerar.** An agent with its own unrestricted wallet can bypass it.
-- **Procurement memory matches identical requests only.** It doesn't claim two different requests are "the same research".
-- **x402 `exact` payments settle immediately.** No escrow or refunds yet; the x402 SDK's `auth-capture` scheme is the natural next step.
+- **Procurement memory matches identical requests only.** It doesn't claim two different requests are "the same research". Want the same item bought again? Set the task's freshness to "never reuse" (sandbox and Vault rules, or `reuseWindowSeconds: 0`); different URLs, queries or bodies are always bought.
+- **x402 `exact` payments settle immediately, so there is no escrow or refund.** Aerar's answer today is to stop bad payments *before* they settle (rules, IntentLock, re-quote, Vault), and the x402 middleware only settles when the provider returns a successful response. A paid response that turns out empty or wrong can't be clawed back; it counts against the provider's reliability score. Escrow needs a settle-later scheme (the x402 SDK's `auth-capture`), which is on the roadmap.
 - **Demo endpoints return synthetic data**, labelled as such.
 - **Single organisation per deployment; one operator password.** The public [try-it sandbox](https://aerar.duckdns.org/try) gives each visitor a private workspace (24 h) that buys from simulated shops only.
 - **With a Vault, the limits hold even if Aerar doesn't.** In the operator workspace and the sandbox, Aerar holds the paying key. With an [Aerar Vault](https://aerar.duckdns.org/vault), the money sits in a contract the user owns and the contract enforces payee, per-payment, daily and expiry limits itself. A compromised Aerar can only spend inside those limits.

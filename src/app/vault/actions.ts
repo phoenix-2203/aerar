@@ -1,6 +1,7 @@
 "use server";
 // Wallet workspace actions. Wallet transactions (create, fund, set limits, pause, revoke, withdraw) are signed in the
 // visitor's own wallet in the browser; these actions only sign in, run the agent, and read state.
+import { freshnessLabel, isFreshness } from "@/lib/memory/freshness";
 import { randomBytes } from "node:crypto";
 import { refresh } from "next/cache";
 import { cookies, headers } from "next/headers";
@@ -368,6 +369,22 @@ export async function switchWorkspace(orgId: string): Promise<VaultResult> {
     await setCookie(next);
     refresh();
     return { done: "Switched." };
+  } catch (e) {
+    return { error: msg(e) };
+  }
+}
+
+/** Owner: how long an identical earlier purchase is reused for $0 instead of paid again (0 = buy every time). */
+export async function setFreshness(seconds: number): Promise<VaultResult> {
+  const s = await as(["owner"]);
+  if (!s) return { error: OWNER_ONLY };
+  if (!isFreshness(seconds)) return { error: "Pick one of the listed options." };
+  try {
+    const { db, task, rules } = await currentRules(s);
+    if (rules.reuseWindowSeconds === seconds) return { done: "Already set." };
+    await updatePolicy(db, task.id, { ...rules, reuseWindowSeconds: seconds }, s.owner, `Reuse window: ${freshnessLabel(seconds)}`);
+    refresh();
+    return { done: seconds ? `Identical purchases are reused for ${freshnessLabel(seconds)}.` : "Every request is bought again; nothing is reused." };
   } catch (e) {
     return { error: msg(e) };
   }

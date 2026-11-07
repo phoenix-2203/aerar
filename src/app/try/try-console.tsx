@@ -9,6 +9,7 @@ import { NotifyCard } from "@/components/notify-card";
 import { ReceiptButton } from "@/components/receipt-slip";
 import { EvidenceButton } from "@/components/evidence-button";
 import { CATEGORIES, categoriesForPurpose } from "@/lib/intent/intentlock";
+import { FRESHNESS } from "@/lib/memory/freshness";
 import { AgentTeam } from "./agent-team";
 import { StatusChip } from "@/components/status-chip";
 import { explain, reasonKind } from "@/lib/copy/reasons";
@@ -392,6 +393,7 @@ function Rules({ state, providers, onDone }: { state: TryState; providers: Provi
   const [cats, setCats] = useState<string[]>(state.mandate.categories.map((c) => c.id));
   const [ifUncertain, setIfUncertain] = useState<"hold" | "refuse">(state.mandate.ifUncertain);
   const suggested = useMemo(() => categoriesForPurpose(purpose), [purpose]);
+  const [reuse, setReuse] = useState<number>(r.reuseWindowSeconds);
   const [pending, start] = useTransition();
   const toggle = (arr: string[], v: string, set: (a: string[]) => void) => set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
@@ -408,7 +410,7 @@ function Rules({ state, providers, onDone }: { state: TryState; providers: Provi
         className="mt-4 space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          start(async () => onDone(await saveRules({ budget, approvalAbove: auto, maxPerPurchase: max, providers: hosts, shoppingList: listOn, items, purpose, categories: cats, ifUncertain })));
+          start(async () => onDone(await saveRules({ budget, approvalAbove: auto, maxPerPurchase: max, providers: hosts, shoppingList: listOn, items, purpose, categories: cats, ifUncertain, reuseWindowSeconds: reuse })));
         }}
       >
         <fieldset className="rounded-xl border border-border p-3">
@@ -459,6 +461,22 @@ function Rules({ state, providers, onDone }: { state: TryState; providers: Provi
           <Money id="a" label="Auto-pay up to" value={auto} onChange={setAuto} />
           <Money id="m" label="Never above" value={max} onChange={setMax} />
         </div>
+        <label className="block">
+          <span className="block text-[12.5px] font-medium text-text-2">Reuse what was already bought for</span>
+          <select
+            value={reuse}
+            onChange={(e) => setReuse(Number(e.target.value))}
+            className="mt-1 h-9 w-full rounded-lg border border-border bg-bg/40 px-2 text-[13px]"
+          >
+            {FRESHNESS.map((f) => (
+              <option key={f.seconds} value={f.seconds}>
+                {f.label}
+              </option>
+            ))}
+            {!FRESHNESS.some((f) => f.seconds === reuse) && <option value={reuse}>{Math.round(reuse / 60)} minutes</option>}
+          </select>
+          <span className="mt-1 block text-[11.5px] text-text-3">Identical requests inside this window are served for $0. Pick &ldquo;never&rdquo; to buy every time.</span>
+        </label>
         <fieldset>
           <legend className="text-[12.5px] font-medium text-text-2">Shops the agent may buy from</legend>
           <div className="mt-2 space-y-1.5">

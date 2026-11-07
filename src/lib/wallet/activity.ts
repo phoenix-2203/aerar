@@ -15,7 +15,7 @@ export async function walletActivity(s: WalletSession) {
   const [policy] = await db.select().from(policies).where(and(eq(policies.taskId, task.id), eq(policies.version, task.currentPolicyVersion)));
   const rows = await db.select().from(purchases).where(eq(purchases.orgId, s.orgId)).orderBy(desc(purchases.createdAt)).limit(30);
   return {
-    task: { id: task.id, budget: fmt$(task.budget), spent: fmt$(task.spent), approvalAbove: fmt$(BigInt(policy?.rules.approvalAbove ?? "0")) },
+    task: { id: task.id, budget: fmt$(task.budget), spent: fmt$(task.spent), approvalAbove: fmt$(BigInt(policy?.rules.approvalAbove ?? "0")), reuseWindowSeconds: policy?.rules.reuseWindowSeconds ?? 0 },
     purchases: rows.map((p) => {
       const v = purchaseView(p);
       return {

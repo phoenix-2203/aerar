@@ -9,6 +9,7 @@ import { clientIp, publicLimits } from "@/lib/server/rate-limit";
 import { parseUsdc } from "@/lib/money/usdc";
 import { PRESETS, TRY_PROVIDERS } from "@/lib/try/catalog";
 import { isCategory } from "@/lib/intent/intentlock";
+import { isFreshness } from "@/lib/memory/freshness";
 import { createTrySandbox, decodeSession, DEFAULT_TRY_BUDGET, DEFAULT_TRY_RULES, encodeSession, TRY_COOKIE, TRY_TTL_SECONDS, tryContext, type TrySession } from "@/lib/try/sandbox";
 import { hireAgent, setTaskStatus, updatePolicy } from "@/lib/workspace";
 import { policies, taskAgents, tasks } from "@/db/schema";
@@ -117,6 +118,8 @@ export interface RulesForm {
   purpose?: string;
   categories?: string[];
   ifUncertain?: "hold" | "refuse";
+  /** Procurement memory: how long an identical earlier purchase is reused instead of paid again (0 = never). */
+  reuseWindowSeconds?: number;
 }
 
 /** Save the visitor's rules as a new policy version (old versions are kept, like the real dashboard). */
@@ -155,6 +158,7 @@ export async function saveRules(f: RulesForm): Promise<TryResult> {
         allowedItems: items,
         categories,
         ifUncertain: f.ifUncertain ?? cur.rules.ifUncertain ?? "hold",
+        reuseWindowSeconds: isFreshness(f.reuseWindowSeconds) ? f.reuseWindowSeconds : cur.rules.reuseWindowSeconds,
       },
       "you",
       "Changed in the sandbox",

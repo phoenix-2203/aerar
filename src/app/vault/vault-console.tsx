@@ -10,6 +10,7 @@ import { ConnectAi } from "@/components/connect-ai";
 import { NotifyCard } from "@/components/notify-card";
 import { ReceiptButton } from "@/components/receipt-slip";
 import { TeamCard } from "./team-card";
+import { FRESHNESS } from "@/lib/memory/freshness";
 import { factoryAbi, vaultAbi } from "@/lib/vault/artifacts";
 import {
   attackOwnVault,
@@ -21,6 +22,7 @@ import {
   untrustProvider,
   vaultBuy,
   vaultBuyUrl,
+  setFreshness,
   vaultDecide,
   vaultState,
   type ProviderView,
@@ -122,6 +124,7 @@ export function VaultConsole(props: {
   operator: Hex;
   mandateId: Hex;
   approvalAbove: string;
+  reuseWindowSeconds: number;
   purchases: Purchase[];
   connectUrl: string;
   role: "owner" | "approver" | "viewer";
@@ -313,7 +316,7 @@ export function VaultConsole(props: {
 
         {/* ---------------------------------------------------------------- the agent */}
         <div className="min-w-0 space-y-6">
-          <Agent canBuy={isOwner} canDecide={props.role !== "viewer"} ready={!!v && !!m && m.maxPerPayment !== "0" && v.balance !== "0"} stopped={!!v && (v.paused || !mandateLive)} approvalAbove={props.approvalAbove} purchases={props.purchases} onChange={reload} />
+          <Agent canBuy={isOwner} canDecide={props.role !== "viewer"} ready={!!v && !!m && m.maxPerPayment !== "0" && v.balance !== "0"} stopped={!!v && (v.paused || !mandateLive)} approvalAbove={props.approvalAbove} reuseWindowSeconds={props.reuseWindowSeconds} purchases={props.purchases} onChange={reload} />
           {isOwner && <BreakIt ready={!!v} />}
           {isOwner && (
             <ConnectAi
@@ -451,7 +454,7 @@ const STATUS: Record<string, { label: string; tone: string }> = {
   unknown: { label: "Checking", tone: "text-warning" },
 };
 
-function Agent({ canBuy, canDecide, ready, stopped, approvalAbove, purchases, onChange }: { canBuy: boolean; canDecide: boolean; ready: boolean; stopped: boolean; approvalAbove: string; purchases: Purchase[]; onChange: () => void }) {
+function Agent({ canBuy, canDecide, ready, stopped, approvalAbove, reuseWindowSeconds, purchases, onChange }: { canBuy: boolean; canDecide: boolean; ready: boolean; stopped: boolean; approvalAbove: string; reuseWindowSeconds: number; purchases: Purchase[]; onChange: () => void }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [which, setWhich] = useState<string | null>(null);
@@ -509,6 +512,24 @@ function Agent({ canBuy, canDecide, ready, stopped, approvalAbove, purchases, on
           Buy
         </button>
       </form>}
+      {canBuy && (
+        <label className="mt-3 flex flex-wrap items-center gap-2 text-[12.5px] text-text-2">
+          Reuse what was already bought for
+          <select
+            value={reuseWindowSeconds}
+            disabled={pending}
+            onChange={(e) => run("fresh-window", () => setFreshness(Number(e.target.value)))}
+            className="h-8 rounded-md border border-border bg-surface px-2 text-[12.5px]"
+          >
+            {FRESHNESS.map((f) => (
+              <option key={f.seconds} value={f.seconds}>
+                {f.label}
+              </option>
+            ))}
+            {!FRESHNESS.some((f) => f.seconds === reuseWindowSeconds) && <option value={reuseWindowSeconds}>{Math.round(reuseWindowSeconds / 60)} minutes</option>}
+          </select>
+        </label>
+      )}
       {canBuy && !ready && <p className="mt-2 text-[12.5px] text-text-3">Open, fund and sign limits on your Vault first.</p>}
       {ready && stopped && (
         <p className="mt-2 text-[12.5px] text-warning">Your Vault is paused or its limits are revoked. Let the agent try anyway: Aerar will pass it, and the Vault will refuse.</p>

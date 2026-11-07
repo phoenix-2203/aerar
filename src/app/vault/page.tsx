@@ -46,6 +46,7 @@ async function Body() {
           operator={operator}
           mandateId={mandateIdFor(s.taskId)}
           approvalAbove={activity.task.approvalAbove}
+          reuseWindowSeconds={activity.task.reuseWindowSeconds}
           purchases={activity.purchases}
           role={s.role}
           workspaceOwner={ownerOfOrg(s.orgId)}
