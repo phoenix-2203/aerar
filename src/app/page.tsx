@@ -124,8 +124,8 @@ export default function Home() {
     <PublicShell>
       {/* Hero */}
       <section className="relative -mx-4 -mt-6 px-4 pb-16 pt-10 sm:-mx-6 sm:-mt-10 sm:px-6 sm:pt-16 lg:pb-24">
-        <div className="hero-night pointer-events-none absolute inset-0 -z-10" aria-hidden />
         <div className="pointer-events-none absolute left-1/2 top-[-120px] -z-10 h-[1000px] w-screen -translate-x-1/2 overflow-hidden" aria-hidden>
+          <div className="hero-night absolute inset-0" />
           <div className="wash right-[-6%] top-[40px] h-[640px] w-[760px]" />
         </div>
         <div className="grid grid-cols-[minmax(0,1fr)] items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14">
