@@ -12,6 +12,7 @@ import { getContext, getDbOnly } from "@/lib/server/context";
 import { createAgent, createOrg, createTask } from "@/lib/workspace";
 import { TRY_PROVIDERS } from "./catalog";
 import { tryRail } from "./rail";
+import { isWalletOrg, walletContext } from "@/lib/wallet/session";
 
 export const TRY_COOKIE = "aerar_try";
 export const TRY_TTL_SECONDS = 24 * 3600;
@@ -87,7 +88,9 @@ export async function tryContext(): Promise<Ctx> {
 
 /** Agents in a sandbox org pay simulated shops; everyone else gets the real rail. */
 export async function agentContext(orgId: string): Promise<Ctx> {
-  return isTryOrg(orgId) ? tryContext() : getContext();
+  if (isTryOrg(orgId)) return tryContext();
+  if (isWalletOrg(orgId)) return walletContext(orgId);
+  return getContext();
 }
 
 /** Everything the /try page shows for one sandbox. */

@@ -50,6 +50,7 @@ export const REASONS: Record<string, Reason> = {
   // Payment.
   QUOTE_CHANGED: { kind: "fail", text: "the provider's price or payment address changed before payment, so nothing was paid" },
   PAYMENT_NOT_SETTLED: { kind: "fail", text: "the provider didn't deliver, so the payment didn't settle" },
+  VAULT_REFUSED: { kind: "fail", text: "the owner's Vault refused it on-chain: it's outside the limits the owner signed" },
 };
 
 export function explain(code: string): string {

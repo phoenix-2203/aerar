@@ -1,10 +1,34 @@
 // The demo *provider* side: an x402 resource server inside this app, so judges have something real to buy.
 // It is a separate role from Aerar (the buyer). It only needs a payee address, never a private key.
-import { HTTPFacilitatorClient } from "@x402/core/server";
+import { x402Facilitator } from "@x402/core/facilitator";
+import { HTTPFacilitatorClient, type FacilitatorClient } from "@x402/core/server";
+import { toFacilitatorEvmSigner } from "@x402/evm";
+import { ExactEvmScheme as ExactEvmFacilitator } from "@x402/evm/exact/facilitator";
+import { createWalletClient, http, publicActions } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { baseSepolia } from "viem/chains";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { withX402, x402ResourceServer } from "@x402/next";
 import { NextResponse, type NextRequest } from "next/server";
 import { BASE_SEPOLIA, BASE_SEPOLIA_USDC } from "@/lib/x402/x402-rail";
+
+/**
+ * X402_FACILITATOR_URL=local: verify and settle in this process with the x402 library's own facilitator, paying gas
+ * from the operator key. The library checks contract wallets (ERC-1271), so Aerar Vault payments settle too.
+ */
+function localFacilitator(): FacilitatorClient {
+  const key = process.env.PAYER_PRIVATE_KEY;
+  if (!key || !/^0x[0-9a-fA-F]{64}$/.test(key)) throw new Error("A local facilitator needs PAYER_PRIVATE_KEY (with Base Sepolia ETH for gas)");
+  const account = privateKeyToAccount(key as `0x${string}`);
+  const client = createWalletClient({ account, chain: baseSepolia, transport: http(process.env.BASE_SEPOLIA_RPC_URL || undefined) }).extend(publicActions);
+  const signer = toFacilitatorEvmSigner({ ...client, address: account.address } as unknown as Parameters<typeof toFacilitatorEvmSigner>[0]);
+  const f = new x402Facilitator().register(BASE_SEPOLIA, new ExactEvmFacilitator(signer));
+  return {
+    verify: (p, r) => f.verify(p, r),
+    settle: (p, r) => f.settle(p, r),
+    getSupported: async () => f.getSupported(),
+  } as FacilitatorClient;
+}
 
 type Handler = (req: NextRequest) => Promise<NextResponse>;
 
@@ -12,7 +36,7 @@ const g = globalThis as unknown as { __aerarDemoServer?: x402ResourceServer };
 
 function resourceServer(): x402ResourceServer {
   if (!g.__aerarDemoServer) {
-    const facilitator = new HTTPFacilitatorClient({ url: process.env.X402_FACILITATOR_URL || "https://x402.org/facilitator" });
+    const facilitator = process.env.X402_FACILITATOR_URL === "local" ? localFacilitator() : new HTTPFacilitatorClient({ url: process.env.X402_FACILITATOR_URL || "https://x402.org/facilitator" });
     g.__aerarDemoServer = new x402ResourceServer(facilitator).register(BASE_SEPOLIA, new ExactEvmScheme());
   }
   return g.__aerarDemoServer;

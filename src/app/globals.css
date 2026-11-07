@@ -263,3 +263,15 @@ body {
   70% { opacity: 0.95; transform: rotate(-6deg) scale(0.94); }
   100% { opacity: 0.85; transform: rotate(-6deg) scale(1); }
 }
+
+/* The Vault: a ledger slip with a perforated left edge. */
+.vault-slip {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg);
+  background-image: radial-gradient(circle at 0 12px, var(--bg) 5px, transparent 5.5px);
+  background-size: 100% 24px;
+  background-repeat: repeat-y;
+}

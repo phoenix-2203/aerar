@@ -130,7 +130,7 @@ export function AppShell({ active, children }: { active?: "/report" | "/audit" |
   );
 }
 
-export function PublicShell({ active, children }: { active?: "/scenarios" | "/demo" | "/try" | "/verify"; children: ReactNode }) {
+export function PublicShell({ active, children }: { active?: "/scenarios" | "/demo" | "/try" | "/verify" | "/vault"; children: ReactNode }) {
   return (
     <Frame
       nav={
@@ -138,12 +138,17 @@ export function PublicShell({ active, children }: { active?: "/scenarios" | "/de
           <NavLink href="/try" active={active === "/try"}>
             Try it
           </NavLink>
+          <NavLink href="/vault" active={active === "/vault"}>
+            Vault
+          </NavLink>
           <NavLink href="/scenarios" active={active === "/scenarios"}>
             <Short short="Attacks" long="Attack lab" />
           </NavLink>
-          <NavLink href="/demo" active={active === "/demo"}>
-            <Short short="Report" long="Live report" />
-          </NavLink>
+          <span className="hidden sm:contents">
+            <NavLink href="/demo" active={active === "/demo"}>
+              Live report
+            </NavLink>
+          </span>
           <span className="hidden sm:contents">
             <NavLink href="/verify" active={active === "/verify"}>
               Verify
@@ -178,6 +183,7 @@ export function SiteFooter() {
         </div>
         <nav className="flex flex-wrap gap-x-5 gap-y-2 whitespace-nowrap" aria-label="Footer">
           <Link href="/try" className="hover:text-text">Try it</Link>
+          <Link href="/vault" className="hover:text-text">Your Vault</Link>
           <Link href="/scenarios" className="hover:text-text">Attack lab</Link>
           <Link href="/verify" className="hover:text-text">Verify a receipt</Link>
           <Link href="/demo" className="hover:text-text">Live report</Link>

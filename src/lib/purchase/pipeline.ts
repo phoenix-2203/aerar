@@ -403,7 +403,7 @@ export async function execute(ctx: Ctx, purchaseId: string): Promise<Purchase> {
   const now = new Date();
 
   if (result.kind === "not_settled")
-    return release(ctx, p, "payment_failed", "PAYMENT_NOT_SETTLED", result.reason, result.response.status ? evidenceFields(result.response) : {});
+    return release(ctx, p, "payment_failed", result.reason.startsWith("The Vault refused") ? "VAULT_REFUSED" : "PAYMENT_NOT_SETTLED", result.reason, result.response.status ? evidenceFields(result.response) : {});
 
   if (result.kind === "unknown") {
     const [u] = await db.transaction(async (tx) => {

@@ -5,6 +5,7 @@ import { toClientEvmSigner } from "@x402/evm";
 import { createPublicClient, decodeEventLog, http, parseAbi, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
+import { VaultRefused, vaultSigner } from "@/lib/vault/chain";
 import type { CapturedResponse, HttpRequestSpec, OnchainCheck, PaymentRail, PayResult, Quote, QuoteResult } from "./rail";
 
 export const BASE_SEPOLIA = "eip155:84532";
@@ -58,19 +59,23 @@ export function toQuote(r: PaymentRequirements, raw: PaymentRequired): Quote {
  * x402 on Base Sepolia. The private key lives only on the server; agents never see it.
  * Refuses to run against anything but Base Sepolia — there is no mainnet switch in this build.
  */
-export function createX402Rail(opts: { privateKey: Hex; rpcUrl?: string; fetch?: typeof fetch }): PaymentRail {
+export function createX402Rail(opts: { privateKey: Hex; rpcUrl?: string; fetch?: typeof fetch; vault?: { address: Hex; mandateId: Hex } }): PaymentRail {
   const f = opts.fetch ?? fetch;
   const account = privateKeyToAccount(opts.privateKey);
   const publicClient = createPublicClient({ chain: baseSepolia, transport: http(opts.rpcUrl) });
   if (baseSepolia.id !== 84532) throw new Error("Aerar only settles on Base Sepolia in this build");
-  const signer = toClientEvmSigner(account, publicClient);
+  // With a Vault, the money comes from the user's own contract and every payment must pass its on-chain mandate.
+  const payer = opts.vault ? opts.vault.address : account.address;
+  const signer = opts.vault
+    ? toClientEvmSigner(vaultSigner(opts.vault.address, opts.vault.mandateId) as unknown as Parameters<typeof toClientEvmSigner>[0], publicClient)
+    : toClientEvmSigner(account, publicClient);
 
   return {
     id: "x402",
     network: BASE_SEPOLIA,
     asset: BASE_SEPOLIA_USDC,
     scheme: "exact",
-    payerAddress: account.address,
+    payerAddress: payer,
 
     async quote(req: HttpRequestSpec): Promise<QuoteResult> {
       const res = await f(toRequest(req));
@@ -102,7 +107,13 @@ export function createX402Rail(opts: { privateKey: Hex; rpcUrl?: string; fetch?:
       if (!chosen) return { kind: "not_settled", reason: "APPROVED_QUOTE_NOT_OFFERED", response: { status: 0, contentType: null, body: new Uint8Array() } };
       const client = new x402Client().register(BASE_SEPOLIA, new ExactEvmScheme(signer));
       const http = new x402HTTPClient(client);
-      const payload = await client.createPaymentPayload({ ...pr, accepts: [chosen] });
+      let payload: Awaited<ReturnType<typeof client.createPaymentPayload>>;
+      try {
+        payload = await client.createPaymentPayload({ ...pr, accepts: [chosen] });
+      } catch (e) {
+        if (e instanceof VaultRefused) return { kind: "not_settled", reason: e.message, response: { status: 0, contentType: null, body: new Uint8Array() } };
+        throw e;
+      }
       const headers = http.encodePaymentSignatureHeader(payload);
       let res: Response;
       try {
@@ -145,7 +156,7 @@ export function createX402Rail(opts: { privateKey: Hex; rpcUrl?: string; fetch?:
             const ev = decodeEventLog({ abi: transferAbi, data: log.data, topics: log.topics });
             const { from, to, value } = ev.args;
             if (
-              from.toLowerCase() === account.address.toLowerCase() &&
+              from.toLowerCase() === payer.toLowerCase() &&
               to.toLowerCase() === expect.payTo.toLowerCase() &&
               value === expect.amount
             )
@@ -154,7 +165,7 @@ export function createX402Rail(opts: { privateKey: Hex; rpcUrl?: string; fetch?:
             /* not a Transfer */
           }
         }
-        return { ok: false, checkedAt, reason: "No matching USDC transfer from Aerar's wallet to the payee in this transaction" };
+        return { ok: false, checkedAt, reason: opts.vault ? "No matching USDC transfer from the Vault to the payee in this transaction" : "No matching USDC transfer from Aerar's wallet to the payee in this transaction" };
       } catch (e) {
         return { ok: false, checkedAt, reason: `Could not read transaction: ${(e as Error).message}` };
       }

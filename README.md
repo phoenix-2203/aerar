@@ -147,6 +147,13 @@ An approved purchase is not a paid purchase, and a paid purchase is not proof th
 - **Procurement memory** across every agent in the organisation, with a per-task reuse window.
 - **Idempotency keys** that hold under concurrent retries.
 
+**Aerar Vault: your wallet, on-chain limits** (new)
+- **Connect your own wallet** at `/vault`, open a Vault (a contract you own on Base Sepolia), fund it with test USDC and **sign its limits**: who can be paid, how much per payment, per day, until when.
+- **Your agent pays from your Vault over normal x402.** Aerar asks the Vault to approve one exact EIP-3009 transfer; the Vault checks its mandate, books the spend and answers the facilitator's ERC-1271 check for that transfer only. USDC v2.2 on Base Sepolia settles it (checked with `scripts/check-usdc-1271.py`).
+- **Pause, revoke or withdraw** from your wallet at any time; pending approvals die with them. Aerar can't change limits, withdraw or pay anyone else.
+- **"Pretend Aerar got hacked"**: ask the Vault for a bad payment with Aerar's real key and watch the contract refuse (dry run, nothing sent).
+- Contract and 15 Foundry tests in [`contracts/`](contracts/).
+
 **Proof**
 - **Onchain check** that the USDC transfer really happened, to the right payee, for the right amount.
 - **Hash-chained audit log** with a one-call chain verification.
@@ -256,7 +263,7 @@ On a phone: ![Report on a phone](docs/screenshots/report-375-light.png)
 - **x402 `exact` payments settle immediately.** No escrow or refunds yet; the x402 SDK's `auth-capture` scheme is the natural next step.
 - **Demo endpoints return synthetic data**, labelled as such.
 - **Single organisation per deployment; one operator password.** The public [try-it sandbox](https://aerar.duckdns.org/try) gives each visitor a private workspace (24 h) that buys from simulated shops only.
-- **Aerar holds the paying key.** If the server were compromised, funds in its wallet are at risk; limits live in Aerar, not on-chain. Roadmap: move task limits into a Base smart account (spend permissions) so they hold even if Aerar doesn't.
+- **With a Vault, the limits hold even if Aerar doesn't.** In the operator workspace and the sandbox, Aerar holds the paying key. With an [Aerar Vault](https://aerar.duckdns.org/vault), the money sits in a contract the user owns and the contract enforces payee, per-payment, daily and expiry limits itself. A compromised Aerar can only spend inside those limits.
 - **Not audited.**
 
 ## Architecture

@@ -27,7 +27,7 @@ export const STEP_ORDER: StepId[] = ["access", "memory", "quote", "policy", "res
 
 const ACCESS = new Set(["TASK_NOT_ACTIVE", "TASK_DEADLINE_PASSED", "MANDATE_EXPIRED", "AGENT_REVOKED", "AGENT_NOT_ASSIGNED", "PROVIDER_NOT_ALLOWED"]);
 const QUOTE = new Set(["PROVIDER_UNREACHABLE", "NO_USABLE_QUOTE"]);
-const PAYMENT = new Set(["QUOTE_CHANGED", "PAYMENT_NOT_SETTLED"]);
+const PAYMENT = new Set(["QUOTE_CHANGED", "PAYMENT_NOT_SETTLED", "VAULT_REFUSED"]);
 
 export interface PurchaseLike {
   status: string;
