@@ -2,11 +2,12 @@ import { x402Client, x402HTTPClient } from "@x402/core/client";
 import type { PaymentRequired, PaymentRequirements } from "@x402/core/types";
 import { ExactEvmScheme } from "@x402/evm/exact/client";
 import { toClientEvmSigner } from "@x402/evm";
-import { createPublicClient, decodeEventLog, http, parseAbi, type Hex } from "viem";
+import { createPublicClient, createWalletClient, decodeEventLog, encodeAbiParameters, http, keccak256, parseAbi, toHex, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
 import { VaultRefused, vaultSigner } from "@/lib/vault/chain";
-import type { CapturedResponse, HttpRequestSpec, OnchainCheck, PaymentRail, PayResult, Quote, QuoteResult } from "./rail";
+import { escrowAbi } from "@/lib/vault/artifacts";
+import type { CapturedResponse, EscrowHold, HttpRequestSpec, OnchainCheck, PaymentRail, PayResult, Quote, QuoteResult, RefundResult } from "./rail";
 
 export const BASE_SEPOLIA = "eip155:84532";
 export const BASE_SEPOLIA_USDC = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
@@ -51,8 +52,8 @@ function rejectionReason(http: x402HTTPClient, res: Response, captured: Captured
   }
 }
 
-export function toQuote(r: PaymentRequirements, raw: PaymentRequired): Quote {
-  return { scheme: r.scheme, network: r.network, asset: r.asset, amount: BigInt(r.amount), payTo: r.payTo, raw };
+export function toQuote(r: PaymentRequirements, raw: PaymentRequired, escrow?: Quote["escrow"]): Quote {
+  return { scheme: r.scheme, network: r.network, asset: r.asset, amount: BigInt(r.amount), payTo: r.payTo, raw, ...(escrow ? { escrow } : {}) };
 }
 
 /**
@@ -66,6 +67,72 @@ export function createX402Rail(opts: { privateKey: Hex; rpcUrl?: string; fetch?:
   if (baseSepolia.id !== 84532) throw new Error("Aerar only settles on Base Sepolia in this build");
   // With a Vault, the money comes from the user's own contract and every payment must pass its on-chain mandate.
   const payer = opts.vault ? opts.vault.address : account.address;
+  const wallet = createWalletClient({ account, chain: baseSepolia, transport: http(opts.rpcUrl) });
+
+  // Is this payTo an Aerar Escrow that Aerar judges? Read from the chain, never from what the shop says.
+  const escrowCache = new Map<string, Promise<Quote["escrow"] | undefined>>();
+  const escrowFor = (payTo: string) => {
+    const k = payTo.toLowerCase();
+    if (!escrowCache.has(k))
+      escrowCache.set(
+        k,
+        (async () => {
+          try {
+            const code = await publicClient.getCode({ address: payTo as Hex });
+            if (!code || code === "0x") return undefined;
+            const at = { address: payTo as Hex, abi: escrowAbi } as const;
+            const [shop, arbiter, window, usdc] = await Promise.all([
+              publicClient.readContract({ ...at, functionName: "shop" }),
+              publicClient.readContract({ ...at, functionName: "arbiter" }),
+              publicClient.readContract({ ...at, functionName: "window" }),
+              publicClient.readContract({ ...at, functionName: "usdc" }),
+            ]);
+            // Only an escrow whose judge is Aerar's own key can be refunded by Aerar.
+            if (arbiter.toLowerCase() !== account.address.toLowerCase() || usdc.toLowerCase() !== BASE_SEPOLIA_USDC.toLowerCase()) return undefined;
+            return { address: payTo, shop, windowSeconds: Number(window) };
+          } catch {
+            return undefined; // not an escrow
+          }
+        })(),
+      );
+    return escrowCache.get(k)!;
+  };
+
+  /** Attribute a settled payment in the escrow to its payer, so it can be refunded or released. */
+  async function recordInEscrow(escrow: NonNullable<Quote["escrow"]>, payload: unknown): Promise<EscrowHold | undefined> {
+    const p = (payload as { payload?: { signature?: Hex; authorization?: { from: Hex; value: string; validAfter: string; validBefore: string; nonce: Hex } } }).payload;
+    const a = p?.authorization;
+    if (!a || !p?.signature) return undefined;
+    try {
+      const hash = await wallet.writeContract({
+        address: escrow.address as Hex,
+        abi: escrowAbi,
+        functionName: "record",
+        args: [a.from, BigInt(a.value), BigInt(a.validAfter), BigInt(a.validBefore), a.nonce, p.signature],
+      });
+      const r = await publicClient.waitForTransactionReceipt({ hash, timeout: 45_000 });
+      if (r.status !== "success") return undefined;
+      const holdId = keccak256(encodeAbiParameters([{ type: "address" }, { type: "bytes32" }], [a.from, a.nonce]));
+      return { escrow: escrow.address, holdId, releaseAfter: new Date(Date.now() + escrow.windowSeconds * 1000).toISOString() };
+    } catch (e) {
+      console.warn(`[aerar] escrow record failed: ${(e as Error).message}`);
+      return undefined;
+    }
+  }
+
+  async function escrowCall(hold: EscrowHold, functionName: "refund" | "confirm", reason?: string): Promise<RefundResult> {
+    try {
+      const hash =
+        functionName === "refund"
+          ? await wallet.writeContract({ address: hold.escrow as Hex, abi: escrowAbi, functionName, args: [hold.holdId as Hex, keccak256(toHex(reason ?? ""))] })
+          : await wallet.writeContract({ address: hold.escrow as Hex, abi: escrowAbi, functionName, args: [hold.holdId as Hex] });
+      const r = await publicClient.waitForTransactionReceipt({ hash, timeout: 45_000 });
+      return r.status === "success" ? { ok: true, txHash: hash } : { ok: false, reason: "The escrow transaction reverted" };
+    } catch (e) {
+      return { ok: false, reason: (e as Error).message.split("\n")[0] };
+    }
+  }
+
   const signer = opts.vault
     ? toClientEvmSigner(vaultSigner(opts.vault.address, opts.vault.mandateId) as unknown as Parameters<typeof toClientEvmSigner>[0], publicClient)
     : toClientEvmSigner(account, publicClient);
@@ -89,7 +156,7 @@ export function createX402Rail(opts: { privateKey: Hex; rpcUrl?: string; fetch?:
       }
       const http = new x402HTTPClient(new x402Client());
       const pr = http.getPaymentRequiredResponse((n) => res.headers.get(n), body);
-      return { kind: "payment_required", quotes: pr.accepts.map((a) => toQuote(a, pr)) };
+      return { kind: "payment_required", quotes: await Promise.all(pr.accepts.map(async (a) => toQuote(a, pr, await escrowFor(a.payTo)))) };
     },
 
     async pay(req: HttpRequestSpec, quote: Quote): Promise<PayResult> {
@@ -128,14 +195,19 @@ export function createX402Rail(opts: { privateKey: Hex; rpcUrl?: string; fetch?:
       } catch {
         settle = null;
       }
-      if (res.ok && settle?.success && settle.transaction)
+      if (res.ok && settle?.success && settle.transaction) {
+        // Paid into a shop's escrow: record it there so it can be refunded (not delivered) or released (delivered).
+        const escrow = (await escrowFor(quote.payTo)) ?? quote.escrow;
+        const hold = escrow ? await recordInEscrow(escrow, payload) : undefined;
         return {
           kind: "settled",
           response,
           txHash: settle.transaction,
           payer: settle.payer ?? null,
           amount: settle.amount ? BigInt(settle.amount) : null,
+          ...(hold ? { escrow: hold } : {}),
         };
+      }
       if (res.ok && !settle)
         return { kind: "unknown", reason: "Provider returned 2xx without a settlement receipt" };
       return {
@@ -144,6 +216,9 @@ export function createX402Rail(opts: { privateKey: Hex; rpcUrl?: string; fetch?:
         reason: settle?.errorReason ?? rejectionReason(http, res, response) ?? `Provider responded ${res.status}`,
       };
     },
+
+    refund: (hold: EscrowHold, reason: string) => escrowCall(hold, "refund", reason),
+    confirm: (hold: EscrowHold) => escrowCall(hold, "confirm"),
 
     async verifyOnchain(txHash: string, expect: { payTo: string; amount: bigint }): Promise<OnchainCheck> {
       const checkedAt = new Date().toISOString();

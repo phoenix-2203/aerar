@@ -22,4 +22,4 @@
 forge test        # 28 tests: Vault 15, Escrow 10, Seal 3 against a FiatToken-v2.2-style mock (test/MockUSDC.sol)
 ```
 
-Not audited. Testnet only. The escrow is not deployed yet.
+Not audited. Testnet only. `deploy/vps/setup-escrow.sh` deploys the Escrow factory and the demo shop's escrow.

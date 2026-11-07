@@ -12,6 +12,8 @@ import type { CapturedResponse, HttpRequestSpec, OnchainCheck, PaymentRail, PayR
 
 export const USDC = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 export const PAYEE = "0x1111111111111111111111111111111111111111";
+/** The escrow a simulated escrow shop names as its payTo (it releases to the shop's own address). */
+export const ESCROW = "0xE5C0E5C0E5C0E5C0E5C0E5C0E5C0E5C0E5C0E5C0";
 
 /** Fresh in-process Postgres with the real migrations applied. */
 export async function testDb(): Promise<Db> {
@@ -63,7 +65,8 @@ export function fakeRail(offers: Record<string, FakeOffer | "free">, opts: { pay
         network: o.network ?? "eip155:84532",
         asset: o.asset ?? USDC,
         amount: o.amount,
-        payTo: o.payTo ?? PAYEE,
+        payTo: o.escrow ? ESCROW : (o.payTo ?? PAYEE),
+        ...(o.escrow ? { escrow: { address: ESCROW, shop: o.payTo ?? PAYEE, windowSeconds: 3600 } } : {}),
         raw: o.description ? { resource: { url: req.url, description: o.description }, accepts: [] } : { accepts: [] },
       };
       return { kind: "payment_required", quotes: [q] };

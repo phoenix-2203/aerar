@@ -42,6 +42,13 @@ function resourceServer(): x402ResourceServer {
   return g.__aerarDemoServer;
 }
 
+/** The demo shop's Aerar Escrow (scripts/deploy-vault-factory.mjs creates it): payments wait there for a delivery verdict. */
+export function demoEscrow(): `0x${string}` {
+  const a = process.env.DEMO_ESCROW_ADDRESS;
+  if (!a || !/^0x[0-9a-fA-F]{40}$/.test(a)) throw new Error("DEMO_ESCROW_ADDRESS is not set (run scripts/deploy-vault-factory.mjs)");
+  return a as `0x${string}`;
+}
+
 export function demoPayTo(): `0x${string}` {
   const a = process.env.DEMO_PAYTO_ADDRESS;
   if (!a || !/^0x[0-9a-fA-F]{40}$/.test(a)) throw new Error("DEMO_PAYTO_ADDRESS is not set to a valid address");
@@ -53,7 +60,7 @@ export function demoPayTo(): `0x${string}` {
  * Built lazily on first request so a missing env var fails that request, not the build.
  * withX402 settles only after the handler returns < 400, so a bad request is never charged.
  */
-export function paidDemoRoute(priceUsdc: string, description: string, handler: Handler): Handler {
+export function paidDemoRoute(priceUsdc: string, description: string, handler: Handler, payTo: () => `0x${string}` = demoPayTo): Handler {
   let wrapped: Handler | null = null;
   return async (req) => {
     try {
@@ -65,7 +72,7 @@ export function paidDemoRoute(priceUsdc: string, description: string, handler: H
               scheme: "exact",
               price: { amount: toAtomic(priceUsdc), asset: BASE_SEPOLIA_USDC, extra: { name: "USDC", version: "2" } },
               network: BASE_SEPOLIA,
-              payTo: demoPayTo(),
+              payTo: payTo(),
             },
           ],
           description,

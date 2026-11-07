@@ -366,6 +366,7 @@ async function submitNew(
     quoteNetwork: quote.network,
     quoteScheme: quote.scheme,
     quoteRaw: quote.raw,
+    ...(quote.escrow ? { escrow: quote.escrow.address, escrowShop: quote.escrow.shop } : {}),
   };
 
   // ---- 4. policy on the real quote
@@ -510,6 +511,7 @@ export async function execute(ctx: Ctx, purchaseId: string): Promise<Purchase> {
     amount: p.quoteAmount!,
     payTo: p.quotePayTo!,
     raw: p.quoteRaw,
+    ...(p.escrow && p.escrowShop ? { escrow: { address: p.escrow, shop: p.escrowShop, windowSeconds: 0 } } : {}),
   };
 
   // Claim the row so two executors can't both pay it.
@@ -593,8 +595,9 @@ export async function execute(ctx: Ctx, purchaseId: string): Promise<Purchase> {
     await rollUp(t, p.taskId, (x) => ({ reserved: sql`${x.reserved} - ${p.reservedAmount}`, spent: sql`${x.spent} + ${net}` }));
     const prov = await provider(t, p.orgId, p.host);
     const hold = dc.ok ? {} : { heldAt: now, heldReason: `${dc.detail}${refund?.ok ? " The payment was refunded from its escrow." : ""} (purchase ${p.id})` };
-    if (!prov) await t.insert(providers).values({ id: newId("prv"), orgId: p.orgId, host: p.host, knownPayTo: approved.payTo, ...hold });
-    else if (!prov.knownPayTo || !dc.ok) await t.update(providers).set({ knownPayTo: prov.knownPayTo ?? approved.payTo, ...hold }).where(eq(providers.id, prov.id));
+    const shopAddress = approved.escrow?.shop ?? approved.payTo;
+    if (!prov) await t.insert(providers).values({ id: newId("prv"), orgId: p.orgId, host: p.host, knownPayTo: shopAddress, ...hold });
+    else if (!prov.knownPayTo || !dc.ok) await t.update(providers).set({ knownPayTo: prov.knownPayTo ?? shopAddress, ...hold }).where(eq(providers.id, prov.id));
     await audit(t, {
       orgId: p.orgId,
       actor: "system",

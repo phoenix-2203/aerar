@@ -167,11 +167,12 @@ contract AerarEscrow {
 }
 
 /// @title AerarEscrowFactory
-/// @notice One escrow per (shop, arbiter, window). A shop creates its own; the address is deterministic, so payers can
-/// check that an x402 `payTo` really is the escrow for the shop they meant to pay.
+/// @notice Creates escrows. Anyone can create one for a shop (a shop's backend often has no key of its own); the
+/// shop, the judge and the window are fixed at creation and part of the address, so nobody can squat or alter the
+/// escrow a shop advertises. Payers check `shop()`, `arbiter()` and `window()` on the escrow before paying it.
 contract AerarEscrowFactory {
     IUSDCEscrow public immutable usdc;
-    mapping(address => mapping(address => address)) public escrowOf; // shop => arbiter => escrow
+    mapping(bytes32 => address) public escrowOf; // keccak256(shop, arbiter, window) => escrow
 
     event EscrowCreated(address indexed shop, address indexed arbiter, address escrow, uint64 window);
 
@@ -179,10 +180,15 @@ contract AerarEscrowFactory {
         usdc = usdc_;
     }
 
-    function create(address arbiter, uint64 window) external returns (AerarEscrow e) {
-        require(escrowOf[msg.sender][arbiter] == address(0), "escrow exists");
-        e = new AerarEscrow{salt: keccak256(abi.encode(msg.sender, arbiter))}(usdc, msg.sender, arbiter, window);
-        escrowOf[msg.sender][arbiter] = address(e);
-        emit EscrowCreated(msg.sender, arbiter, address(e), window);
+    function key(address shop, address arbiter, uint64 window) public pure returns (bytes32) {
+        return keccak256(abi.encode(shop, arbiter, window));
+    }
+
+    function create(address shop, address arbiter, uint64 window) external returns (AerarEscrow e) {
+        bytes32 k = key(shop, arbiter, window);
+        require(escrowOf[k] == address(0), "escrow exists");
+        e = new AerarEscrow{salt: k}(usdc, shop, arbiter, window);
+        escrowOf[k] = address(e);
+        emit EscrowCreated(shop, arbiter, address(e), window);
     }
 }

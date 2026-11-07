@@ -61,6 +61,21 @@ contract MockUSDC {
         _move(from, to, value);
     }
 
+    /// The (v, r, s) overload USDC also has; x402 facilitators use it for EOA signatures.
+    function transferWithAuthorization(
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        this.transferWithAuthorization(from, to, value, validAfter, validBefore, nonce, abi.encodePacked(r, s, v));
+    }
+
     function _valid(address signer, bytes32 digest, bytes memory sig) internal view returns (bool) {
         if (signer.code.length == 0) {
             if (sig.length != 65) return false;

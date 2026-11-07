@@ -50,6 +50,13 @@
       "when": 1794084394900,
       "tag": "0006_refunds",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794085282651,
+      "tag": "0007_escrow_shop",
+      "breakpoints": true
     }
   ]
 }

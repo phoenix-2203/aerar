@@ -240,6 +240,8 @@ export const purchases = pgTable(
     onchainCheck: jsonb("onchain_check"),
     // Refund (shops that take payment through an AerarEscrow). paidAmount is the net amount after a refund.
     escrow: text("escrow"),
+    /** The shop behind the escrow (who it releases to): the provider's identity for the payee check. */
+    escrowShop: text("escrow_shop"),
     escrowHoldId: text("escrow_hold_id"),
     refundedAmount: usdc("refunded_amount").notNull().default(sql`0`),
     refundTx: text("refund_tx"),

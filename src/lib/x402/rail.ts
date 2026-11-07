@@ -8,6 +8,8 @@ export interface Quote {
   payTo: string;
   /** Full provider payment-required object, kept as evidence and used to build the payment. */
   raw: unknown;
+  /** Set when payTo is an Aerar Escrow that Aerar can judge (checked on-chain): who it pays, and after how long. */
+  escrow?: { address: string; shop: string; windowSeconds: number };
 }
 
 export interface HttpRequestSpec {

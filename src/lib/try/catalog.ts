@@ -17,8 +17,8 @@ export interface TryProvider {
   items: TryItem[];
   /** Shown to visitors as the provider an attacker controls. Not allowed by default. */
   attacker?: boolean;
-  /** Takes payment through an AerarEscrow (payTo is the escrow), so a failed delivery is refunded. */
-  escrow?: boolean;
+  /** Takes payment through an AerarEscrow: payTo is the escrow, which releases to this shop address. */
+  escrow?: { shop: `0x${string}` };
 }
 
 export const TRY_PROVIDERS: TryProvider[] = [
@@ -71,7 +71,7 @@ export const TRY_PROVIDERS: TryProvider[] = [
     host: "api.briefbox.dev",
     name: "BriefBox (pays through escrow)",
     payTo: "0xE5C0000000000000000000000000000000000006",
-    escrow: true,
+    escrow: { shop: "0xB41EF00000000000000000000000000000000006" },
     items: [
       { path: "/weekly-brief", name: "Weekly market brief", price: 40_000n, about: "Weekly market brief report", delivers: "empty" },
       { path: "/sector-brief", name: "Sector brief", price: 30_000n, about: "Sector brief report" },

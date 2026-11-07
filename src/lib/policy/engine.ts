@@ -27,6 +27,8 @@ export interface PolicyInput {
     asset: string;
     amount: bigint;
     payTo: string;
+    /** payTo is an Aerar Escrow that releases to this shop. */
+    escrow?: { shop: string };
   };
   /** Payee recorded the first time we paid this host, if any. */
   knownPayTo: string | null;
@@ -141,10 +143,11 @@ export function evaluatePolicy(input: PolicyInput): PolicyResult {
   if (quote.scheme !== rails.scheme)
     declines.push(["SCHEME_NOT_SUPPORTED", `Payment scheme "${quote.scheme}" is not supported.`]);
   if (!/^0x[0-9a-fA-F]{40}$/.test(quote.payTo)) declines.push(["INVALID_PAYEE", "The quoted payee is not a valid address."]);
-  else if (input.knownPayTo && input.knownPayTo.toLowerCase() !== quote.payTo.toLowerCase())
+  // A shop paid through its escrow is still the same shop: compare who the money ends up with.
+  else if (input.knownPayTo && input.knownPayTo.toLowerCase() !== (quote.escrow?.shop ?? quote.payTo).toLowerCase())
     declines.push([
       "PAYEE_CHANGED",
-      `${input.host} used to be paid at ${input.knownPayTo}; this quote pays ${quote.payTo}.`,
+      `${input.host} used to be paid at ${input.knownPayTo}; this quote pays ${quote.escrow ? `${quote.escrow.shop} (through escrow ${quote.payTo})` : quote.payTo}.`,
     ]);
 
   // How much

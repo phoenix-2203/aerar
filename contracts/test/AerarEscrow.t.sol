@@ -32,8 +32,7 @@ contract AerarEscrowTest {
         vm.warp(1_800_000_000);
         usdc = new MockUSDC();
         factory = new AerarEscrowFactory(IUSDCEscrow(address(usdc)));
-        vm.prank(SHOP);
-        escrow = factory.create(AERAR, 1 hours);
+        escrow = factory.create(SHOP, AERAR, 1 hours);
         payer = vm.addr(PAYER_KEY);
         usdc.mint(payer, 5_000_000); // $5
     }
@@ -158,14 +157,16 @@ contract AerarEscrowTest {
         _eq(usdc.balanceOf(address(vault)), 2_000_000, "the money is back in the owner's Vault");
     }
 
-    function test_factoryMakesOneEscrowPerShopAndArbiter() public {
-        vm.prank(SHOP);
-        vm.expectRevert(bytes("escrow exists"));
-        factory.create(AERAR, 1 hours);
-        require(factory.escrowOf(SHOP, AERAR) == address(escrow), "lookup");
-        require(escrow.shop() == SHOP && escrow.arbiter() == AERAR, "fixed shop and judge");
+    function test_factoryMakesOneEscrowPerShopJudgeAndWindow() public {
         vm.prank(ATTACKER);
+        vm.expectRevert(bytes("escrow exists"));
+        factory.create(SHOP, AERAR, 1 hours);
+        require(factory.escrowOf(factory.key(SHOP, AERAR, 1 hours)) == address(escrow), "lookup");
+        require(escrow.shop() == SHOP && escrow.arbiter() == AERAR && escrow.window() == 1 hours, "fixed shop, judge and window");
         vm.expectRevert(AerarEscrow.BadWindow.selector);
-        factory.create(AERAR, 1 minutes);
+        factory.create(SHOP, AERAR, 1 minutes);
+        // Someone else creating an escrow "for" the shop with their own judge gets a different address the shop never advertises.
+        AerarEscrow other = factory.create(SHOP, ATTACKER, 1 hours);
+        require(address(other) != address(escrow), "different escrow");
     }
 }

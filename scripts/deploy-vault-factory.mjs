@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Deploy the Aerar Vault factory to Base Sepolia from the operator key, then print the line to add to .env.
+// Deploy the Aerar Vault factory, Morning Seal and Escrow factory to Base Sepolia from the operator key, create the demo
+// shop's escrow, then print the lines to add to .env. Safe to rerun: anything already deployed is skipped.
 // Usage (on the VPS, in /opt/aerar):  sudo -u aerar node scripts/deploy-vault-factory.mjs
 // Reads PAYER_PRIVATE_KEY and BASE_SEPOLIA_RPC_URL from .env (or the environment). Needs a little Base Sepolia ETH.
 import { readFileSync } from "node:fs";
@@ -52,6 +53,31 @@ async function deploy(name, envKey, a, code, args) {
   return `${envKey}=${r.contractAddress}`;
 }
 
-const lines = [await deploy("Vault factory", "VAULT_FACTORY_ADDRESS", abi, bytecode, [USDC]), await deploy("Morning Seal", "SEAL_ADDRESS", sealAbi, sealBytecode, [])].filter(Boolean);
+const escrowFactoryAbi = JSON.parse(/export const escrowFactoryAbi = (\[.*\]) as const;/.exec(src)[1]);
+const escrowFactoryBytecode = /export const escrowFactoryBytecode = "(0x[0-9a-f]+)"/.exec(bin)[1];
+
+const lines = [
+  await deploy("Vault factory", "VAULT_FACTORY_ADDRESS", abi, bytecode, [USDC]),
+  await deploy("Morning Seal", "SEAL_ADDRESS", sealAbi, sealBytecode, []),
+  await deploy("Escrow factory", "ESCROW_FACTORY_ADDRESS", escrowFactoryAbi, escrowFactoryBytecode, [USDC]),
+].filter(Boolean);
+
+// The demo shop's escrow: releases to DEMO_PAYTO_ADDRESS, judged by Aerar's operator key, 1-hour delivery window.
+const escrowFactory = (lines.find((l) => l.startsWith("ESCROW_FACTORY_ADDRESS=")) ?? `=${env.ESCROW_FACTORY_ADDRESS}`).split("=")[1];
+const shop = env.DEMO_PAYTO_ADDRESS;
+if (escrowFactory && /^0x[0-9a-fA-F]{40}$/.test(shop ?? "")) {
+  const WINDOW = 3600n;
+  const key = await pub.readContract({ address: escrowFactory, abi: escrowFactoryAbi, functionName: "key", args: [shop, account.address, WINDOW] });
+  let escrow = await pub.readContract({ address: escrowFactory, abi: escrowFactoryAbi, functionName: "escrowOf", args: [key] });
+  if (/^0x0{40}$/.test(escrow)) {
+    const hash = await wallet.writeContract({ address: escrowFactory, abi: escrowFactoryAbi, functionName: "create", args: [shop, account.address, WINDOW] });
+    console.log(`Demo shop escrow: creating… tx ${hash}`);
+    const r = await pub.waitForTransactionReceipt({ hash });
+    if (r.status !== "success") throw new Error("Escrow creation failed");
+    escrow = await pub.readContract({ address: escrowFactory, abi: escrowFactoryAbi, functionName: "escrowOf", args: [key] });
+  }
+  console.log(`Demo shop escrow: https://sepolia.basescan.org/address/${escrow} (pays ${shop}, judged by ${account.address}, 1 h window)`);
+  if (env.DEMO_ESCROW_ADDRESS?.toLowerCase() !== escrow.toLowerCase()) lines.push(`DEMO_ESCROW_ADDRESS=${escrow}`);
+} else console.log("Skipping the demo shop escrow: DEMO_PAYTO_ADDRESS isn't set.");
 if (lines.length) console.log(`\nAdd to /opt/aerar/.env:\n${lines.join("\n")}${env.X402_FACILITATOR_URL === "local" ? "" : "\nX402_FACILITATOR_URL=local"}`);
 else console.log("\nNothing to deploy.");
