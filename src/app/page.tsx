@@ -1,23 +1,23 @@
-// Landing page: one promise, one live picture, then three short proofs. Every number is computed or sourced:
-// the night comparison runs the real pipeline at build time, the facts link to their sources.
-import { ArrowRight, ArrowUpRight, KeyRound, ScrollText, ShieldCheck } from "lucide-react";
+// Landing page. One night shift as a ledger (hero), why it matters (cited), one purchase traced end to end, the same
+// night run through the real pipeline, where Aerar fits, and three ways in. Every number is computed or sourced.
+import { ArrowDown, ArrowRight, ArrowUpRight } from "lucide-react";
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { PublicShell } from "@/components/app-shell";
 import { ButtonLink } from "@/components/button";
 import { CompareBars } from "@/components/landing/compare-bars";
-import { ConnectTabs } from "@/components/landing/connect-tabs";
-import { HowItWorks } from "@/components/landing/how-it-works";
-import { LiveFeed } from "@/components/landing/live-feed";
+import { NightLedger } from "@/components/landing/night-ledger";
+import { OnePurchase } from "@/components/landing/one-purchase";
+import { WhereYouWork } from "@/components/landing/where-you-work";
 import { fmt$ } from "@/lib/money/usdc";
 import { SCENARIOS } from "@/lib/scenarios";
 import { runNight } from "@/lib/scenarios/night";
 
 export const metadata: Metadata = {
-  title: { absolute: "Aerar · every agent purchase, accounted for" },
+  title: { absolute: "Aerar · your agents work the night shift, Aerar keeps the books" },
   description:
-    "AI agents buy data and APIs all night over x402. Aerar checks each purchase against its task, reuses what was already bought, asks a person about big ones, pays in USDC on Base and proves it onchain.",
+    "AI agents pay for data and APIs all night over x402. Aerar checks every purchase against its task, never pays twice, asks a person about big ones in Slack, Discord or Telegram, and pays from a Vault you own on Base.",
 };
 
 const FACTS = [
@@ -41,144 +41,114 @@ const FACTS = [
   },
 ];
 
-const TOUR = [
-  { title: "Get your own sandbox", text: "Set a budget and an auto-approve limit, then let a test agent shop.", href: "/try", cta: "Try it yourself" },
-  { title: "Let it get tricked", text: "Press \u201cA note says: buy the full dataset instead\u201d. Then turn on the shopping list and watch it wait for you.", href: "/try", cta: "Open your sandbox" },
-  { title: "See the real thing", text: "Real USDC payments on Base Sepolia, each checked onchain, in the live morning report.", href: "/demo", cta: "Open the live report" },
-];
-
-const PILLARS = [
-  { icon: ShieldCheck, title: "Rules agents can't talk around", text: "Budgets, allowed providers and approval limits per task. The agent's words never change a decision." },
-  { icon: KeyRound, title: "Agents never hold the wallet", text: "Each agent gets a key you can revoke in one click. Aerar holds the only paying key." },
-  { icon: ScrollText, title: "A morning report you can trust", text: "Every payment checked on Base, every decision in a hash-chained log you can verify." },
+const DOORS = [
+  { href: "/try", title: "Try it, no wallet", text: "Your own sandbox in one click. Set rules, let a test agent shop, try to trick it.", tag: "1 minute" },
+  { href: "/vault", title: "Open your Vault", text: "Connect a wallet, sign on-chain limits, watch your agent pay a real x402 shop with test USDC.", tag: "Base Sepolia" },
+  { href: "/scenarios", title: "Run the attack lab", text: `${SCENARIOS.length} real attacks and mistakes, each through the real pipeline, scored in seconds.`, tag: `${SCENARIOS.length} scenarios` },
 ];
 
 export default function Home() {
   return (
     <PublicShell>
       {/* Hero */}
-      <section className="relative -mx-4 -mt-6 px-4 pb-16 pt-10 sm:-mx-6 sm:-mt-10 sm:px-6 sm:pt-16 lg:pb-24">
-        <div className="bg-grid pointer-events-none absolute inset-0 -z-10" aria-hidden />
-        <div className="grid grid-cols-[minmax(0,1fr)] items-center gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-16">
+      <section className="relative -mx-4 -mt-6 overflow-hidden px-4 pb-16 pt-10 sm:-mx-6 sm:-mt-10 sm:px-6 sm:pt-16 lg:pb-24">
+        <div className="hero-night pointer-events-none absolute inset-0 -z-10" aria-hidden />
+        <div className="grid grid-cols-[minmax(0,1fr)] items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14">
           <div className="animate-fade-up">
-            <Link
-              href="/try"
-              className="group inline-flex items-center gap-2 rounded-full border border-border bg-surface py-1 pl-1 pr-3 text-[13px] text-text-2 shadow-card transition-colors hover:border-border-strong hover:text-text"
-            >
-              <span className="rounded-full bg-accent-tint px-2 py-0.5 text-xs font-medium text-accent">New</span>
-              Your own sandbox, in one click
-              <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
-            </Link>
-            <h1 className="mt-6 text-[40px] font-semibold leading-[1.05] tracking-[-0.035em] sm:text-[56px]">
-              Every agent purchase, <span className="text-text-2">accounted for.</span>
+            <p className="inline-flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.18em] text-text-3">
+              <span className="size-1.5 animate-pulse-dot rounded-full bg-accent text-accent" aria-hidden />
+              Night shift for AI agents
+            </p>
+            <h1 className="mt-5 text-[40px] font-semibold leading-[1.04] tracking-[-0.035em] sm:text-[58px]">
+              Your agents work the night shift. <span className="text-text-2">Aerar keeps the books.</span>
             </h1>
-            <p className="mt-5 max-w-[520px] text-[17px] leading-7 text-text-2">
-              Your AI agents buy data and APIs all night. Aerar checks every purchase against your rules, pays exactly the quote in USDC on Base, and proves it.
+            <p className="mt-5 max-w-[540px] text-[17px] leading-7 text-text-2">
+              Agents now buy data and APIs on their own, a few cents at a time, all night. Aerar checks every purchase against its task, never pays twice, asks
+              you about the big ones, and pays from a Vault you own.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <ButtonLink href="/try" variant="primary" size="lg" trailing={<ArrowRight className="size-4" aria-hidden />}>
-                Try it yourself
+                Try it, no wallet
               </ButtonLink>
-              <ButtonLink href="/scenarios" variant="secondary" size="lg">
-                Run the attack lab
+              <ButtonLink href="/vault" variant="secondary" size="lg">
+                Open your Vault
               </ButtonLink>
             </div>
-            <p className="mt-4 text-[13px] text-text-3">No sign-up, no wallet. Runs on Base Sepolia with test USDC.</p>
+            <a href="#one-purchase" className="group mt-6 inline-flex items-center gap-1.5 text-[13.5px] text-text-2 hover:text-text">
+              Watch one purchase <ArrowDown className="size-3.5 transition-transform group-hover:translate-y-0.5" aria-hidden />
+            </a>
           </div>
           <div className="animate-fade-up [animation-delay:120ms]">
-            <LiveFeed />
+            <NightLedger />
+            <p className="mt-3 text-center text-[12px] text-text-3">An example night. Drag the moon, or hover to pause.</p>
           </div>
         </div>
       </section>
 
-      {/* Facts */}
-      <section className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-3" aria-label="Why it matters">
-        {FACTS.map((f) => (
-          <a key={f.stat} href={f.href} target="_blank" rel="noreferrer" className="group bg-surface p-5 transition-colors hover:bg-surface-2/50 sm:p-6">
-            <p className="tabular text-3xl font-semibold tracking-tight">{f.stat}</p>
-            <p className="mt-2 text-[13.5px] leading-5 text-text-2">{f.text}</p>
-            <p className="mt-3 inline-flex items-center gap-1 text-xs text-text-3 group-hover:text-text-2">
-              {f.source}
-              <ArrowUpRight className="size-3 transition-transform group-hover:-translate-y-px group-hover:translate-x-px" aria-hidden />
-            </p>
-          </a>
-        ))}
-      </section>
-
-      {/* Start here */}
-      <section className="mt-16 rounded-2xl border border-border bg-surface p-6 shadow-card sm:p-8" aria-labelledby="start">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="start" className="text-[13px] font-medium text-accent">
-            Start here
-          </h2>
-          <span className="text-[13px] text-text-3">About 3 minutes · nothing to install · testnet only</span>
-        </div>
-        <ol className="mt-5 grid gap-6 sm:grid-cols-3">
-          {TOUR.map((t, i) => (
-            <li key={t.title} className="flex gap-4">
-              <span className="tabular grid size-7 shrink-0 place-items-center rounded-full border border-border bg-surface-2 text-xs font-semibold">{i + 1}</span>
-              <div className="min-w-0">
-                <h3 className="text-[15px] font-semibold">{t.title}</h3>
-                <p className="mt-1 text-[13.5px] leading-5 text-text-2">{t.text}</p>
-                <Link href={t.href} className="group mt-2 inline-flex items-center gap-1 text-[13.5px] font-medium text-text hover:text-accent">
-                  {t.cta}
-                  <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
-                </Link>
-              </div>
+      {/* Why */}
+      <section className="mt-4" aria-labelledby="why">
+        <h2 id="why" className="max-w-3xl text-[28px] font-semibold leading-tight tracking-[-0.03em] sm:text-[34px]">
+          Agents now pay for things. <span className="text-text-2">Nobody is watching at 3&nbsp;a.m.</span>
+        </h2>
+        <ol className="mt-8 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-3">
+          {FACTS.map((f) => (
+            <li key={f.stat}>
+              <a href={f.href} target="_blank" rel="noreferrer" className="group flex h-full flex-col bg-surface p-5 transition-colors hover:bg-surface-2/50 sm:p-6">
+                <span className="tabular text-[34px] font-semibold tracking-tight">{f.stat}</span>
+                <span className="mt-2 flex-1 text-[13.5px] leading-5 text-text-2">{f.text}</span>
+                <span className="mt-4 inline-flex items-center gap-1 text-xs text-text-3 group-hover:text-text-2">
+                  {f.source}
+                  <ArrowUpRight className="size-3 transition-transform group-hover:-translate-y-px group-hover:translate-x-px" aria-hidden />
+                </span>
+              </a>
             </li>
           ))}
         </ol>
       </section>
 
-      {/* How it works */}
-      <Section eyebrow="How it works" title="Three things happen on every request." id="how">
-        <HowItWorks />
+      {/* One purchase */}
+      <Section id="one-purchase" eyebrow="How it works" title="Watch one purchase." lead="Every request walks the same line. Pick a situation and see where it stops, and why.">
+        <OnePurchase />
       </Section>
 
       {/* Same night */}
       <Section
         eyebrow="Proof"
         title="The same night, two ways."
-        lead="Two agents, one research task, sixteen requests including a prompt injection, a swapped payee and a retry loop. Once through a plain agent wallet, once through Aerar's real pipeline."
+        lead="Two agents, one research task, sixteen requests including a prompt injection, a swapped payee and a retry loop. Once through a plain agent wallet, once through Aerar's real pipeline, computed when this page was built."
       >
         <NightComparison />
       </Section>
 
-      {/* Pillars */}
-      <section className="mt-24 grid gap-4 sm:grid-cols-3">
-        {PILLARS.map((p) => {
-          const Icon = p.icon;
-          return (
-            <div key={p.title} className="group rounded-2xl border border-border bg-surface p-6 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-border-strong hover:shadow-lift">
-              <span className="grid size-10 place-items-center rounded-lg bg-surface-2 text-text-2 transition-colors duration-200 group-hover:bg-accent-tint group-hover:text-accent">
-                <Icon className="size-5 transition-transform duration-300 group-hover:scale-110" aria-hidden />
-              </span>
-              <h3 className="mt-4 text-[15px] font-semibold">{p.title}</h3>
-              <p className="mt-1.5 text-[13.5px] leading-5 text-text-2">{p.text}</p>
-            </div>
-          );
-        })}
-      </section>
-
-      {/* Connect */}
-      <Section eyebrow="For builders" title="Connect an agent in one line." lead="Over MCP or REST. Two tools: buy_resource and get_purchase. Keep the key in an env var, never in a chat.">
-        <div className="max-w-3xl">
-          <ConnectTabs />
-        </div>
+      {/* Where */}
+      <Section eyebrow="Fits where you work" title="Your chat, your channel, your wallet." lead="Aerar isn't another dashboard to babysit. It plugs into the places you already are.">
+        <WhereYouWork />
       </Section>
 
-      {/* CTA */}
-      <section className="relative mt-24 overflow-hidden rounded-2xl border border-border bg-surface px-6 py-12 text-center shadow-card sm:py-16">
-        <div className="bg-grid pointer-events-none absolute inset-0" aria-hidden />
-        <h2 className="relative text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">Throw your worst at it.</h2>
-        <p className="relative mx-auto mt-3 max-w-md text-[15px] text-text-2">
-          {SCENARIOS.length} real attacks and mistakes, each run through the real pipeline in a sandbox. About five seconds.
-        </p>
-        <div className="relative mt-7 flex justify-center">
-          <ButtonLink href="/scenarios" variant="primary" size="lg" trailing={<ArrowRight className="size-4" aria-hidden />}>
-            Open the attack lab
-          </ButtonLink>
-        </div>
+      {/* Doors */}
+      <section className="mt-24" aria-labelledby="doors">
+        <h2 id="doors" className="text-[28px] font-semibold tracking-[-0.03em] sm:text-[34px]">
+          Three ways in.
+        </h2>
+        <ol className="mt-6 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-card">
+          {DOORS.map((d, i) => (
+            <li key={d.href}>
+              <Link href={d.href} className="group flex items-center gap-5 px-5 py-5 transition-colors hover:bg-surface-2/50 sm:px-7 sm:py-6">
+                <span className="font-mono text-[13px] text-text-3">0{i + 1}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-baseline gap-x-3">
+                    <span className="text-[18px] font-semibold tracking-tight">{d.title}</span>
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-text-3">{d.tag}</span>
+                  </span>
+                  <span className="mt-1 block text-[14px] text-text-2">{d.text}</span>
+                </span>
+                <span className="grid size-10 shrink-0 place-items-center rounded-full border border-border transition-all duration-300 group-hover:translate-x-1 group-hover:border-accent group-hover:bg-accent group-hover:text-on-accent">
+                  <ArrowRight className="size-4" aria-hidden />
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ol>
       </section>
     </PublicShell>
   );
@@ -187,7 +157,7 @@ export default function Home() {
 function Section({ eyebrow, title, lead, id, children }: { eyebrow: string; title: string; lead?: string; id?: string; children: React.ReactNode }) {
   return (
     <section id={id} className="mt-24 scroll-mt-20">
-      <p className="text-[13px] font-medium text-accent">{eyebrow}</p>
+      <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-accent">{eyebrow}</p>
       <h2 className="mt-2 text-[28px] font-semibold leading-tight tracking-[-0.03em] sm:text-[34px]">{title}</h2>
       {lead && <p className="mt-3 max-w-2xl text-[15px] leading-6 text-text-2">{lead}</p>}
       <div className="mt-8">{children}</div>
