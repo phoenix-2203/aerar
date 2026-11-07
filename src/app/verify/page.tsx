@@ -13,7 +13,8 @@ export default async function VerifyPage({ searchParams }: PageProps<"/verify">)
   return (
     <PublicShell active="/verify">
       <div className="max-w-2xl animate-fade-up">
-        <h1 className="text-[34px] font-semibold leading-tight tracking-[-0.03em] sm:text-[42px]">Don&apos;t trust the dashboard. Check the receipt.</h1>
+        <p className="eyebrow">Signed receipts</p>
+        <h1 className="mt-3 text-[34px] font-semibold leading-tight tracking-[-0.03em] sm:text-[42px]">Don&apos;t trust the dashboard. Check the receipt.</h1>
         <p className="mt-3 text-[15px] leading-6 text-text-2">
           Every purchase Aerar decides comes with a signed receipt: what was asked, the provider&apos;s real quote, the rules version, every reason, and where the
           money went. This page checks one in your browser: unchanged, signed by Aerar, and matching the USDC transfer on Base.

@@ -102,11 +102,12 @@ export function purchaseSteps(p: PurchaseLike): Step[] {
   if (pay.length) add("pay", "failed", cap(pay.map(explain).join("; ")) + ". Budget released.");
   else if (p.status === "unknown") add("pay", "pending", "Outcome unknown; the amount stays held until reconciled.");
   else if (p.status === "reserved" || p.status === "paying") add("pay", "pending", "Payment in progress.");
-  else add("pay", "passed", `Paid ${p.paidFormatted ?? price} in USDC on Base Sepolia.`);
+  else add("pay", "passed", p.txHash?.startsWith("0xsim") ? `Paid ${p.paidFormatted ?? price} (simulated test USDC).` : `Paid ${p.paidFormatted ?? price} in USDC on Base Sepolia.`);
 
   // 7. Prove
   const check = p.onchainCheck as { ok?: boolean; reason?: string } | null | undefined;
   if (p.status !== "delivered") add("onchain", "skipped", "Nothing to prove.");
+  else if (p.txHash?.startsWith("0xsim")) add("onchain", "passed", "Simulated transfer in the sandbox: nothing on a chain to check.");
   else if (p.onchainVerifiedAt) add("onchain", "passed", "Transfer found on Base and matches the quote.");
   else if (check && check.ok === false) add("onchain", "failed", `Transfer doesn't match: ${check.reason ?? "check failed"}.`);
   else add("onchain", "pending", "Checking the transfer on Base…");

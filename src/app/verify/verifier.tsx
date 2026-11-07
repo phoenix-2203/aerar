@@ -129,7 +129,7 @@ export function Verifier({ initialId }: { initialId?: string }) {
             />
             <div className="mt-3 flex items-center justify-between gap-3">
               <p className="text-xs text-text-3">Checked in your browser. Aerar&apos;s server only supplies its public key.</p>
-              <button disabled={!text.trim()} className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm font-medium hover:border-border-strong disabled:opacity-50">
+              <button disabled={!text.trim()} className="inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-lg border border-border px-4 text-sm font-medium hover:border-border-strong disabled:opacity-50">
                 Check it
               </button>
             </div>

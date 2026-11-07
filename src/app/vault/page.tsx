@@ -59,7 +59,8 @@ async function Body() {
 function Heading() {
   return (
     <div className="max-w-2xl animate-fade-up">
-      <h1 className="text-[34px] font-semibold leading-tight tracking-[-0.03em] sm:text-[42px]">Your money. Your limits. On-chain.</h1>
+      <p className="eyebrow">Aerar Vault · Base Sepolia</p>
+      <h1 className="mt-3 text-[34px] font-semibold leading-tight tracking-[-0.03em] sm:text-[42px]">Your money. Your limits. On-chain.</h1>
       <p className="mt-3 text-[15px] leading-6 text-text-2">
         Your agent&apos;s budget sits in a Vault contract that you own. Aerar checks every purchase against your task, then asks the Vault to pay. The Vault
         checks your signed limits itself, so even Aerar can&apos;t overspend.
@@ -77,7 +78,8 @@ function Intro() {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-center">
       <div className="animate-fade-up">
-        <h1 className="text-[36px] font-semibold leading-[1.08] tracking-[-0.035em] sm:text-[48px]">
+        <p className="eyebrow">Aerar Vault · your wallet</p>
+        <h1 className="mt-4 text-[36px] font-semibold leading-[1.08] tracking-[-0.035em] sm:text-[48px]">
           Let your agent spend. <span className="text-text-2">From a vault only you control.</span>
         </h1>
         <p className="mt-4 max-w-[520px] text-[16px] leading-7 text-text-2">

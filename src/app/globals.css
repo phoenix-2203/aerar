@@ -338,3 +338,13 @@ body {
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 .cheat-field { animation: cheat-pulse 1.6s ease-in-out 2; }
 @keyframes cheat-pulse { 0%, 100% { border-color: var(--border-strong); } 50% { border-color: var(--danger); } }
+
+/* Section eyebrow: the ledger's column heading. */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+}

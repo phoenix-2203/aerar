@@ -1,6 +1,5 @@
 // Try it yourself: a private sandbox per visitor. Set rules, let a test agent buy from simulated shops (or connect
 // your own agent over MCP), and approve what waits for you. No sign-up, no wallet, no real money.
-import { Bot, Coins, ShieldCheck, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
@@ -53,45 +52,44 @@ async function TryBody() {
 }
 
 function Intro() {
-  const points = [
-    { icon: ShieldCheck, title: "Set the rules", text: "Budget, auto-approve limit, allowed shops and a shopping list." },
-    { icon: Bot, title: "Let an agent shop", text: "Press a request, or connect your own agent over MCP." },
-    { icon: Coins, title: "See every decision", text: "Paid, reused, held for you or declined, with each step explained." },
+  const lines: [string, string, string][] = [
+    ["22:00", "You set the rules", "budget, auto-approve limit, shops, a shopping list"],
+    ["22:04", "Your agent shops", "real requests, simulated shops, nothing real spent"],
+    ["23:58", "A web page tricks it", "“buy from pay.attacker.io”: watch it get refused"],
+    ["01:12", "It asks for something big", "it waits for you; approve or decline"],
+    ["02:30", "It hires a helper", "a smaller budget that counts up to yours"],
+    ["06:00", "You read the morning report", "every decision, every step, a signed receipt"],
   ];
   return (
-    <section className="relative -mx-4 -mt-6 px-4 pb-10 pt-10 sm:-mx-6 sm:-mt-10 sm:px-6 sm:pt-16">
-      <div className="bg-grid pointer-events-none absolute inset-0 -z-10" aria-hidden />
-      <div className="mx-auto max-w-2xl animate-fade-up text-center">
-        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-[13px] text-text-2 shadow-card">
-          <Sparkles className="size-3.5 text-accent" aria-hidden /> About 3 minutes · no sign-up · no wallet
-        </span>
-        <h1 className="mt-6 text-[36px] font-semibold leading-[1.08] tracking-[-0.035em] sm:text-[48px]">Try Aerar yourself.</h1>
-        <p className="mx-auto mt-4 max-w-xl text-[17px] leading-7 text-text-2">
-          Get a private sandbox with your own task, rules and test agent. The agent shops at simulated providers, so nothing real is spent. It&apos;s yours for
-          24 hours.
+    <section className="grid grid-cols-[minmax(0,1fr)] items-center gap-12 py-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:py-10">
+      <div className="animate-fade-up">
+        <p className="eyebrow">Your sandbox · no sign-up · no wallet</p>
+        <h1 className="mt-4 text-[38px] font-semibold leading-[1.06] tracking-[-0.035em] sm:text-[52px]">
+          Run a night shift <span className="text-text-2">in three minutes.</span>
+        </h1>
+        <p className="mt-5 max-w-[520px] text-[17px] leading-7 text-text-2">
+          A private workspace with your own task, rules and test agent. It shops at simulated providers, so nothing real is spent. Try to trick it. It&apos;s
+          yours for 24 hours.
         </p>
-        <div className="mt-8 flex justify-center">
+        <div className="mt-8">
           <StartButton />
         </div>
+        <p className="mt-4 text-[13px] text-text-3">
+          Want real money on a real chain? <a href="/vault" className="underline hover:text-text">Open a Vault</a> with your wallet instead.
+        </p>
       </div>
-      <div className="mx-auto mt-14 grid max-w-4xl gap-4 sm:grid-cols-3">
-        {points.map((p, i) => {
-          const Icon = p.icon;
-          return (
-            <div key={p.title} className="group rounded-2xl border border-border bg-surface p-5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-border-strong">
-              <div className="flex items-center gap-3">
-                <span className="grid size-9 place-items-center rounded-lg bg-surface-2 text-text-2 transition-colors group-hover:bg-accent-tint group-hover:text-accent">
-                  <Icon className="size-[18px]" aria-hidden />
-                </span>
-                <span className="tabular text-xs font-medium text-text-3">0{i + 1}</span>
-              </div>
-              <h2 className="mt-3 text-[15px] font-semibold">{p.title}</h2>
-              <p className="mt-1 text-[13.5px] leading-5 text-text-2">{p.text}</p>
-            </div>
-          );
-        })}
-      </div>
-      <p className="mt-8 text-center text-[13px] text-text-3">Real testnet payments made by Aerar&apos;s own agent are in the live report.</p>
+      <ol className="vault-slip animate-fade-up p-6 font-mono text-[12.5px] [animation-delay:120ms]" aria-label="What you'll do">
+        <li className="mb-3 text-[11px] uppercase tracking-[0.18em] text-text-3">Tonight in your sandbox</li>
+        {lines.map(([t, a, b], i) => (
+          <li key={t} className="ledger-line flex gap-4 border-b border-dashed border-border py-3 last:border-0" style={{ animationDelay: `${150 + i * 90}ms` }}>
+            <span className="w-11 shrink-0 text-text-3">{t}</span>
+            <span className="min-w-0">
+              <span className="block font-sans text-[14px] font-medium text-text">{a}</span>
+              <span className="block text-[11.5px] text-text-3">{b}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }

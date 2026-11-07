@@ -157,7 +157,7 @@ export default function Home() {
 function Section({ eyebrow, title, lead, id, children }: { eyebrow: string; title: string; lead?: string; id?: string; children: React.ReactNode }) {
   return (
     <section id={id} className="mt-24 scroll-mt-20">
-      <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-accent">{eyebrow}</p>
+      <p className="eyebrow">{eyebrow}</p>
       <h2 className="mt-2 text-[28px] font-semibold leading-tight tracking-[-0.03em] sm:text-[34px]">{title}</h2>
       {lead && <p className="mt-3 max-w-2xl text-[15px] leading-6 text-text-2">{lead}</p>}
       <div className="mt-8">{children}</div>

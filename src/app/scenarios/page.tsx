@@ -28,7 +28,7 @@ export default function ScenariosPage() {
   return (
     <PublicShell active="/scenarios">
       <div className="max-w-2xl animate-fade-up">
-        <p className="text-[13px] font-medium text-accent">Attack lab</p>
+        <p className="eyebrow">Attack lab</p>
         <h1 className="mt-2 text-[34px] font-semibold leading-tight tracking-[-0.03em] sm:text-[42px]">Throw real attacks at Aerar.</h1>
         <p className="mt-3 text-[15px] leading-6 text-text-2">
           {SCENARIOS.length} things that really go wrong when agents spend money. Each one runs through the real pipeline on a sandbox, next to what a plain

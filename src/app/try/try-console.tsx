@@ -1,6 +1,6 @@
 "use client";
 // The sandbox console: 1) your rules, 2) ask your agent to buy, 3) what happened. Plus "connect your own agent".
-import { ArrowRight, Bot, Check, ChevronDown, ListChecks, Play, RotateCcw, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ArrowRight, Bot, Check, ChevronDown, ListChecks, Play, RotateCcw, ShieldCheck, X } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/button";
 import { PurchaseTimeline } from "@/components/purchase-timeline";
@@ -24,7 +24,7 @@ export function StartButton() {
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="flex flex-col items-start gap-3">
       <Button
         variant="primary"
         size="lg"
@@ -93,9 +93,7 @@ export function TryConsole({
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="flex items-center gap-2 text-[13px] font-medium text-accent">
-            <Sparkles className="size-3.5" aria-hidden /> Your sandbox · simulated shops · nothing real is spent
-          </p>
+          <p className="eyebrow">Your sandbox · simulated shops · nothing real is spent</p>
           <h1 className="mt-2 text-[30px] font-semibold leading-tight tracking-[-0.03em] sm:text-[36px]">{state.task.title}</h1>
           <div className="mt-3 flex max-w-md items-center gap-3 text-[13px] text-text-2">
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2" aria-hidden>
@@ -118,24 +116,26 @@ export function TryConsole({
           {/* 2. Ask your agent */}
           <section className="rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-6" aria-labelledby="ask">
             <StepHead n={1} id="ask" title="Ask your agent to buy something" sub="Each button is one thing that really happens to agents. Watch how your rules answer." />
-            <div className="mt-5 grid gap-2 sm:grid-cols-2">
-              {presets.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => run(p.id, { preset: p.id })}
-                  disabled={!!running}
-                  className="group flex items-start gap-3 rounded-xl border border-border bg-bg/40 p-3.5 text-left transition-all duration-150 hover:-translate-y-px hover:border-border-strong hover:bg-surface-2/50 disabled:opacity-60"
-                >
-                  <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg bg-surface-2 text-text-2 transition-colors group-hover:bg-accent-tint group-hover:text-accent">
-                    {running === p.id ? <span className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" /> : <Play className="size-3.5" aria-hidden />}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-[14px] font-medium leading-5">{p.label}</span>
-                    <span className="mt-0.5 block text-[12.5px] text-text-3">{p.shows}</span>
-                  </span>
-                </button>
+            <ol className="mt-5 divide-y divide-dashed divide-border overflow-hidden rounded-xl border border-border bg-bg/30">
+              {presets.map((p, i) => (
+                <li key={p.id}>
+                  <button
+                    onClick={() => run(p.id, { preset: p.id })}
+                    disabled={!!running}
+                    className="group flex w-full items-center gap-4 px-4 py-3 text-left transition-colors duration-150 hover:bg-surface-2/60 disabled:opacity-60"
+                  >
+                    <span className="w-6 shrink-0 font-mono text-[12px] text-text-3">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[14px] font-medium leading-5">{p.label}</span>
+                      <span className="mt-0.5 block font-mono text-[11.5px] text-text-3">{p.shows}</span>
+                    </span>
+                    <span className="grid size-8 shrink-0 place-items-center rounded-full border border-border text-text-2 transition-all duration-200 group-hover:border-accent group-hover:bg-accent group-hover:text-on-accent">
+                      {running === p.id ? <span className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" /> : <Play className="size-3.5 translate-x-px" aria-hidden />}
+                    </span>
+                  </button>
+                </li>
               ))}
-            </div>
+            </ol>
             <CustomRequest providers={providers} disabled={!!running} onRun={(url, purpose) => run("custom", { url, purpose })} busy={running === "custom"} />
           </section>
 
