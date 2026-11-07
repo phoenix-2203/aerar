@@ -36,14 +36,22 @@ const eth = await pub.getBalance({ address: account.address });
 console.log(`Operator ${account.address} has ${formatEther(eth)} ETH on Base Sepolia`);
 if (eth === 0n) throw new Error("The operator needs a little Base Sepolia ETH for gas (deploy + settling Vault payments). Use a faucet, then rerun.");
 
-if (env.VAULT_FACTORY_ADDRESS && (await pub.getCode({ address: env.VAULT_FACTORY_ADDRESS }))) {
-  console.log(`Already deployed: VAULT_FACTORY_ADDRESS=${env.VAULT_FACTORY_ADDRESS}`);
-  process.exit(0);
+const sealAbi = JSON.parse(/export const sealAbi = (\[.*\]) as const;/.exec(src)[1]);
+const sealBytecode = /export const sealBytecode = "(0x[0-9a-f]+)"/.exec(bin)[1];
+
+async function deploy(name, envKey, a, code, args) {
+  if (env[envKey] && (await pub.getCode({ address: env[envKey] }))) {
+    console.log(`${name}: already deployed at ${env[envKey]}`);
+    return null;
+  }
+  const hash = await wallet.deployContract({ abi: a, bytecode: code, args });
+  console.log(`${name}: deploying… tx ${hash}`);
+  const r = await pub.waitForTransactionReceipt({ hash });
+  if (r.status !== "success" || !r.contractAddress) throw new Error(`${name} deploy failed`);
+  console.log(`${name}: https://sepolia.basescan.org/address/${r.contractAddress}`);
+  return `${envKey}=${r.contractAddress}`;
 }
 
-const hash = await wallet.deployContract({ abi, bytecode, args: [USDC] });
-console.log(`Deploying… tx ${hash}`);
-const r = await pub.waitForTransactionReceipt({ hash });
-if (r.status !== "success" || !r.contractAddress) throw new Error("Deploy failed");
-console.log(`\nFactory deployed: https://sepolia.basescan.org/address/${r.contractAddress}`);
-console.log(`\nAdd to /opt/aerar/.env:\nVAULT_FACTORY_ADDRESS=${r.contractAddress}\nX402_FACILITATOR_URL=local`);
+const lines = [await deploy("Vault factory", "VAULT_FACTORY_ADDRESS", abi, bytecode, [USDC]), await deploy("Morning Seal", "SEAL_ADDRESS", sealAbi, sealBytecode, [])].filter(Boolean);
+if (lines.length) console.log(`\nAdd to /opt/aerar/.env:\n${lines.join("\n")}${env.X402_FACILITATOR_URL === "local" ? "" : "\nX402_FACILITATOR_URL=local"}`);
+else console.log("\nNothing to deploy.");

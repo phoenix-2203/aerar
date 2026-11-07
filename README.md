@@ -154,6 +154,9 @@ An approved purchase is not a paid purchase, and a paid purchase is not proof th
 - **"Pretend Aerar got hacked"**: ask the Vault for a bad payment with Aerar's real key and watch the contract refuse (dry run, nothing sent).
 - Contract and 15 Foundry tests in [`contracts/`](contracts/).
 
+**Morning Seal** (new)
+- Each morning the head of every workspace's hash-chained audit log is written to Base (`contracts/src/AerarSeal.sol`). Anyone can press "Check against Base" in the report: the browser reads the seal from the contract and compares it with the log today. Changing any earlier entry breaks the match.
+
 **Proof**
 - **Onchain check** that the USDC transfer really happened, to the right payee, for the right amount.
 - **Hash-chained audit log** with a one-call chain verification.

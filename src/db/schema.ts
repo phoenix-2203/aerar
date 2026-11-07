@@ -232,3 +232,20 @@ export const auditEvents = pgTable(
   },
   (t) => [index("audit_org").on(t.orgId, t.seq), index("audit_subject").on(t.subjectId)],
 );
+
+/** Morning Seals: the head of a workspace's audit chain, written to Base. */
+export const seals = pgTable(
+  "seals",
+  {
+    id: text("id").primaryKey(),
+    orgId: text("org_id").notNull(),
+    seq: integer("seq").notNull(),
+    head: text("head").notNull(), // hex sha256 of the audit entry at `seq`
+    entries: integer("entries").notNull(),
+    txHash: text("tx_hash").notNull(),
+    contract: text("contract").notNull(),
+    sealer: text("sealer").notNull(),
+    sealedAt: ts("sealed_at").notNull().defaultNow(),
+  },
+  (t) => [index("seals_org").on(t.orgId, t.seq)],
+);

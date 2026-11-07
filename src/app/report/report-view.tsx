@@ -1,6 +1,7 @@
 // The morning report, shared by the operator page (/report) and the public read-only demo (/demo).
 // Order: one-sentence lead, four tiles, approvals inbox, purchases (filterable, each opens the drawer),
 // why things were declined, providers and agents, task budgets.
+import { MorningSeal } from "@/components/morning-seal";
 import { Inbox, ListFilter, Moon } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -183,6 +184,7 @@ export function ReportView({ r, w, mode, q }: { r: Report; w: Window; mode: View
         )}
       </Card>
         <aside className="space-y-4">
+        <MorningSeal />
         {/* Tasks */}
         <section id="tasks" className="scroll-mt-20" aria-labelledby="tasks-h">
           <h2 id="tasks-h" className="text-sm font-semibold">
