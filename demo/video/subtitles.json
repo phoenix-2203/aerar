@@ -1,0 +1,217 @@
+[
+ {
+  "start": 0.35,
+  "end": 4.31,
+  "text": "Imagine you hire an assistant to research Ethereum analytics."
+ },
+ {
+  "start": 4.44,
+  "end": 7.14,
+  "text": "You give them one task, and $10."
+ },
+ {
+  "start": 7.27,
+  "end": 11.88,
+  "text": "Halfway through, a web page tells them the research needs an $8 gift card."
+ },
+ {
+  "start": 12.01,
+  "end": 12.98,
+  "text": "They can afford it."
+ },
+ {
+  "start": 13.11,
+  "end": 14.78,
+  "text": "The payment is valid."
+ },
+ {
+  "start": 14.9,
+  "end": 16.95,
+  "text": "But it is not what they were hired to buy."
+ },
+ {
+  "start": 17.5,
+  "end": 19.79,
+  "text": "AI agents are now that assistant."
+ },
+ {
+  "start": 19.92,
+  "end": 26.05,
+  "text": "They buy data and APIs on their own, a few cents at a time, over x402 on Base."
+ },
+ {
+  "start": 26.18,
+  "end": 30.07,
+  "text": "Spending limits ask one question: can the agent afford it?"
+ },
+ {
+  "start": 30.2,
+  "end": 33.87,
+  "text": "Aerar asks the one that matters: is this what it was asked to buy?"
+ },
+ {
+  "start": 34.42,
+  "end": 38.06,
+  "text": "Every task in Aerar starts with a mandate that a person signs."
+ },
+ {
+  "start": 38.19,
+  "end": 42.67,
+  "text": "The purpose, the budget, the limits, and the kinds of things the agent may buy."
+ },
+ {
+  "start": 42.8,
+  "end": 47.2,
+  "text": "Aerar signs it too, so nobody can quietly change the rules later."
+ },
+ {
+  "start": 47.75,
+  "end": 52.11,
+  "text": "Here is that gift card attack, run through Aerar's real purchase pipeline."
+ },
+ {
+  "start": 52.24,
+  "end": 57.02,
+  "text": "$8, inside a $10 budget, from a marketplace the task trusts."
+ },
+ {
+  "start": 57.15,
+  "end": 59.04,
+  "text": "Every spending limit passes."
+ },
+ {
+  "start": 59.17,
+  "end": 61.29,
+  "text": "IntentLock refuses it anyway."
+ },
+ {
+  "start": 61.42,
+  "end": 65.73,
+  "text": "The item is a gift card, and the mandate is for blockchain analytics."
+ },
+ {
+  "start": 65.86,
+  "end": 69.9,
+  "text": "The Ethereum data the task actually needs still gets bought."
+ },
+ {
+  "start": 70.45,
+  "end": 73.17,
+  "text": "The same rules run live in the sandbox."
+ },
+ {
+  "start": 73.3,
+  "end": 75.2,
+  "text": "A normal purchase is paid."
+ },
+ {
+  "start": 75.33,
+  "end": 80.41,
+  "text": "When a second agent asks for the same data, Aerar serves it from memory, for zero."
+ },
+ {
+  "start": 80.54,
+  "end": 84.02,
+  "text": "And a shop the task doesn't trust is never even contacted."
+ },
+ {
+  "start": 84.57,
+  "end": 88.81,
+  "text": "Big purchases wait for a person, right here, or in Slack."
+ },
+ {
+  "start": 88.94,
+  "end": 93.14,
+  "text": "And when a shop takes the money but sends back nothing, Aerar catches it."
+ },
+ {
+  "start": 93.27,
+  "end": 99.37,
+  "text": "The purchase is marked paid, but not delivered, and that shop goes on hold, so it can't happen twice."
+ },
+ {
+  "start": 99.92,
+  "end": 106.05,
+  "text": "Every purchase leaves evidence: the signed mandate it was decided under, every reason, and the payment."
+ },
+ {
+  "start": 106.18,
+  "end": 108.94,
+  "text": "Anyone can check a receipt in their own browser."
+ },
+ {
+  "start": 109.07,
+  "end": 110.56,
+  "text": "This one is real."
+ },
+ {
+  "start": 110.69,
+  "end": 113.25,
+  "text": "The USDC moved on Base Sepolia."
+ },
+ {
+  "start": 113.38,
+  "end": 116.13,
+  "text": "Change a single number, and the check fails."
+ },
+ {
+  "start": 116.68,
+  "end": 121.61,
+  "text": "For hard guarantees, Aerar Vault keeps the money in a contract you own on Base."
+ },
+ {
+  "start": 121.74,
+  "end": 128.22,
+  "text": "It only pays shops you approved, within per-payment and daily limits, and you can pause or revoke it at any time."
+ },
+ {
+  "start": 128.35,
+  "end": 131.81,
+  "text": "Even a compromised Aerar can't spend outside those lines."
+ },
+ {
+  "start": 132.36,
+  "end": 133.93,
+  "text": "None of this is a mock-up."
+ },
+ {
+  "start": 134.06,
+  "end": 138.32,
+  "text": "36 real attacks run through the real pipeline in seconds."
+ },
+ {
+  "start": 138.45,
+  "end": 144.19,
+  "text": "186 app tests, and 18 contract tests, all pass."
+ },
+ {
+  "start": 144.74,
+  "end": 148.58,
+  "text": "Most agent payment tools decide how much an agent can spend."
+ },
+ {
+  "start": 148.71,
+  "end": 152.51,
+  "text": "Aerar governs what it buys, proves it, and checks that it arrived."
+ },
+ {
+  "start": 152.64,
+  "end": 156.92,
+  "text": "Agents plug in through MCP, or a TypeScript SDK."
+ },
+ {
+  "start": 157.05,
+  "end": 159.11,
+  "text": "Today it runs on Base Sepolia."
+ },
+ {
+  "start": 159.24,
+  "end": 164.05,
+  "text": "Next: a security review, escrow for failed deliveries, and mainnet."
+ },
+ {
+  "start": 164.18,
+  "end": 167.3,
+  "text": "Aerar. Every agent purchase, accounted for."
+ }
+]

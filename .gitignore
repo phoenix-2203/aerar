@@ -50,3 +50,8 @@ sdk/dist/
 
 # Cowork session outputs
 Claude outputs/
+# Demo video build products
+demo/video/rec/out/
+demo/video/build/
+demo/video/aerar-demo.mp4
+demo/video/audio/*.wav

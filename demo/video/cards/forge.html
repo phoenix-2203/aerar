@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><style>
+.wrap{position:absolute;inset:0;padding:56px 110px;display:grid;grid-template-columns:420px 1fr;gap:56px;align-items:center}
+.term{background:#141a17;color:#d9dfd9;border-radius:18px;padding:26px 30px;font:15.5px/1.6 Mono,monospace;box-shadow:0 30px 70px -25px rgb(0 0 0/.5)}
+.term .cmd{color:#9fb0a6;margin-bottom:10px}
+.p{color:#6fd39f} .sum{margin-top:12px;color:#fff;font-weight:600}
+h2{font-size:46px;line-height:1.05;margin:14px 0 18px}
+p.lead{font-size:21px;line-height:1.5;color:var(--t2)}
+</style></head><body>
+<div class="wash" style="left:-200px;top:-200px;width:700px;height:600px"></div>
+<div class="wrap">
+ <div><div class="eyebrow in">Aerar Vault · Base</div><h2 class="in" style="animation-delay:.15s">The contract enforces the limits.</h2>
+ <p class="lead in" style="animation-delay:.3s">AerarVault.sol test suite, run with Foundry for this video.</p></div>
+ <div class="term"><div class="cmd">$ forge test</div><div class="t in" style="animation-delay:0.30s"><span class="p">[PASS]</span> test_aerarCantChangeLimitsOrWithdraw()</div><div class="t in" style="animation-delay:0.42s"><span class="p">[PASS]</span> test_aerarCantPayAnUnlistedPayee()</div><div class="t in" style="animation-delay:0.54s"><span class="p">[PASS]</span> test_approvalWindowIsShort()</div><div class="t in" style="animation-delay:0.66s"><span class="p">[PASS]</span> test_expiredMandate()</div><div class="t in" style="animation-delay:0.78s"><span class="p">[PASS]</span> test_facilitatorCantChangePayeeOrAmount()</div><div class="t in" style="animation-delay:0.90s"><span class="p">[PASS]</span> test_factoryMakesOneVaultPerOwner()</div><div class="t in" style="animation-delay:1.02s"><span class="p">[PASS]</span> test_onlyTheOperatorAuthorizes()</div><div class="t in" style="animation-delay:1.14s"><span class="p">[PASS]</span> test_ownerWithdraws()</div><div class="t in" style="animation-delay:1.26s"><span class="p">[PASS]</span> test_pauseStopsEverything()</div><div class="t in" style="animation-delay:1.38s"><span class="p">[PASS]</span> test_paysInsideTheMandate()</div><div class="t in" style="animation-delay:1.50s"><span class="p">[PASS]</span> test_perPaymentAndPeriodLimits()</div><div class="t in" style="animation-delay:1.62s"><span class="p">[PASS]</span> test_revokeKillsPendingApprovals()</div><div class="t in" style="animation-delay:1.74s"><span class="p">[PASS]</span> test_settledApprovalCantBeReleased()</div><div class="t in" style="animation-delay:1.86s"><span class="p">[PASS]</span> test_settlesOnlyOnce()</div><div class="t in" style="animation-delay:1.98s"><span class="p">[PASS]</span> test_unusedApprovalCanBeReleased()</div><div class="sum in" style="animation-delay:2.30s">Ran 2 test suites: <span class="p">18 passed</span>, 0 failed</div></div>
+</div></body></html>

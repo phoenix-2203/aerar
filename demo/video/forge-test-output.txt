@@ -1,0 +1,27 @@
+No files changed, compilation skipped
+
+Ran 3 tests for test/AerarSeal.t.sol:AerarSealTest
+[PASS] test_onlyNewerSeals() (gas: 132578)
+[PASS] test_sealsAndReadsBack() (gas: 81469)
+[PASS] test_someoneElsesSealsAreSeparate() (gas: 80879)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 464.62µs (214.98µs CPU time)
+
+Ran 15 tests for test/AerarVault.t.sol:AerarVaultTest
+[PASS] test_aerarCantChangeLimitsOrWithdraw() (gas: 12917)
+[PASS] test_aerarCantPayAnUnlistedPayee() (gas: 15971)
+[PASS] test_approvalWindowIsShort() (gas: 18327)
+[PASS] test_expiredMandate() (gas: 14178)
+[PASS] test_facilitatorCantChangePayeeOrAmount() (gas: 137268)
+[PASS] test_factoryMakesOneVaultPerOwner() (gas: 20672)
+[PASS] test_onlyTheOperatorAuthorizes() (gas: 11206)
+[PASS] test_ownerWithdraws() (gas: 41214)
+[PASS] test_pauseStopsEverything() (gas: 130605)
+[PASS] test_paysInsideTheMandate() (gas: 181905)
+[PASS] test_perPaymentAndPeriodLimits() (gas: 286234)
+[PASS] test_revokeKillsPendingApprovals() (gas: 133375)
+[PASS] test_settledApprovalCantBeReleased() (gas: 179999)
+[PASS] test_settlesOnlyOnce() (gas: 180063)
+[PASS] test_unusedApprovalCanBeReleased() (gas: 99902)
+Suite result: ok. 15 passed; 0 failed; 0 skipped; finished in 1.59ms (967.37µs CPU time)
+
+Ran 2 test suites in 2.67ms (2.05ms CPU time): 18 tests passed, 0 failed, 0 skipped (18 total tests)

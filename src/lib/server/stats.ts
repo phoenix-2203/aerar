@@ -11,7 +11,8 @@ export async function liveStats(db: Db) {
       paid: sql<string>`coalesce(sum(${purchases.paidAmount}), 0)`,
       stopped: sql<string>`coalesce(sum(case when ${purchases.status} in ('declined','rejected') then coalesce(${purchases.quoteAmount}, 0) else 0 end), 0)`,
       saved: sql<string>`coalesce(sum(case when ${purchases.status} = 'reused' then coalesce(${purchases.quoteAmount}, 0) else 0 end), 0)`,
-      onchain: sql<number>`count(*) filter (where ${purchases.onchainVerifiedAt} is not null)::int`,
+      // Only real transfers: sandbox payments are simulated ("0xsim…") and are never counted as proven on Base.
+      onchain: sql<number>`count(*) filter (where ${purchases.onchainVerifiedAt} is not null and ${purchases.txHash} ~ '^0x[0-9a-fA-F]{64}$')::int`,
       stoppedCount: sql<number>`count(*) filter (where ${purchases.status} in ('declined','rejected'))::int`,
     })
     .from(purchases);

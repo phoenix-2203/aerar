@@ -1,0 +1,21 @@
+@font-face { font-family: Display; src: url(display.woff2) format("woff2"); font-weight: 200 800; }
+@font-face { font-family: Sans; src: url(sans.woff2) format("woff2"); font-weight: 100 900; }
+@font-face { font-family: Mono; src: url(mono.woff2) format("woff2"); font-weight: 100 900; }
+:root { --bg:#f7f6f1; --surface:#fcfbf8; --s2:#f0eee7; --border:#e4e1d7; --text:#18201c; --t2:#4b524d; --t3:#5e655f;
+  --accent:#2b55d6; --violet:#7458c9; --rose:#c8607f; --amber:#c98a2e; --ok:#1f6b47; --okt:#e4efe6; --bad:#ae3a2e; --badt:#f6e4df; --warn:#8f5a0b; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1440px; height: 810px; overflow: hidden; background: var(--bg); color: var(--text); font-family: Sans, sans-serif; -webkit-font-smoothing: antialiased; }
+.wash { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .30; pointer-events: none;
+  background: conic-gradient(from 210deg at 55% 50%, var(--accent), var(--violet), var(--rose), var(--amber), var(--accent)); }
+.eyebrow { font: 500 15px Mono, monospace; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); }
+h1, h2 { font-family: Display, sans-serif; letter-spacing: -0.035em; font-weight: 650; }
+.grad { background: linear-gradient(95deg, var(--accent), var(--violet) 55%, var(--rose)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.card { background: rgb(252 251 248 / .85); backdrop-filter: blur(16px); border: 1px solid #fff; border-radius: 22px; box-shadow: 0 1px 2px rgb(40 36 22/.06), 0 30px 70px -25px rgb(46 40 24/.3); }
+.in { opacity: 0; transform: translateY(14px); animation: in .6s cubic-bezier(.2,.8,.2,1) forwards; }
+@keyframes in { to { opacity: 1; transform: none; } }
+.pop { opacity: 0; transform: scale(.6) rotate(-6deg); animation: pop .45s cubic-bezier(.2,.8,.2,1.4) forwards; }
+@keyframes pop { to { opacity: 1; transform: rotate(-6deg) scale(1); } }
+.mono { font-family: Mono, monospace; }
+.logo { display:flex; align-items:center; gap:12px; font: 700 30px Display, sans-serif; letter-spacing:-.02em; }
+.logo svg { width: 34px; height: 34px; }
+#__cur{display:none!important}
