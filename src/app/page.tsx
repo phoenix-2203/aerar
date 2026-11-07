@@ -1,4 +1,4 @@
-// Landing page. One night shift as a ledger (hero), why it matters (cited), one purchase traced end to end, the same
+// Landing page. One night shift as a ledger (hero), why it matters (cited), IntentLock, refunds, one purchase traced end to end, the same
 // night run through the real pipeline, where Aerar fits, and three ways in. Every number is computed or sourced.
 import { ArrowDown, ArrowRight, ArrowUpRight } from "lucide-react";
 import type { Metadata } from "next";
@@ -21,7 +21,7 @@ import { runNight } from "@/lib/scenarios/night";
 export const metadata: Metadata = {
   title: { absolute: "Aerar · your agents work the night shift, Aerar keeps the books" },
   description:
-    "AI agents pay for data and APIs all night over x402. Aerar checks every purchase against the purpose a person signed (IntentLock), never pays twice, asks a person about big ones in Slack, Discord or Telegram, and pays from a Vault you own on Base.",
+    "AI agents pay for data and APIs all night over x402. Aerar checks every purchase against the purpose a person signed (IntentLock), never pays twice, asks a person about big ones in Slack, Discord or Telegram, refunds what wasn't delivered through a shop's escrow, and pays from a Vault you own on Base.",
 };
 
 const FACTS = [
@@ -81,12 +81,58 @@ function IntentLockStrip() {
           that was talked into it.
         </p>
         <p>
+          Disguised items are decoded first: Morse code, base64, look-alike letters, leetspeak. Hiding what you sell is a warning sign in itself, so a disguised
+          item is refused, or waits for you if it otherwise fits.
+        </p>
+        <p>
           The purpose is part of a <b className="text-text">signed mandate</b>. Change the rules behind Aerar&apos;s back and buying stops until a person signs again.
           Items Aerar can&apos;t place wait for you.
         </p>
         <div className="flex flex-wrap gap-3 pt-1">
           <ButtonLink href="/scenarios#intent" variant="secondary" size="sm">
             Run it in the attack lab
+          </ButtonLink>
+          <ButtonLink href="/try" variant="ghost" size="sm">
+            Try it in your sandbox
+          </ButtonLink>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// The live refund on Base Sepolia (README, "Live on testnet"): paid into the demo shop's escrow, nothing came back, refunded.
+const REFUND_TX = "0x330a41f4f1a5c752cb89a311cee638a077a51f139e86684ed4c319dd7175360a";
+const REFUND_ROWS: [string, string, "pass" | "fail"][] = [
+  ["Paid", "$0.05 into the shop's escrow, not the shop", "pass"],
+  ["Delivery check", "the shop sent back {}", "fail"],
+  ["Refund", "$0.05 back to the payer, on Base", "pass"],
+  ["The shop", "on hold until a person clears it", "pass"],
+];
+
+function RefundStrip() {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)] lg:items-center">
+      <ol className="glass overflow-hidden rounded-2xl font-mono text-[13px] shadow-lift">
+        {REFUND_ROWS.map(([k, v, r]) => (
+          <li key={k} className="flex items-center gap-3 border-b border-dashed border-border px-4 py-3 last:border-0">
+            <span className="min-w-0 flex-1 sm:flex sm:gap-3">
+              <span className="block shrink-0 text-text-3 sm:w-36">{k}</span>
+              <span className="block text-text-2 sm:min-w-0 sm:flex-1 sm:truncate">{v}</span>
+            </span>
+            <span className={`stamp-mini shrink-0 ${r === "pass" ? "border-success text-success" : "border-danger text-danger"}`}>{r === "pass" ? "DONE" : "FAILED"}</span>
+          </li>
+        ))}
+      </ol>
+      <div className="space-y-3 text-[14.5px] leading-6 text-text-2">
+        <p>
+          x402 payments settle at once, so a shop that takes the money and sends nothing usually keeps it. Aerar still catches it and puts the shop on hold. And
+          a shop that takes payment through an <b className="text-text">Aerar Escrow</b> can be refunded: the money waits there until the delivery checks out.
+        </p>
+        <p>Delivered: the shop is paid straight away. Not delivered: the money goes back. Nobody can send it anywhere else.</p>
+        <div className="flex flex-wrap gap-3 pt-1">
+          <ButtonLink href={`https://sepolia.basescan.org/tx/${REFUND_TX}`} target="_blank" rel="noreferrer" variant="secondary" size="sm" trailing={<ArrowUpRight className="size-3.5" aria-hidden />}>
+            See a real refund on Base
           </ButtonLink>
           <ButtonLink href="/try" variant="ghost" size="sm">
             Try it in your sandbox
@@ -194,6 +240,16 @@ export default function Home() {
         lead="An agent researching Ethereum is told by a web page that the work “requires” an $8 gift card. The budget is $10, so a spending limit says yes. Aerar checks the item against the purpose a person signed, and says no."
       >
         <IntentLockStrip />
+      </Section>
+
+      {/* Refunds */}
+      <Section
+        id="refunds"
+        eyebrow="Refunds"
+        title="Paid, but nothing arrived? Get it back."
+        lead="Aerar checks what came back for the money. When a shop sends nothing usable, the purchase is marked, the shop goes on hold, and if the shop takes payment through an escrow, the money comes back."
+      >
+        <RefundStrip />
       </Section>
 
       {/* One purchase */}
