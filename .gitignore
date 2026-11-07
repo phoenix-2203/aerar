@@ -47,3 +47,6 @@ next-env.d.ts
 # VPS secrets
 deploy/.env
 sdk/dist/
+
+# Cowork session outputs
+Claude outputs/
