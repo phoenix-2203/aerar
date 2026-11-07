@@ -56,162 +56,162 @@
  },
  {
   "start": 46.77,
-  "end": 49.39,
+  "end": 49.42,
   "text": "Aerar sits between your agents and their money."
  },
  {
-  "start": 49.84,
-  "end": 56.37,
+  "start": 49.86,
+  "end": 56.59,
   "text": "Research agents buying data, trading bots buying feeds, coding agents paying for APIs."
  },
  {
-  "start": 56.65,
-  "end": 58.73,
-  "text": "Every purchase is checked first."
- },
- {
-  "start": 59.11,
-  "end": 65.97,
+  "start": 56.97,
+  "end": 63.83,
   "text": "Each task starts with a mandate a person signs: the purpose, the budget, the limits, and what the agent may buy."
  },
  {
-  "start": 66.55,
-  "end": 70.63,
+  "start": 64.41,
+  "end": 68.5,
   "text": "Aerar signs it too, so the rules can't be quietly changed."
  },
  {
-  "start": 71.01,
-  "end": 74.09,
+  "start": 68.88,
+  "end": 71.96,
   "text": "Here's that kind of attack, on Aerar's real pipeline."
  },
  {
-  "start": 74.5,
-  "end": 78.66,
+  "start": 72.37,
+  "end": 76.53,
   "text": "A web page tells a research agent it needs an $8 gift card."
  },
  {
-  "start": 79.06,
-  "end": 81.33,
+  "start": 76.93,
+  "end": 79.2,
   "text": "It's within budget, from a trusted shop."
  },
  {
-  "start": 81.75,
-  "end": 86.27,
+  "start": 79.62,
+  "end": 84.14,
   "text": "IntentLock refuses it: the mandate is for blockchain analytics."
  },
  {
-  "start": 86.55,
-  "end": 89.06,
+  "start": 84.42,
+  "end": 86.92,
   "text": "The data the task needs still gets bought."
  },
  {
-  "start": 89.44,
-  "end": 92.64,
+  "start": 87.3,
+  "end": 90.5,
   "text": "Live in the sandbox: a normal purchase is paid."
  },
  {
-  "start": 93.04,
-  "end": 96.02,
+  "start": 90.9,
+  "end": 93.88,
   "text": "The same data again comes from memory, for zero."
  },
  {
-  "start": 96.39,
-  "end": 98.22,
+  "start": 94.25,
+  "end": 96.08,
   "text": "Aerar never pays twice."
  },
  {
-  "start": 98.41,
-  "end": 101.8,
+  "start": 96.27,
+  "end": 99.66,
   "text": "And a shop the task doesn't trust is never contacted."
  },
  {
-  "start": 102.18,
-  "end": 103.95,
+  "start": 100.04,
+  "end": 101.81,
   "text": "Aerar remembers prices."
  },
  {
-  "start": 104.21,
-  "end": 107.79,
+  "start": 102.07,
+  "end": 105.65,
   "text": "A shop that quietly charges 5x more waits for you."
  },
  {
-  "start": 108.18,
-  "end": 113.71,
+  "start": 106.04,
+  "end": 111.57,
   "text": "A shop that swaps its payment wallet, the way a hijacked one would, is refused."
  },
  {
-  "start": 114.09,
-  "end": 116.9,
+  "start": 111.95,
+  "end": 114.91,
   "text": "Big buys wait for a person, here or in Slack."
  },
  {
-  "start": 117.34,
-  "end": 123.44,
-  "text": "And a shop that takes the money and sends nothing is caught: paid, not delivered, and put on hold."
+  "start": 115.4,
+  "end": 119.27,
+  "text": "A shop that takes the money and sends nothing is caught and put on hold."
  },
  {
-  "start": 123.82,
-  "end": 127.4,
+  "start": 119.67,
+  "end": 123.35,
+  "text": "And if it takes payment through an escrow, the money comes back."
+ },
+ {
+  "start": 123.73,
+  "end": 127.31,
   "text": "Every purchase leaves evidence anyone can check in their browser."
  },
  {
-  "start": 127.76,
-  "end": 131.85,
+  "start": 127.67,
+  "end": 131.76,
   "text": "This receipt is real: USDC on Base Sepolia."
  },
  {
-  "start": 132.13,
-  "end": 134.19,
+  "start": 132.04,
+  "end": 134.1,
   "text": "Change one number, and it fails."
  },
  {
-  "start": 134.57,
-  "end": 137.31,
+  "start": 134.48,
+  "end": 137.22,
   "text": "Grok's agent paid a wallet nobody approved."
  },
  {
-  "start": 137.9,
-  "end": 140.71,
+  "start": 137.81,
+  "end": 140.62,
   "text": "Aerar Vault is a contract you own on Base."
  },
  {
-  "start": 141.0,
-  "end": 146.59,
+  "start": 140.91,
+  "end": 146.5,
   "text": "It only pays shops you approved, within daily limits, even if Aerar itself is hacked."
  },
  {
-  "start": 146.97,
-  "end": 149.73,
+  "start": 146.88,
+  "end": 149.64,
   "text": "Agent wallets cap how much an agent spends."
  },
  {
-  "start": 150.07,
-  "end": 155.41,
+  "start": 149.98,
+  "end": 155.32,
   "text": "Aerar checks what it buys, never pays twice, confirms it arrived, and proves it."
  },
  {
-  "start": 155.79,
-  "end": 158.19,
-  "text": "36 real attacks, all handled."
+  "start": 155.7,
+  "end": 158.18,
+  "text": "39 real attacks, all handled."
  },
  {
-  "start": 158.65,
-  "end": 163.3,
-  "text": "186 app tests, and 18 contract tests, pass."
+  "start": 158.61,
+  "end": 162.34,
+  "text": "200 app tests, and 28 contract tests, pass."
  },
  {
-  "start": 163.68,
-  "end": 167.36,
+  "start": 162.72,
+  "end": 166.4,
   "text": "Plug in with MCP, or the TypeScript SDK."
  },
  {
-  "start": 167.8,
-  "end": 171.39,
+  "start": 166.84,
+  "end": 170.43,
   "text": "Live on Base Sepolia, with mainnet after a security review."
  },
  {
-  "start": 171.73,
-  "end": 175.01,
+  "start": 170.77,
+  "end": 174.05,
   "text": "Aerar. Every agent purchase, accounted for."
  }
 ]
