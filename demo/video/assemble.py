@@ -37,7 +37,7 @@ PLAN = {
                        {"zoom": (M("s04_intentlock", "refused") - S("s04_intentlock") + 0.2, 1155, box("s04_intentlock", "refused")["y"], 1.3)})],
     "s07_sandbox":   [("s05_sandbox", S("s05_sandbox"), None, None, {})],
     "s08_guards":    [("s08_guards", S("s08_guards"), None, None, {})],
-    "s09_delivery":  [("s06_outcomes", S("s06_outcomes"), 12.0, None, {})],
+    "s09_delivery":  [("s06_outcomes", S("s06_outcomes"), 13.6, None, {})],
     "s10_proof":     [("s07_proof", S("s07_proof") + 0.4, M("s07_proof", "verify") - S("s07_proof") - 0.6, 3.6, {}),
                       ("s07_proof", M("s07_proof", "verify") + 0.1, 12.2, None,
                        {"zoom_at": ("invalid", M("s07_proof", "invalid") - M("s07_proof", "verify") - 0.1, 1180, box("s07_proof", "invalid")["y"], 1.28)})],
@@ -47,7 +47,7 @@ PLAN = {
     "s14_close":     [("s10b_sdk", S("s10b_sdk"), 4.6, 4.2, {}), ("c_end", 0, None, None, {})],
 }
 TAGS = {"s05_mandate": "Signed mandate", "s06_intentlock": "IntentLock", "s07_sandbox": "Memory · trusted shops",
-        "s08_guards": "Price memory · wallet-swap guard", "s09_delivery": "Approvals · delivery checks",
+        "s08_guards": "Price memory · wallet-swap guard", "s09_delivery": "Approvals · delivery checks · refunds",
         "s10_proof": "Evidence · verifiable receipts", "s11_vault": "Aerar Vault on Base", "s13_tests": "Attack lab · tests"}
 HITS = {"s01_grok": 13.8, "s02_openai": 7.0}   # card-time of the money reveal on each incident card
 
@@ -132,7 +132,7 @@ def ts(x):
 REPL = [("AI X B T", "AIXBT"), ("x four oh two", "x402"), ("U S D C", "USDC"), ("M C P", "MCP"), ("S D K", "SDK"),
         ("forty seven thousand dollars", "$47,000"), ("fifty five and a half ether", "55.5 ETH"),
         ("over a hundred thousand dollars", "over $100,000"), ("eight dollar", "$8"), ("five times more", "5x more"),
-        ("Thirty six", "36"), ("One hundred and eighty six", "186"), ("eighteen", "18"), ("three billion", "3 billion"), ("a hundred and fifty thousand dollars", "$150,000")]
+        ("Thirty six", "36"), ("Thirty nine", "39"), ("Two hundred", "200"), ("twenty eight", "28"), ("One hundred and eighty six", "186"), ("eighteen", "18"), ("three billion", "3 billion"), ("a hundred and fifty thousand dollars", "$150,000")]
 def clean(s):
     for k, v in REPL:
         s = s.replace(k, v)

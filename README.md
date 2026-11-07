@@ -351,7 +351,7 @@ npm run typecheck
 npm run lint
 
 # Demos (no money moves: in-memory sandbox, simulated providers)
-npm run scenarios            # narrated: all 36 scenarios (--fast, --problem duplicate, --only parallel-race, --list)
+npm run scenarios            # narrated: all 39 scenarios (--fast, --problem duplicate, --only parallel-race, --list)
 npm run night-shift          # one night, plain wallet vs Aerar, then the morning report
 npm run seed:sim             # local only: fill the dashboard with a simulated night
 npm run screenshots          # every page at 375/1440 px, light/dark, via your installed Chrome

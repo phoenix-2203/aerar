@@ -1,12 +1,17 @@
 [
  [
   0.0,
-  2.61,
+  2.76,
   "Big buys wait for a person, here or in Slack."
  ],
  [
-  3.25,
-  9.152,
-  "And a shop that takes the money and sends nothing is caught: paid, not delivered, and put on hold."
+  3.45,
+  7.12,
+  "A shop that takes the money and sends nothing is caught and put on hold."
+ ],
+ [
+  7.72,
+  11.2,
+  "And if it takes payment through an escrow, the money comes back."
  ]
 ]

@@ -185,7 +185,7 @@ const SCENES = {
     }, { storage: STATE });
   },
 
-  // 09 (v2): approval in place, then a shop that takes the money and sends nothing
+  // 09 (v3): approval in place, a shop that sends nothing (held), then the same trick through an escrow (refunded)
   async s06_outcomes() {
     await record('s06_outcomes', async (p) => {
       await p.goto(BASE + '/try', { waitUntil: 'networkidle' });
@@ -193,19 +193,25 @@ const SCENES = {
       await smoothScrollTo(p, ask, 80, 10);
       await p.mouse.move(760, 520);
       await p.waitForTimeout(500); p.mark('start');
-      await click(p, ask.locator('ol li button').nth(5), { fx: 0.3 });
-      await p.waitForTimeout(900);
+      const t0 = Date.now(); const at = (x) => p.waitForTimeout(Math.max(0, x * 1000 - (Date.now() - t0)));
+      await click(p, ask.locator('ol li button').nth(5), { fx: 0.3, steps: 14 });
+      await p.waitForTimeout(700);
       const card = p.locator('section[aria-label="Needs your approval"] article').filter({ hasText: 'deep report' }).first();
-      await smoothScrollTo(p, card, 260, 600);
-      await click(p, card.getByRole('button', { name: /Approve/ }), { steps: 14 });
-      await p.waitForTimeout(900);
-      await smoothScrollTo(p, ask, 80, 500);
-      await click(p, ask.locator('ol li button').nth(7), { fx: 0.3, steps: 14 });
-      await p.waitForTimeout(1900);
+      await smoothScrollTo(p, card, 260, 500);
+      await click(p, card.getByRole('button', { name: /Approve/ }), { steps: 12 });
+      await at(3.3);
+      await smoothScrollTo(p, ask, 80, 400);
+      await click(p, ask.locator('ol li button').nth(7), { fx: 0.3, steps: 12 });
+      await at(7.5);
+      await smoothScrollTo(p, ask, 80, 400);
+      await click(p, ask.locator('ol li button').nth(8), { fx: 0.3, steps: 12 });
+      await p.waitForTimeout(1600);
+      p.mark('refunded');
+      await moveTo(p, p.locator('#activity ul > li').filter({ hasText: 'Refunded' }).first(), { fx: 0.15, steps: 16 }).catch(() => {});
+      await at(11.4);
       const sec = p.locator('section[aria-labelledby="security"]');
-      await smoothScrollTo(p, sec, 90, 900);
-      await moveTo(p, sec.locator('text=is on hold').first(), { steps: 24 });
-      await p.waitForTimeout(3600);
+      await smoothScrollTo(p, sec, 90, 700);
+      await at(13.2);
     }, { storage: STATE });
   },
 
@@ -270,7 +276,7 @@ const SCENES = {
       await p.goto(BASE + '/scenarios', { waitUntil: 'networkidle' });
       await p.waitForTimeout(600); p.mark('start');
       await click(p, p.getByRole('button', { name: /Run all/ }));
-      await p.waitForFunction(() => /36\/36/.test(document.body.innerText), null, { timeout: 60000 });
+      await p.waitForFunction(() => /39\/39/.test(document.body.innerText), null, { timeout: 60000 });
       await p.waitForTimeout(2600);
     });
   },

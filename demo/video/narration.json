@@ -13,7 +13,7 @@
  ],
  [
   "s04_what",
-  "Aerar sits between your agents and their money. Research agents buying data, trading bots buying feeds, coding agents paying for APIs. Every purchase is checked first."
+  "Aerar sits between your agents and their money. Research agents buying data, trading bots buying feeds, coding agents paying for APIs."
  ],
  [
   "s05_mandate",
@@ -33,7 +33,7 @@
  ],
  [
   "s09_delivery",
-  "Big buys wait for a person, here or in Slack. And a shop that takes the money and sends nothing is caught: paid, not delivered, and put on hold."
+  "Big buys wait for a person, here or in Slack. A shop that takes the money and sends nothing is caught and put on hold. And if it takes payment through an escrow, the money comes back."
  ],
  [
   "s10_proof",
@@ -49,7 +49,7 @@
  ],
  [
   "s13_tests",
-  "Thirty six real attacks, all handled. One hundred and eighty six app tests, and eighteen contract tests, pass."
+  "Thirty nine real attacks, all handled. Two hundred app tests, and twenty eight contract tests, pass."
  ],
  [
   "s14_close",
